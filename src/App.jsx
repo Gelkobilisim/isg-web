@@ -1,222 +1,543 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Globe, MapPin, Building, FileText, Weight, BarChart3, ChevronDown, ChevronUp, ZoomIn, ChevronLeft } from 'lucide-react';
+import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp } from 'lucide-react';
+
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCkdLCPFTXl4JdGJpSD--yAIpd29BtnN-k",
+  authDomain: "isg-web-6363.firebaseapp.com",
+  projectId: "isg-web-6363",
+  storageBucket: "isg-web-6363.firebasestorage.app",
+  messagingSenderId: "821576627724",
+  appId: "1:821576627724:web:5941a738ff70940599a029"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const DEPARTMENTS = ["Boyahane", "Altyapı", "Dalgaduvar", "Lazer", "Güç", "Kaynaklı imalat", "Dış alan", "Bakım & Onarım"];
-const COUNTRIES = ["Türkiye", "Almanya", "Fransa", "İngiltere", "İtalya", "İspanya", "Hollanda", "Belçika", "Avusturya", "İsveç", "ABD", "Kanada", "Diğer"];
 
-const PRIORITIES = {
-  basit: { label: 'Basit', multiplier: 1, color: 'bg-blue-100 text-blue-800' },
-  orta: { label: 'Orta', multiplier: 2, color: 'bg-yellow-100 text-yellow-800' },
-  kritik: { label: 'Kritik', multiplier: 5, color: 'bg-red-100 text-red-800' }
-};
-
-const STATUS_INFO = {
-  cozuldu: { label: 'Çözüldü', color: 'bg-green-100 text-green-800 border-green-500', icon: CheckCircle },
-  onay_bekliyor: { label: 'Cevap Bekleniyor', color: 'bg-yellow-100 text-yellow-800 border-yellow-500', icon: Clock },
-  acik: { label: 'Çözülmemiş', color: 'bg-red-100 text-red-800 border-red-500', icon: AlertTriangle },
-  itiraz_edildi: { label: 'İtiraz Edildi', color: 'bg-red-100 text-red-800 border-red-500', icon: AlertTriangle },
-  iptal: { label: 'İptal Edildi', color: 'bg-gray-100 text-gray-800 border-gray-400', icon: XCircle }
-};
-
-const SHIPPING_STATUS = {
-  beklemede: { label: 'Yükleme İçin Beklemede', color: 'bg-blue-100 text-blue-800 border-blue-400', icon: Clock },
-  yukleniyor: { label: 'Yükleniyor', color: 'bg-orange-100 text-orange-800 border-orange-400', icon: Activity },
-  gonderildi: { label: 'Yüklenip Gönderildi', color: 'bg-green-100 text-green-800 border-green-500', icon: CheckCircle }
-};
-
-const DICTIONARY = {
+const DICT = {
   tr: {
+    isg_tab: "İSG & Tertip",
+    yukleme_tab: "Yükleme Takip",
     sys_isg_title: "İSG & Tertip",
-    sys_yukleme_title: "Yükleme Takip",
+    sys_yukleme_title: "Yükleme & Sevkiyat",
     sys_management: "Yönetim Sistemi",
     welcome: "Hoş Geldiniz",
-    login_prompt: "Sisteme devam etmek için hesap bilgilerinizi girin.",
-    err_login: "Kullanıcı adı veya şifre hatalı veya bu modüle yetkiniz yok!",
-    no_auth: "Bu modüle giriş yetkiniz bulunmamaktadır."
+    login_desc: "Sisteme devam etmek için hesap bilgilerinizi girin.",
+    username: "Kullanıcı Adı",
+    password: "Şifre",
+    remember_me: "Oturumumu Açık Tut (Beni Hatırla)",
+    login_btn: "Sisteme Giriş Yap",
+    err_wrong_cred: "Kullanıcı adı veya şifre hatalı!",
+    err_isg_module: "Yükleme personeli İSG modülünden giriş yapamaz!",
+    err_yukleme_module: "İSG personeli Yükleme modülünden giriş yapamaz!",
+    loading_server: "Sunucuya bağlanılıyor...",
+    logout: "Çıkış Yap",
+    
+    // Priorities & Statuses
+    pri_basit: "Basit", pri_orta: "Orta", pri_kritik: "Kritik",
+    stat_cozuldu: "Çözüldü", stat_onay: "Cevap Bekleniyor", stat_acik: "Çözülmemiş", stat_itiraz: "İtiraz Edildi", stat_iptal: "İptal",
+    
+    // Yüklemeci Panel
+    yuk_title: "Sevkiyat & Yükleme",
+    yuk_desc: "Araç kayıtları, detaylı tonaj ve fotoğraf yönetimi",
+    new_load_btn: "Yeni Yükleme / Araç Girişi Başlat",
+    load_form_title: "Araç ve Sevkiyat Giriş Formu",
+    plate_no: "Araç Plakası veya İrsaliye No *",
+    driver_name: "Şoför Adı Soyadı (İsteğe Bağlı)",
+    dest_location: "Gideceği Lokasyon / Şehir *",
+    dest_company: "Gideceği Firma *",
+    project_no: "Proje No / Sipariş Kodu *",
+    tonnage: "Yüklenen Tonaj (kg veya Ton) *",
+    cam_pre: "Boş Kasa / Durum Fotoğrafı (İsteğe Bağlı)",
+    cam_open: "Kamerayı Aç / Fotoğraf Yükle",
+    optional: "(Zorunlu Değil)",
+    note_pre: "Kısa Not (İsteğe Bağlı)",
+    start_load_btn: "Kaydı Başlat",
+    active_loads: "Devam Eden Yüklemeler",
+    no_active_loads: "Şu an aktif bir yükleme yok.",
+    no_active_desc: "Gelen araçları yukarıdaki butondan sisteme girebilirsiniz.",
+    plate: "PLAKA / İRSALİYE",
+    entry_time: "GİRİŞ SAATİ",
+    driver: "Şoför",
+    pre_note_title: "Yükleme Giriş Notu",
+    no_note: "Not girilmedi.",
+    no_photo: "FOTO YOK",
+    finish_load_btn: "Yüklemeyi Tamamla",
+    finish_form_title: "Yükleme Bitiş Kaydı",
+    cam_post: "Güvenlik / Bağlama Fotoğrafı (İsteğe Bağlı)",
+    note_post: "Bitiş Notu / Teslim Alan (İsteğe Bağlı)",
+    cancel: "Vazgeç",
+    close_job: "İşi Kapat",
+    status_done: "Tamamlandı",
+    status_progress: "Devam Ediyor",
+
+    // Admin Panel
+    admin_panel: "Yönetici Paneli",
+    admin_desc: "Fabrika geneli yetkili izleme, tonaj takibi ve yönetim.",
+    next_reset: "Sonraki Puan Sıfırlama",
+    btn_users: "Kullanıcı Hesapları",
+    risk_map: "Risk Haritası",
+    problem: "Problem",
+    no_problem: "Sorunsuz",
+    user_management: "Kullanıcı Yönetimi",
+    isg_accounts: "İSG Hesapları",
+    yukleme_accounts: "Yükleme Hesapları",
+    new_account: "Yeni Hesap Oluştur",
+    fullname: "Ad Soyad",
+    sys_role: "Sistem Rolü",
+    dept: "Sorumlu Olduğu Birim",
+    create_acc_btn: "Hesabı Oluştur",
+    existing_accs: "Mevcut Hesaplar",
+    show_passwords: "Şifreleri Göster",
+    delete_history: "Sistem Geçmişi Temizliği (agiradar özel)",
+    delete_desc: "Veritabanı şişkinliğini önlemek için eski İSG ve Yükleme raporlarını kalıcı olarak silebilirsiniz.",
+    month_1: "1 Aydan Eskiler", month_3: "3 Aydan Eskiler", month_6: "6 Aydan Eskiler", month_all: "Tüm Geçmişi Sil",
+    delete_btn: "Sil",
+    are_you_sure: "Emin Misiniz?",
+    del_warn_1: "Son ", del_warn_2: " ay öncesine ait TÜM KAYITLAR kalıcı olarak silinecektir.",
+    del_warn_all: "Veritabanındaki TÜM İSG VE YÜKLEME KAYITLARI kalıcı olarak silinecektir.",
+    del_warn_end: "Bu veriler asla geri getirilemez!",
+    perm_delete: "Kalıcı Olarak Sil",
+    wait: "Bekle",
+    all_reports: "Tüm Sevkiyat Raporları",
+    records: "Kayıt",
+    no_records: "Kayıt bulunmamaktadır.",
+    before: "Giriş / Kasa Durumu",
+    after: "Bitiş / Yüklü Durum",
+    loading_progress: "Yükleme Sürüyor...",
+    return_back: "Geri Dön",
+    total_record: "Toplam Kayıt:",
+    current_score: "Güncel Puan",
+    solution_after: "Çözüm / Sonrası",
+    risk: "Risk",
+    hours_left: "Saat Kaldı",
+    solution_rate: "Çözüm Oranı",
+    tonnage_24h: "Son 24 Saatte Yüklenen Toplam Tonaj",
+    total_tonnage: "Toplam Tonaj"
   },
   en: {
-    sys_isg_title: "OHS & 5S",
-    sys_yukleme_title: "Shipping Tracking",
+    isg_tab: "OHS & Cleanliness",
+    yukleme_tab: "Loading Tracking",
+    sys_isg_title: "OHS & Cleanliness",
+    sys_yukleme_title: "Loading & Shipment",
     sys_management: "Management System",
     welcome: "Welcome",
-    login_prompt: "Enter your credentials to continue to the system.",
-    err_login: "Invalid username or password, or unauthorized for this module!",
-    no_auth: "You do not have authorization to access this module."
+    login_desc: "Enter your account details to continue.",
+    username: "Username",
+    password: "Password",
+    remember_me: "Keep me logged in (Remember Me)",
+    login_btn: "Login to System",
+    err_wrong_cred: "Invalid username or password!",
+    err_isg_module: "Loading personnel cannot login from OHS module!",
+    err_yukleme_module: "OHS personnel cannot login from Loading module!",
+    loading_server: "Connecting to server...",
+    logout: "Logout",
+    
+    // Priorities & Statuses
+    pri_basit: "Low", pri_orta: "Medium", pri_kritik: "Critical",
+    stat_cozuldu: "Resolved", stat_onay: "Pending Approval", stat_acik: "Unresolved", stat_itiraz: "Objected", stat_iptal: "Cancelled",
+    
+    // Yüklemeci Panel
+    yuk_title: "Shipment & Loading",
+    yuk_desc: "Vehicle records, detailed tonnage and photo management",
+    new_load_btn: "Start New Loading / Vehicle Entry",
+    load_form_title: "Vehicle & Shipment Entry Form",
+    plate_no: "License Plate or Waybill No *",
+    driver_name: "Driver Full Name (Optional)",
+    dest_location: "Destination Location / City *",
+    dest_company: "Destination Company *",
+    project_no: "Project No / Order Code *",
+    tonnage: "Loaded Tonnage (kg or Tons) *",
+    cam_pre: "Empty Trailer / Status Photo (Optional)",
+    cam_open: "Open Camera / Upload Photo",
+    optional: "(Optional)",
+    note_pre: "Short Note (Optional)",
+    start_load_btn: "Start Record",
+    active_loads: "Ongoing Loadings",
+    no_active_loads: "There are no active loadings at the moment.",
+    no_active_desc: "You can enter incoming vehicles using the button above.",
+    plate: "PLATE / WAYBILL",
+    entry_time: "ENTRY TIME",
+    driver: "Driver",
+    pre_note_title: "Entry Note",
+    no_note: "No note provided.",
+    no_photo: "NO PHOTO",
+    finish_load_btn: "Finish Loading",
+    finish_form_title: "Loading Completion Record",
+    cam_post: "Security / Fastening Photo (Optional)",
+    note_post: "Completion Note / Received By (Optional)",
+    cancel: "Cancel",
+    close_job: "Close Job",
+    status_done: "Completed",
+    status_progress: "In Progress",
+
+    // Admin Panel
+    admin_panel: "Admin Panel",
+    admin_desc: "Factory-wide monitoring, tonnage tracking and management.",
+    next_reset: "Next Score Reset",
+    btn_users: "User Accounts",
+    risk_map: "Risk Map",
+    problem: "Problem",
+    no_problem: "No Issues",
+    user_management: "User Management",
+    isg_accounts: "OHS Accounts",
+    yukleme_accounts: "Loading Accounts",
+    new_account: "Create New Account",
+    fullname: "Full Name",
+    sys_role: "System Role",
+    dept: "Responsible Department",
+    create_acc_btn: "Create Account",
+    existing_accs: "Existing Accounts",
+    show_passwords: "Show Passwords",
+    delete_history: "System History Cleanup (agiradar only)",
+    delete_desc: "You can permanently delete old OHS and Loading reports to prevent database bloat.",
+    month_1: "Older than 1 Month", month_3: "Older than 3 Months", month_6: "Older than 6 Months", month_all: "Delete All History",
+    delete_btn: "Delete",
+    are_you_sure: "Are You Sure?",
+    del_warn_1: "ALL RECORDS older than ", del_warn_2: " months will be permanently deleted.",
+    del_warn_all: "ALL OHS AND LOADING RECORDS in the database will be permanently deleted.",
+    del_warn_end: "This data can never be recovered!",
+    perm_delete: "Permanently Delete",
+    wait: "Wait",
+    all_reports: "All Shipment Reports",
+    records: "Records",
+    no_records: "No records found.",
+    before: "Entry / Trailer State",
+    after: "Completion / Loaded State",
+    loading_progress: "Loading in Progress...",
+    return_back: "Go Back",
+    total_record: "Total Records:",
+    current_score: "Current Score",
+    solution_after: "Solution / After",
+    risk: "Risk",
+    hours_left: "Hours Left",
+    solution_rate: "Resolution Rate",
+    tonnage_24h: "Total Tonnage Loaded in 24 Hours",
+    total_tonnage: "Total Tonnage"
   }
 };
 
+const PRIORITIES = {
+  basit: { label_key: 'pri_basit', multiplier: 1, color: 'bg-blue-100 text-blue-800' },
+  orta: { label_key: 'pri_orta', multiplier: 2, color: 'bg-yellow-100 text-yellow-800' },
+  kritik: { label_key: 'pri_kritik', multiplier: 5, color: 'bg-red-100 text-red-800' }
+};
+
+const STATUS_INFO = {
+  cozuldu: { label_key: 'stat_cozuldu', color: 'bg-green-100 text-green-800 border-green-500', icon: CheckCircle },
+  onay_bekliyor: { label_key: 'stat_onay', color: 'bg-yellow-100 text-yellow-800 border-yellow-500', icon: Clock },
+  acik: { label_key: 'stat_acik', color: 'bg-red-100 text-red-800 border-red-500', icon: AlertTriangle },
+  itiraz_edildi: { label_key: 'stat_itiraz', color: 'bg-red-100 text-red-800 border-red-500', icon: AlertTriangle },
+  iptal: { label_key: 'stat_iptal', color: 'bg-gray-100 text-gray-800 border-gray-400', icon: XCircle }
+};
+
+const formatDate = (dateObj) => {
+  return `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
+};
+
+const formatTime = (dateObj) => {
+  return `${dateObj.getHours().toString().padStart(2, '0')}:${dateObj.getMinutes().toString().padStart(2, '0')}`;
+};
+
+const handleImageUpload = (file, callback) => {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = (event) => {
+    const img = new Image();
+    img.src = event.target.result;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 1024;
+      let width = img.width;
+      let height = img.height;
+      if (width > MAX_WIDTH) { height = Math.round((height *= MAX_WIDTH / width)); width = MAX_WIDTH; }
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/jpeg', 0.75)); 
+    };
+  };
+};
+
 export default function App() {
-  const [lang, setLang] = useState('tr');
-  const t = (key) => DICTIONARY[lang][key] || key;
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isFirebaseLoading, setIsFirebaseLoading] = useState(true);
+  const [lang, setLang] = useState(localStorage.getItem('isg_lang') || 'tr');
   
-  // Oturum Persistence (Sayfa yenilendiğinde atmaması için Local/Session Storage kullanımı)
-  const [currentUser, setCurrentUser] = useState(() => {
-    const local = localStorage.getItem('isg_auth');
-    if (local) return JSON.parse(local);
-    const session = sessionStorage.getItem('isg_auth');
-    if (session) return JSON.parse(session);
-    return null;
-  });
+  const [users, setUsers] = useState([]);
+  const [points, setPoints] = useState({});
+  const [tasks, setTasks] = useState([]);
+  const [loadings, setLoadings] = useState([]);
 
-  const [loginTheme, setLoginTheme] = useState('isg');
-  
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem('isg_users');
-    if (saved) return JSON.parse(saved);
-    return [{ id: 1, username: 'agiradar', password: 'agiradar123', role: 'admin', name: 'A. Adar', dept: null }];
-  });
+  const [adminSystemMode, setAdminSystemMode] = useState('isg'); 
+  const [adminViewMode, setAdminViewMode] = useState('list');
+  const [selectedAdminDept, setSelectedAdminDept] = useState(null);
+  const [selectedAdminDate, setSelectedAdminDate] = useState(null);
 
-  const [points, setPoints] = useState(() => {
-    const saved = localStorage.getItem('isg_points');
-    if (saved) return JSON.parse(saved);
-    return DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {});
-  });
-  
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem('isg_tasks');
-    return saved ? JSON.parse(saved) : [];
-  });
+  // Full-screen Image Modal Viewer
+  const [previewModalImg, setPreviewModalImg] = useState(null);
+  const [previewModalTitle, setPreviewModalTitle] = useState('');
 
-  const [loadings, setLoadings] = useState(() => {
-    const saved = localStorage.getItem('loadings');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const t = (key) => DICT[lang][key] || key;
 
-  // Veritabanı (Storage) Dinamik Güncelleme
-  useEffect(() => { localStorage.setItem('isg_users', JSON.stringify(users)); }, [users]);
-  useEffect(() => { localStorage.setItem('isg_points', JSON.stringify(points)); }, [points]);
-  useEffect(() => { localStorage.setItem('isg_tasks', JSON.stringify(tasks)); }, [tasks]);
-  useEffect(() => { localStorage.setItem('loadings', JSON.stringify(loadings)); }, [loadings]);
+  const toggleLang = () => {
+    const newLang = lang === 'tr' ? 'en' : 'tr';
+    setLang(newLang);
+    localStorage.setItem('isg_lang', newLang);
+  };
 
-  const [lightboxImg, setLightboxImg] = useState(null);
+  useEffect(() => {
+    const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+      const usersData = snapshot.docs.map(doc => doc.data());
+      if (usersData.length === 0) {
+        const defaultAdmin = { id: "1", username: 'agiradar', password: 'agiradar123', role: 'admin', name: 'Ağır Adar', dept: null };
+        setDoc(doc(db, "users", "1"), defaultAdmin);
+        setUsers([defaultAdmin]);
+      } else {
+        const adminAcc = usersData.find(u => u.id === "1");
+        if (adminAcc && adminAcc.username === 'admin') {
+           updateDoc(doc(db, "users", "1"), { username: 'agiradar', password: 'agiradar123', name: 'Ağır Adar' });
+        }
+        setUsers(usersData);
+        
+        const savedUserId = localStorage.getItem('isg_logged_in_user');
+        if (savedUserId) {
+          const autoUser = usersData.find(u => u.id === savedUserId);
+          if (autoUser) setCurrentUser(autoUser);
+        }
+      }
+    });
 
-  const formatDate = (dateObj) => {
-    return `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
+    const unsubPoints = onSnapshot(doc(db, "system", "points"), (docSnap) => {
+      if (docSnap.exists()) { setPoints(docSnap.data()); } 
+      else {
+        const initialPoints = DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {});
+        setDoc(doc(db, "system", "points"), initialPoints);
+        setPoints(initialPoints);
+      }
+    });
+
+    const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
+      const tasksData = snapshot.docs.map(doc => doc.data());
+      tasksData.sort((a, b) => b.timestamp - a.timestamp);
+      setTasks(tasksData);
+      setIsFirebaseLoading(false);
+    });
+
+    const unsubLoadings = onSnapshot(collection(db, "loadings"), (snapshot) => {
+      const loadingData = snapshot.docs.map(doc => doc.data());
+      loadingData.sort((a, b) => b.timestamp - a.timestamp);
+      setLoadings(loadingData);
+    });
+
+    return () => { unsubUsers(); unsubPoints(); unsubTasks(); unsubLoadings(); };
+  }, []);
+
+  const getLastFridayOfCurrentMonth = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0); 
+    while (d.getDay() !== 5) { d.setDate(d.getDate() - 1); }
+    return d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
   const logout = () => { 
-    localStorage.removeItem('isg_auth');
-    sessionStorage.removeItem('isg_auth');
     setCurrentUser(null); 
+    setSelectedAdminDept(null); 
+    setSelectedAdminDate(null);
+    setAdminViewMode('list');
+    setAdminSystemMode('isg');
+    localStorage.removeItem('isg_logged_in_user');
   };
 
+  const createTask = async (dept, priority, desc, deadlineHours, imgUrl) => {
+    const taskId = Date.now().toString();
+    const newTask = {
+      id: taskId, dept, priority, desc, status: 'acik', 
+      createdAt: formatDate(new Date()), timestamp: Date.now(), 
+      deadlineHours, imgUrl: imgUrl || '', modNote: ''
+    };
+    await setDoc(doc(db, "tasks", taskId), newTask);
+  };
+
+  const updateTaskStatus = async (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
+    const taskRef = doc(db, "tasks", id);
+    const updates = { status: newStatus };
+    if (chiefNote) updates.chiefNote = chiefNote;
+    if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
+    if (modNote) updates.modNote = modNote;
+    await updateDoc(taskRef, updates);
+  };
+
+  const createLoading = async (plaka, sofor, destLocation, destCompany, projectNo, tonnage, not, imgUrl) => {
+    const loadId = Date.now().toString();
+    const newLoad = {
+      id: loadId, 
+      plaka, 
+      sofor, 
+      destLocation: destLocation || '', 
+      destCompany: destCompany || '', 
+      projectNo: projectNo || '', 
+      tonnage: tonnage || '', 
+      preNote: not, 
+      preImgUrl: imgUrl || '', 
+      status: 'devam_ediyor', 
+      creatorId: currentUser.id, 
+      creatorName: currentUser.name,
+      createdAtDate: formatDate(new Date()), 
+      createdAtTime: formatTime(new Date()), 
+      timestamp: Date.now(),
+      postImgUrl: '', 
+      postNote: '', 
+      finishedAtTime: ''
+    };
+    await setDoc(doc(db, "loadings", loadId), newLoad);
+  };
+
+  const finishLoading = async (loadId, postNot, postImgUrl) => {
+    const loadRef = doc(db, "loadings", loadId);
+    await updateDoc(loadRef, {
+      status: 'tamamlandi',
+      postNote: postNot,
+      postImgUrl: postImgUrl || '',
+      finishedAtTime: formatTime(new Date())
+    });
+  };
+
+  // 24 Hour Tonnage Analytics Calculation
   const get24HourTonnage = () => {
     const past24h = Date.now() - (24 * 60 * 60 * 1000);
-    return loadings.filter(l => l.timestamp >= past24h).reduce((total, load) => total + (parseFloat(load.tonnage) || 0), 0);
+    return loadings
+      .filter(l => l.timestamp >= past24h)
+      .reduce((total, load) => {
+        const val = parseFloat(load.tonnage) || 0;
+        return total + val;
+      }, 0);
   };
 
-  const CompanyLogo = ({ className = "", scale = "scale-100", theme = 'blue', showBox = true }) => (
-    <div className={`flex flex-col items-center justify-center rounded-2xl ${showBox ? 'bg-white/95 px-16 py-8 shadow-2xl border border-gray-100/50 backdrop-blur-sm' : ''} ${className}`}>
-      <div className={`flex items-center space-x-2 ${scale} origin-center`}>
-        <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden shrink-0">
+  const CompanyLogo = ({ className = "", scale = "scale-100", theme = 'blue' }) => (
+    <div className={`flex flex-col items-center justify-center bg-white p-2 rounded-xl shadow-sm ${className}`}>
+      <div className={`flex items-center space-x-1 ${scale} origin-center`}>
+        <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden">
            <div className={`absolute top-0 left-0 w-full h-full border-t-4 border-l-4 rounded-tl-full opacity-80 ${theme==='orange'?'border-orange-600':'border-blue-900'}`}></div>
            <div className={`absolute top-1 left-1 w-[90%] h-[90%] border-t-4 border-l-4 rounded-tl-full ${theme==='orange'?'border-orange-400':'border-blue-400'}`}></div>
            <div className="absolute top-3 left-2 w-[80%] h-[80%] border-t-4 border-l-4 border-gray-400 rounded-tl-full opacity-50"></div>
         </div>
-        <div className="flex flex-col items-start">
+        <div className="flex flex-col">
           <div className="flex items-baseline space-x-1">
             <span className="text-gray-800 font-extrabold text-2xl tracking-tighter">ADS</span>
             <span className="text-gray-800 font-bold text-xl">Metal A.Ş.</span>
           </div>
-          <span className={`text-[6.5px] font-bold text-white px-1.5 py-0.5 rounded-sm tracking-widest uppercase -mt-0.5 w-max ${theme==='orange'?'bg-orange-600':'bg-blue-900'}`}>Transformer Tanks & Fin Walls</span>
+          <span className={`text-[6px] font-bold text-white px-1 rounded-sm tracking-widest uppercase -mt-1 w-max ${theme==='orange'?'bg-orange-600':'bg-blue-900'}`}>Transformer Tanks & Fin Walls</span>
         </div>
       </div>
     </div>
   );
 
+  // Full Screen Image Modal Lightbox Component
   const ImageLightboxModal = () => {
-    if (!lightboxImg) return null;
+    if (!previewModalImg) return null;
     return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4 cursor-zoom-out" onClick={() => setLightboxImg(null)}>
-        <button className="absolute top-6 right-6 text-white hover:text-gray-300 p-2 bg-white/10 rounded-full"><X className="w-8 h-8" /></button>
-        <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={e => e.stopPropagation()}>
-           <img src={lightboxImg} alt="Enlarged" className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl border border-white/20" />
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-slide-up" onClick={() => setPreviewModalImg(null)}>
+        <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute top-4 right-4 z-10 flex space-x-2">
+            <button onClick={() => setPreviewModalImg(null)} className="p-3 bg-white/20 hover:bg-white/40 text-white rounded-full transition-colors shadow-lg">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          {previewModalTitle && (
+            <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/10">
+              {previewModalTitle}
+            </div>
+          )}
+          <img src={previewModalImg} alt="Büyütülmüş Fotoğraf" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/20" />
+          <p className="text-white/70 text-xs mt-3 flex items-center">
+            <Maximize2 className="w-3.5 h-3.5 mr-1" /> Kapatmak için görsele veya boşluğa tıklayabilirsiniz
+          </p>
         </div>
       </div>
     );
   };
 
-  const TopBar = ({ theme = 'blue' }) => (
-    <header className="bg-white px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200">
-      <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
-        <div className="flex items-center space-x-4">
-          <CompanyLogo scale="scale-75 md:scale-90" theme={theme} showBox={false} />
-          <div className="border-l pl-4 border-gray-300">
-            <h2 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{currentUser.name}</h2>
-            <span className="text-[10px] md:text-xs text-gray-500 capitalize leading-tight">{currentUser.role === 'sef' ? `${currentUser.dept} Birimi` : currentUser.role} Paneli</span>
-          </div>
-        </div>
-        <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
-          <span className="hidden sm:inline">Çıkış Yap</span>
-          <LogOut className="w-5 h-5" />
-        </button>
-      </div>
-    </header>
-  );
-
   const LoginScreen = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loginErr, setLoginErr] = useState('');
-    const [rememberMe, setRememberMe] = useState(true); // Beni Hatırla state'i
-    
-    const isISG = loginTheme === 'isg';
+    const [rememberMe, setRememberMe] = useState(false);
+    const [loginTheme, setLoginTheme] = useState('isg'); 
 
     const handleLogin = (e) => {
       e.preventDefault();
       const account = users.find(u => u.username === username.toLowerCase().trim());
       
       if (account && account.password === password) {
-        if (loginTheme === 'isg' && account.role === 'yuklemeci') { setLoginErr(t('no_auth')); return; }
-        if (loginTheme === 'yukleme' && (account.role === 'sef' || account.role === 'mod')) { setLoginErr(t('no_auth')); return; }
-        
-        // Beni hatırla seçeneğine göre Storage ayarı
-        if (rememberMe) {
-          localStorage.setItem('isg_auth', JSON.stringify(account));
-        } else {
-          sessionStorage.setItem('isg_auth', JSON.stringify(account));
+        if (loginTheme === 'isg' && account.role === 'yuklemeci') {
+            setLoginErr(t('err_isg_module')); return;
+        }
+        if (loginTheme === 'yukleme' && (account.role === 'sef' || account.role === 'mod')) {
+            setLoginErr(t('err_yukleme_module')); return;
         }
 
+        if (rememberMe) {
+          localStorage.setItem('isg_logged_in_user', account.id);
+        }
         setCurrentUser(account);
         setLoginErr('');
       } else {
-        setLoginErr(t('err_login'));
+        setLoginErr(t('err_wrong_cred'));
       }
     };
 
+    if (isFirebaseLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+           <p className="text-gray-600 font-medium animate-pulse">{t('loading_server')}</p>
+        </div>
+      );
+    }
+
+    const isISG = loginTheme === 'isg';
+
     return (
-      <div className="relative flex items-center justify-center min-h-screen bg-gray-900 p-6 overflow-hidden">
-        <div className="absolute inset-0 z-0 opacity-40">
-           <img src="ads-metal-anadolu-osb.jpg" alt="ADS Metal Factory" className="w-full h-full object-cover" />
-           <div className={`absolute inset-0 bg-gradient-to-br transition-colors duration-1000 ${isISG ? 'from-blue-900/90 to-gray-900/90' : 'from-orange-900/90 to-gray-900/90'}`}></div>
+      <div className={`flex flex-col items-center justify-center min-h-screen p-6 transition-colors duration-500 ${isISG ? 'bg-gray-100' : 'bg-orange-50'}`}>
+        <div className="absolute top-6 right-6">
+            <button onClick={toggleLang} className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-700 hover:bg-gray-50 border border-gray-200">
+                <Globe className="w-4 h-4 text-blue-500" />
+                <span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
+            </button>
         </div>
 
-        <div className="absolute top-6 right-6 z-20 flex bg-white/10 backdrop-blur-md rounded-full p-1 border border-white/20 shadow-xl">
-          <button onClick={() => setLang('tr')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${lang === 'tr' ? 'bg-white text-gray-900' : 'text-white hover:bg-white/20'}`}>TR</button>
-          <button onClick={() => setLang('en')} className={`px-4 py-1.5 rounded-full text-xs font-bold transition-colors ${lang === 'en' ? 'bg-white text-gray-900' : 'text-white hover:bg-white/20'}`}>EN</button>
+        <div className="bg-white p-1.5 rounded-full shadow-md mb-8 flex space-x-1 border border-gray-200">
+          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
+            <ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}
+          </button>
+          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
+            <Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}
+          </button>
         </div>
 
-        <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden animate-slide-up z-10 border border-white/40 mt-12 md:mt-0">
-          <div className={`hidden md:flex flex-col items-center justify-center w-1/2 p-12 border-r border-gray-100 transition-colors duration-500 ${isISG ? 'bg-blue-50/50' : 'bg-orange-100/30'}`}>
-            <CompanyLogo className="mb-8" scale="scale-150" theme={isISG ? 'blue' : 'orange'} showBox={true} />
-            <div className="flex space-x-2 bg-gray-200 p-1.5 rounded-xl shadow-inner mb-6">
-              <button onClick={() => setLoginTheme('isg')} className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center ${isISG ? 'bg-white text-blue-700 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><ShieldAlert className="w-4 h-4 mr-1.5" /> İSG</button>
-              <button onClick={() => setLoginTheme('yukleme')} className={`px-5 py-2.5 rounded-lg font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-white text-orange-700 shadow-md' : 'text-gray-500 hover:text-gray-700'}`}><Truck className="w-4 h-4 mr-1.5" /> Yükleme</button>
-            </div>
-            <h1 className={`text-3xl font-bold text-center mt-2 leading-tight ${isISG ? 'text-blue-900' : 'text-orange-900'}`}>{isISG ? t('sys_isg_title') : t('sys_yukleme_title')}<br/>{t('sys_management')}</h1>
+        <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+          <div className={`hidden md:flex flex-col items-center justify-center w-1/2 p-12 border-r border-gray-100 transition-colors duration-500 ${isISG ? 'bg-blue-50' : 'bg-orange-100/50'}`}>
+            <CompanyLogo className="bg-transparent shadow-none mb-6" scale="scale-150" theme={isISG ? 'blue' : 'orange'} />
+            <h1 className={`text-3xl font-bold text-center mt-8 ${isISG ? 'text-blue-900' : 'text-orange-900'}`}>
+              {isISG ? t('sys_isg_title') : t('sys_yukleme_title')}<br/>{t('sys_management')}
+            </h1>
           </div>
 
           <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
-            <div className="md:hidden text-center mb-6">
-              <CompanyLogo className="mx-auto" scale="scale-110" theme={isISG ? 'blue' : 'orange'} showBox={false} />
-              <div className="flex justify-center space-x-2 bg-gray-200 p-1.5 rounded-xl shadow-inner mt-6 mx-auto w-max">
-                <button onClick={() => setLoginTheme('isg')} className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center ${isISG ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}><ShieldAlert className="w-4 h-4 mr-1.5" /> İSG</button>
-                <button onClick={() => setLoginTheme('yukleme')} className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-white text-orange-700 shadow-sm' : 'text-gray-500'}`}><Truck className="w-4 h-4 mr-1.5" /> Yükleme</button>
-              </div>
+            <div className="md:hidden text-center mb-8">
+              <CompanyLogo className="mx-auto" scale="scale-110" theme={isISG ? 'blue' : 'orange'} />
+              <h1 className="text-xl font-bold text-gray-800 mt-4">{isISG ? t('sys_isg_title') : t('sys_yukleme_title')}</h1>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('welcome')}</h2>
-            <p className="text-gray-500 mb-8 text-sm">{t('login_prompt')}</p>
+            <p className="text-gray-500 mb-8 text-sm">{t('login_desc')}</p>
             
             <form onSubmit={handleLogin} className="space-y-5">
               {loginErr && (
@@ -226,49 +547,28 @@ export default function App() {
               )}
               
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Kullanıcı Adı</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{t('username')}</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input 
-                    type="text" 
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors"
-                    required
-                  />
+                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className={`w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 focus:bg-white transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required />
                 </div>
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">Şifre</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{t('password')}</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input 
-                    type="password" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors"
-                    required
-                  />
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 focus:bg-white transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required />
                 </div>
               </div>
-
-              {/* Beni Hatırla Seçeneği Eklendi */}
-              <div className="flex items-center mt-2">
-                <input 
-                  type="checkbox" 
-                  id="rememberMe" 
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer"
-                />
-                <label htmlFor="rememberMe" className="ml-2 block text-sm font-medium text-gray-600 cursor-pointer">
-                  Beni Hatırla
-                </label>
+              
+              <div className="flex items-center mt-2 pl-1">
+                <input type="checkbox" id="rememberMe" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className={`w-4 h-4 bg-gray-100 border-gray-300 rounded cursor-pointer ${isISG ? 'text-blue-600 focus:ring-blue-500' : 'text-orange-600 focus:ring-orange-500'}`} />
+                <label htmlFor="rememberMe" className="ml-2 text-sm font-bold text-gray-600 cursor-pointer select-none">{t('remember_me')}</label>
               </div>
               
-              <button type="submit" className={`w-full py-4 text-white rounded-xl font-bold shadow-lg transition-colors mt-6 ${isISG ? 'bg-blue-700 hover:bg-blue-800' : 'bg-orange-600 hover:bg-orange-700'}`}>
-                Giriş Yap
+              <button type="submit" className={`w-full py-4 text-white rounded-xl font-bold shadow-lg transition-colors mt-4 ${isISG ? 'bg-blue-700 hover:bg-blue-800' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                {t('login_btn')}
               </button>
             </form>
           </div>
@@ -277,277 +577,518 @@ export default function App() {
     );
   };
 
-  const AdminDashboard = () => {
-    // 3 Ana Görünüm: 'isg' | 'yukleme' | 'users'
-    const [adminViewMode, setAdminViewMode] = useState('isg'); 
+  const TopBar = ({ theme = 'blue' }) => {
+    let roleText = currentUser.role;
+    if (currentUser.role === 'sef') roleText = `${currentUser.dept} Birimi`;
+    if (currentUser.role === 'yuklemeci') roleText = `Yükleme Sorumlusu`;
     
-    // İSG Tabları
-    const [isgMonthOffset, setIsgMonthOffset] = useState(0);
-    const [selectedAdminDept, setSelectedAdminDept] = useState(null);
-    const [selectedAdminDate, setSelectedAdminDate] = useState(null);
-    
-    // Yükleme Tabları
-    const [yuklemeTab, setYuklemeTab] = useState('calendar');
-    const [currentMonthOffset, setCurrentMonthOffset] = useState(0);
-    const [shipFilter, setShipFilter] = useState('today');
-    const [expandedId, setExpandedId] = useState(null);
+    return (
+      <header className="bg-white px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200">
+        <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-1 scale-75 md:scale-90 origin-left">
+              <CompanyLogo className="bg-transparent shadow-none !p-0" theme={theme} />
+            </div>
+            <div className="border-l pl-4 border-gray-300">
+              <h2 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{currentUser.name}</h2>
+              <span className="text-[10px] md:text-xs text-gray-500 capitalize leading-tight">{roleText}</span>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+             <button onClick={toggleLang} className="hidden sm:flex items-center space-x-1 text-gray-500 hover:text-gray-800 text-xs font-bold bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
+                 <Globe className="w-3.5 h-3.5" /> <span>{lang === 'tr' ? 'EN' : 'TR'}</span>
+             </button>
+             <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
+               <span className="hidden sm:inline">{t('logout')}</span>
+               <LogOut className="w-5 h-5" />
+             </button>
+          </div>
+        </div>
+      </header>
+    );
+  };
 
-    // Kullanıcı Yönetimi State'leri
-    const [userTab, setUserTab] = useState('isg');
-    const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
-    
-    // Admin Wipe Feature States
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [deleteCountdown, setDeleteCountdown] = useState(0);
+  const YuklemeciDashboard = () => {
+    const [isCreating, setIsCreating] = useState(false);
+    const [form, setForm] = useState({ 
+      plaka: '', 
+      sofor: '', 
+      destLocation: '', 
+      destCompany: '', 
+      projectNo: '', 
+      tonnage: '', 
+      not: '' 
+    });
+    const [imgPreview, setImgPreview] = useState(null);
+    const [finishModal, setFinishModal] = useState({ isOpen: false, loadId: null, note: '', imgPreview: null });
 
-    const isAdminAgiradar = currentUser?.username === 'agiradar';
+    const activeLoadings = loadings.filter(l => l.status === 'devam_ediyor');
+    const tonnage24h = get24HourTonnage();
 
-    // Kullanıcı Metodları
-    const handleCreateUser = (e) => {
+    const handleStartLoading = (e) => {
       e.preventDefault();
-      if(users.find(u => u.username === newUser.username)) { alert("Bu kullanıcı adı alınmış!"); return; }
-      setUsers([...users, { ...newUser, id: Date.now(), dept: newUser.role === 'sef' ? newUser.dept : null }]);
-      setNewUser({ username: '', password: '', name: '', role: userTab === 'isg' ? 'sef' : 'yuklemeci', dept: DEPARTMENTS[0] });
-      alert("Kullanıcı başarıyla oluşturuldu.");
+      createLoading(form.plaka, form.sofor, form.destLocation, form.destCompany, form.projectNo, form.tonnage, form.not, imgPreview);
+      setForm({ plaka: '', sofor: '', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
+      setImgPreview(null);
+      setIsCreating(false);
     };
 
-    const handleDeleteUser = (id) => {
-      if(id === 1) return; 
-      if(window.confirm("Kullanıcı silinsin mi?")) setUsers(users.filter(u => u.id !== id));
+    const handleFinishLoading = () => {
+      finishLoading(finishModal.loadId, finishModal.note, finishModal.imgPreview);
+      setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null });
     };
 
-    const handleWipeData = () => {
-      if(window.confirm("TÜM GEÇMİŞ RAPORLARI SİLMEK ÜZERESİNİZ! Bu işlem geri alınamaz. Emin misiniz?")) {
-        setTasks([]);
-        setLoadings([]);
-        setPoints(DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {}));
-        setIsDeleting(false);
-        alert("Tüm geçmiş kayıtlar başarıyla temizlendi.");
-      }
-    };
-
-    const startDeleteCountdown = () => {
-      setIsDeleting(true);
-      setDeleteCountdown(10);
-      let count = 10;
-      const interval = setInterval(() => {
-        count -= 1;
-        setDeleteCountdown(count);
-        if (count <= 0) {
-          clearInterval(interval);
-        }
-      }, 1000);
-    };
-
-    const renderUsers = () => (
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up w-full">
-        <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center"><Users className="w-6 h-6 mr-2 text-purple-600"/> Sistem & Kullanıcı Yönetimi</h2>
-        
-        <div className="flex space-x-2 bg-gray-100 p-1 rounded-xl mb-6 max-w-md">
-          <button onClick={() => {setUserTab('isg'); setNewUser({...newUser, role:'sef'});}} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${userTab==='isg'?'bg-white text-blue-600 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>İSG Hesapları</button>
-          <button onClick={() => {setUserTab('yukleme'); setNewUser({...newUser, role:'yuklemeci'});}} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${userTab==='yukleme'?'bg-white text-orange-600 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>Yükleme Hesapları</button>
+    return (
+      <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 bg-orange-50/30">
+        <div className="bg-gradient-to-r from-orange-600 to-amber-700 p-6 md:p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden mb-8 gap-4">
+          <div className="z-10">
+            <h1 className="text-3xl font-extrabold mb-2 flex items-center"><Truck className="w-8 h-8 mr-3"/> {t('yuk_title')}</h1>
+            <p className="text-orange-100 font-medium">{t('yuk_desc')}</p>
+          </div>
+          <div className="z-10 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex items-center space-x-3">
+             <div className="bg-white/20 p-2 rounded-xl"><Scale className="w-6 h-6 text-white" /></div>
+             <div>
+               <p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">{t('tonnage_24h')}</p>
+               <p className="text-2xl font-extrabold text-white">{tonnage24h.toLocaleString('tr-TR')} <span className="text-sm font-medium">kg / ton</span></p>
+             </div>
+          </div>
+          <Package className="w-48 h-48 text-white opacity-10 absolute right-0 -bottom-10 z-0 transform -rotate-12 pointer-events-none" />
         </div>
 
-        <form onSubmit={handleCreateUser} className="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8 space-y-4">
-          <h3 className="font-bold text-gray-700 text-sm mb-2 border-b pb-2">Yeni Hesap Oluştur ({userTab === 'isg' ? 'İSG Modülü' : 'Yükleme Modülü'})</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="block text-xs font-bold text-gray-500 mb-1">Ad Soyad</label><input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-purple-400" placeholder="Örn: Ahmet Yılmaz" /></div>
-            <div><label className="block text-xs font-bold text-gray-500 mb-1">Kullanıcı Adı (Giriş için)</label><input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-purple-400" placeholder="örn: ahmetyilmaz" /></div>
-            <div><label className="block text-xs font-bold text-gray-500 mb-1">Şifre</label><input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-purple-400" /></div>
-            <div>
-              <label className="block text-xs font-bold text-gray-500 mb-1">Sistem Rolü</label>
-              <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-purple-400">
-                {userTab === 'isg' ? (
-                  <>
-                    <option value="sef">Birim Şefi</option>
-                    <option value="mod">İSG Uzmanı (Moderatör)</option>
-                    <option value="admin">Sistem Yöneticisi (Admin)</option>
-                  </>
-                ) : (
-                  <option value="yuklemeci">LOJİSTİK - Yükleme Sorumlusu</option>
-                )}
-              </select>
-            </div>
-            {newUser.role === 'sef' && (
-              <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-gray-500 mb-1">Sorumlu Olduğu Birim</label>
-                <select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-purple-400">{DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}</select>
-              </div>
-            )}
-          </div>
-          <button type="submit" className={`font-bold py-3 px-4 rounded-xl text-sm w-full flex justify-center items-center text-white shadow-md transition-colors ${userTab === 'isg' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'}`}><Plus className="w-5 h-5 mr-2"/> Hesabı Oluştur</button>
-        </form>
+        {!isCreating && (
+          <button onClick={() => setIsCreating(true)} className="w-full bg-white border-2 border-dashed border-orange-300 hover:border-orange-500 text-orange-700 py-6 rounded-2xl font-bold shadow-sm hover:shadow-md transition-all flex justify-center items-center space-x-3 mb-8 group">
+            <div className="bg-orange-100 p-2 rounded-full group-hover:scale-110 transition-transform"><Plus className="w-6 h-6" /></div>
+            <span className="text-lg">{t('new_load_btn')}</span>
+          </button>
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div>
-            <h3 className="font-bold text-gray-700 text-sm mb-3">Mevcut Hesaplar ({users.length})</h3>
-            <div className="space-y-2">
-              {users.filter(u => u.id === 1 || (userTab === 'isg' ? u.role !== 'yuklemeci' : u.role === 'yuklemeci')).map(u => (
-                <div key={u.id} className="flex justify-between items-center p-3 border rounded-xl hover:bg-gray-50 transition-colors">
-                  <div>
-                    <p className="font-bold text-gray-800 text-sm">{u.name} <span className="text-xs text-gray-400 font-normal ml-2">@{u.username}</span></p>
-                    <p className="text-xs text-gray-500 capitalize">{u.role === 'sef' ? `${u.dept} Şefi` : u.role}</p>
-                    {/* YENİ: Sadece agiradar hesap şifrelerini görebilir */}
-                    {isAdminAgiradar && u.id !== 1 && <p className="text-[10px] text-red-500 font-bold mt-1 bg-red-50 px-2 py-0.5 rounded w-max">Şifre: {u.password}</p>}
-                  </div>
-                  {u.id !== 1 && <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"><Trash2 className="w-4 h-4"/></button>}
+        {isCreating && (
+          <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-orange-100 mb-8 animate-slide-up">
+            <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
+              <h3 className="font-bold text-xl text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-2 text-orange-500"/> {t('load_form_title')}</h3>
+              <button onClick={() => {setIsCreating(false); setImgPreview(null); setForm({plaka:'', sofor:'', destLocation:'', destCompany:'', projectNo:'', tonnage:'', not:''});}} className="text-gray-400 hover:text-gray-700"><X className="w-6 h-6"/></button>
+            </div>
+            <form onSubmit={handleStartLoading} className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('plate_no')}</label>
+                  <input required type="text" value={form.plaka} onChange={e=>setForm({...form, plaka: e.target.value.toUpperCase()})} className="w-full border border-gray-300 rounded-xl p-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold" />
                 </div>
-              ))}
-            </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('driver_name')}</label>
+                  <input type="text" value={form.sofor} onChange={e=>setForm({...form, sofor: e.target.value})} className="w-full border border-gray-300 rounded-xl p-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_location')}</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="text" value={form.destLocation} onChange={e=>setForm({...form, destLocation: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: İstanbul / Dilovası" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_company')}</label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="text" value={form.destCompany} onChange={e=>setForm({...form, destCompany: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: ABB Trafo A.Ş." />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('project_no')}</label>
+                  <div className="relative">
+                    <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="text" value={form.projectNo} onChange={e=>setForm({...form, projectNo: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: PRJ-2026-88" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('tonnage')}</label>
+                  <div className="relative">
+                    <Scale className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="number" step="any" value={form.tonnage} onChange={e=>setForm({...form, tonnage: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder="Örn: 24500 (kg) veya 24.5" />
+                  </div>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{t('cam_pre')}</label>
+                <input type="file" id="preLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImgPreview)} />
+                <div onClick={() => document.getElementById('preLoadCamera').click()} className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
+                  {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
+                    <><div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 group-hover:text-orange-500" /></div>
+                    <span className="text-sm font-bold">{t('cam_open')}</span><span className="text-xs text-gray-400 mt-1">{t('optional')}</span></>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{t('note_pre')}</label>
+                <input type="text" value={form.not} onChange={e=>setForm({...form, not: e.target.value})} className="w-full border border-gray-300 rounded-xl p-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" />
+              </div>
+              <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg">{t('start_load_btn')}</button>
+            </form>
           </div>
-          
-          {/* YENİ: Wipe data sadece agiradar'a özel */}
-          {isAdminAgiradar && (
-            <div>
-              <h3 className="font-bold text-gray-700 text-sm mb-3 flex items-center text-red-600"><AlertTriangle className="w-4 h-4 mr-2"/> Sistem Veritabanı (Admin Özel)</h3>
-              <div className="p-6 bg-red-50 border border-red-200 rounded-2xl flex flex-col items-center justify-center text-center">
-                 <h3 className="font-bold text-red-700 text-lg mb-2">Toplu Veri Temizliği</h3>
-                 <p className="text-sm text-red-600 mb-6">Sistemin veritabanını temizlemek istiyorsanız bu butonu kullanabilirsiniz. İSG ve Nakliye dahil tüm kayıtlı raporlar kalıcı olarak silinir.</p>
-                 
-                 {!isDeleting ? (
-                   <button onClick={startDeleteCountdown} className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition-all flex items-center">
-                     <Trash2 className="w-5 h-5 mr-2" /> Tüm Geçmiş Raporları Sil
-                   </button>
-                 ) : (
-                   <button disabled={deleteCountdown > 0} onClick={handleWipeData} className={`px-6 py-3 font-bold rounded-xl shadow-lg transition-all flex items-center ${deleteCountdown > 0 ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-red-600 hover:bg-red-700 text-white animate-pulse'}`}>
-                     {deleteCountdown > 0 ? `Onay Bekleniyor (${deleteCountdown}s)` : 'Eminim, Her Şeyi Sil!'}
-                   </button>
-                 )}
+        )}
+
+        <div className="mb-4">
+          <h2 className="text-lg font-bold text-gray-800 flex items-center"><Activity className="w-5 h-5 mr-2 text-blue-500"/> {t('active_loads')} ({activeLoadings.length})</h2>
+        </div>
+
+        {activeLoadings.length === 0 ? (
+          <div className="bg-white p-10 rounded-3xl text-center border border-gray-100 shadow-sm">
+            <CheckCircle className="w-16 h-16 mx-auto text-green-400 mb-4" />
+            <p className="font-bold text-xl text-gray-800">{t('no_active_loads')}</p>
+            <p className="text-gray-500 text-sm mt-2">{t('no_active_desc')}</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {activeLoadings.map(load => (
+              <div key={load.id} className="bg-white rounded-3xl shadow-sm border border-gray-200 overflow-hidden flex flex-col">
+                <div className="bg-gray-50 p-4 border-b border-gray-100 flex justify-between items-center">
+                  <div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">{t('plate')}</span><span className="text-xl font-extrabold text-gray-800">{load.plaka}</span></div>
+                  <div className="text-right"><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">{t('entry_time')}</span><span className="text-lg font-bold text-blue-600">{load.createdAtTime}</span></div>
+                </div>
+                <div className="p-5 flex-1 flex flex-col space-y-3">
+                  {load.sofor && <p className="text-xs text-gray-600 font-medium"><User className="w-3.5 h-3.5 inline mr-1 text-gray-400"/> {t('driver')}: <span className="text-gray-800 font-bold">{load.sofor}</span></p>}
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-orange-50/60 p-3 rounded-xl border border-orange-100">
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800">{load.destLocation || '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800">{load.destCompany || '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-700">{load.tonnage ? `${load.tonnage} kg/Ton` : '-'}</span></div>
+                  </div>
+
+                  <div className="flex items-start space-x-4 bg-gray-50 p-3 rounded-xl border border-gray-100 mt-auto">
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0 overflow-hidden relative group cursor-pointer" onClick={() => load.preImgUrl && setPreviewModalImg(load.preImgUrl)}>
+                       {load.preImgUrl ? (
+                          <>
+                            <img src={load.preImgUrl} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
+                          </>
+                       ) : <><ImageIcon className="w-5 h-5 mb-1"/><span className="text-[8px] font-bold">{t('no_photo')}</span></>}
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-gray-400 font-bold mb-1 uppercase tracking-wider">{t('pre_note_title')}</p>
+                      <p className="text-sm text-gray-800 font-medium">{load.preNote || t('no_note')}</p>
+                    </div>
+                  </div>
+                  <button onClick={() => setFinishModal({isOpen: true, loadId: load.id, note: '', imgPreview: null})} className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center mt-2"><CheckSquare className="w-5 h-5 mr-2" /> {t('finish_load_btn')}</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {finishModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
+            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+              <div className="p-6 bg-green-600 text-white flex justify-between items-center">
+                <h3 className="font-bold text-xl flex items-center"><Save className="w-6 h-6 mr-3"/> {t('finish_form_title')}</h3>
+                <button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="p-2 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button>
+              </div>
+              <div className="p-8 space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('cam_post')}</label>
+                  <input type="file" id="postLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setFinishModal({...finishModal, imgPreview: img}))} />
+                  <div onClick={() => document.getElementById('postLoadCamera').click()} className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
+                    {finishModal.imgPreview ? ( <img src={finishModal.imgPreview} className="w-full h-full object-cover" /> ) : (
+                      <><div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 group-hover:text-green-500" /></div>
+                      <span className="text-sm font-bold">{t('cam_open')}</span></>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('note_post')}</label>
+                  <input type="text" value={finishModal.note} onChange={e=>setFinishModal({...finishModal, note: e.target.value})} className="w-full border border-gray-300 rounded-xl p-4 bg-gray-50 outline-none focus:ring-2 focus:ring-green-500" />
+                </div>
+                <div className="flex space-x-3 pt-4 border-t border-gray-100">
+                  <button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="flex-1 py-4 font-bold text-gray-600 bg-gray-100 rounded-xl">{t('cancel')}</button>
+                  <button onClick={handleFinishLoading} className="flex-1 py-4 font-bold text-white bg-green-600 rounded-xl shadow-lg">{t('close_job')}</button>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     );
+  };
 
-    const renderIsgRightPanel = () => {
-      // 1. Departman Görünümü
-      if (selectedAdminDept) {
-        const deptTasks = tasks.filter(t => t.dept === selectedAdminDept);
-        return (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <button onClick={() => setSelectedAdminDept(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4 transition-colors">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Takvime Dön
-                </button>
-                <h2 className="text-2xl font-bold text-gray-800">{selectedAdminDept} Departmanı Raporu</h2>
-                <p className="text-gray-500 mt-1">Toplam İhlal Kaydı: {deptTasks.length}</p>
-              </div>
-              <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center">
-                 <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">Güncel Puan</p>
-                 <p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p>
-              </div>
-            </div>
+  const AdminDashboard = () => {
+    const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
+    const [accountTab, setAccountTab] = useState('isg');
+    
+    const [historyFilter, setHistoryFilter] = useState('1');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteCountdown, setDeleteCountdown] = useState(10);
+    const [visiblePasswords, setVisiblePasswords] = useState({});
 
-            <div className="grid grid-cols-1 gap-4">
-              {deptTasks.length === 0 ? (
-                 <p className="text-sm text-gray-500 p-4 col-span-full">Bu departmana ait kayıt bulunmamaktadır.</p>
-              ) : (
-                deptTasks.map(task => {
-                  const statusDef = STATUS_INFO[task.status];
-                  const Icon = statusDef.icon;
-                  return (
-                    <div key={task.id} className={`p-5 rounded-xl shadow-sm border-l-4 bg-gray-50 flex flex-col md:flex-row gap-6 ${statusDef.color.split(' ')[2]}`}>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start mb-3">
-                          <span className="text-xs text-gray-500 font-bold">{task.createdAt}</span>
-                          <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
-                            <Icon className="w-3.5 h-3.5 mr-1" /> {statusDef.label}
-                          </span>
-                        </div>
-                        <p className="text-gray-800 text-sm font-medium mb-4 bg-white p-3 rounded-lg border border-gray-100">{task.desc}</p>
-                        <span className={`text-xs px-2.5 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
-                      </div>
-                      
-                      {/* Fotoğraflar (Öncesi ve Sonrası) */}
-                      <div className="flex gap-3 md:w-64 shrink-0 mt-4 md:mt-0 items-center justify-center border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-4">
-                        {task.imgUrl ? (
-                           <div className="text-center group cursor-zoom-in" onClick={() => setLightboxImg(task.imgUrl)}>
-                             <div className="w-20 h-20 bg-gray-200 rounded-lg border border-gray-300 overflow-hidden relative">
-                               <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><ZoomIn className="text-white w-6 h-6"/></div>
-                               <ImageIcon className="w-8 h-8 m-auto mt-6 text-gray-400" />
-                             </div>
-                             <span className="text-[10px] font-bold text-gray-500 mt-1 block">ÖNCESİ</span>
-                           </div>
-                        ) : null}
-                        
-                        {task.afterImgUrl ? (
-                           <div className="text-center group cursor-zoom-in" onClick={() => setLightboxImg(task.afterImgUrl)}>
-                             <div className="w-20 h-20 bg-green-50 rounded-lg border border-green-300 overflow-hidden relative">
-                               <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><ZoomIn className="text-white w-6 h-6"/></div>
-                               <CheckCircle className="w-8 h-8 m-auto mt-6 text-green-400" />
-                             </div>
-                             <span className="text-[10px] font-bold text-green-600 mt-1 block">SONRASI</span>
-                           </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        );
+    useEffect(() => {
+      let timer;
+      if (showDeleteModal && deleteCountdown > 0) {
+        timer = setTimeout(() => setDeleteCountdown(deleteCountdown - 1), 1000);
       }
+      return () => clearTimeout(timer);
+    }, [showDeleteModal, deleteCountdown]);
 
-      // 2. Takvim Günlük Görünümü
-      if (selectedAdminDate) {
-        const dateTasks = tasks.filter(t => t.createdAt === selectedAdminDate);
+    const togglePasswordVisibility = (userId) => {
+      setVisiblePasswords(prev => ({ ...prev, [userId]: !prev[userId] }));
+    };
+
+    const handleCreateUser = async (e) => {
+      e.preventDefault();
+      if(users.find(u => u.username === newUser.username)) { alert("Username taken!"); return; }
+      const newUserId = Date.now().toString();
+      const finalRole = accountTab === 'yukleme' ? 'yuklemeci' : newUser.role;
+      const finalDept = finalRole === 'sef' ? newUser.dept : null;
+      
+      const userObj = { ...newUser, role: finalRole, id: newUserId, dept: finalDept };
+      await setDoc(doc(db, "users", newUserId), userObj);
+      setNewUser({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
+    };
+
+    const handleDeleteUser = async (id) => {
+      if(id === "1") return; 
+      if(window.confirm("Delete user?")) { await deleteDoc(doc(db, "users", id)); }
+    };
+
+    const executeHistoryDelete = async () => {
+      const now = Date.now();
+      const oneMonth = 30 * 24 * 60 * 60 * 1000;
+      let cutoff = 0;
+      if (historyFilter === '1') cutoff = now - (1 * oneMonth);
+      else if (historyFilter === '3') cutoff = now - (3 * oneMonth);
+      else if (historyFilter === '6') cutoff = now - (6 * oneMonth);
+      else if (historyFilter === 'all') cutoff = now + 10000;
+
+      const tasksToDelete = tasks.filter(t => t.timestamp <= cutoff);
+      for (const t of tasksToDelete) { await deleteDoc(doc(db, "tasks", t.id)); }
+      const loadsToDelete = loadings.filter(l => l.timestamp <= cutoff);
+      for (const l of loadsToDelete) { await deleteDoc(doc(db, "loadings", l.id)); }
+
+      setShowDeleteModal(false); setDeleteCountdown(10);
+    };
+
+    const renderRightPanel = () => {
+      if (adminViewMode === 'users') {
+        const filteredUsers = users.filter(u => accountTab === 'isg' ? (u.role !== 'yuklemeci') : (u.role === 'yuklemeci'));
+        
         return (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-            <button onClick={() => setSelectedAdminDate(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4 transition-colors">
-              <ArrowLeft className="w-4 h-4 mr-2" /> Takvime Dön
-            </button>
             <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">Günlük İSG Raporu</h2>
-                <p className="text-blue-600 font-medium text-lg mt-1">{selectedAdminDate}</p>
-              </div>
-              <CalendarDays className="w-12 h-12 text-blue-100" />
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Users className="w-6 h-6 mr-2 text-blue-600"/> {t('user_management')}</h2>
             </div>
 
-            <div className="grid grid-cols-1 gap-4">
-              {dateTasks.length === 0 ? (
-                 <p className="text-sm text-gray-500 p-4 col-span-full">Bu tarihte herhangi bir kayıt açılmamış.</p>
-              ) : (
-                dateTasks.map(task => {
+            <div className="flex bg-gray-100 p-1.5 rounded-xl shadow-inner mb-6">
+               <button onClick={() => setAccountTab('isg')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'isg' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
+                 <ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_accounts')}
+               </button>
+               <button onClick={() => setAccountTab('yukleme')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'yukleme' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}>
+                 <Truck className="w-4 h-4 mr-2" /> {t('yukleme_accounts')}
+               </button>
+            </div>
+            
+            <form onSubmit={handleCreateUser} className="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8 space-y-4">
+              <h3 className="font-bold text-gray-700 text-sm mb-2 border-b pb-2">{t('new_account')} ({accountTab === 'isg' ? 'İSG' : 'Yükleme'})</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{t('fullname')}</label>
+                  <input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{t('username')}</label>
+                  <input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{t('password')}</label>
+                  <input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
+                </div>
+                
+                {accountTab === 'isg' && (
+                    <div>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">{t('sys_role')}</label>
+                    <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
+                        <option value="sef">Birim Şefi</option>
+                        <option value="mod">İSG Uzmanı (Moderatör)</option>
+                        <option value="admin">Sistem Yöneticisi</option>
+                    </select>
+                    </div>
+                )}
+                
+                {accountTab === 'isg' && newUser.role === 'sef' && (
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-500 mb-1">{t('dept')}</label>
+                    <select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+              <button type="submit" className={`text-white font-bold py-2 px-4 rounded-lg text-sm w-full flex justify-center items-center ${accountTab === 'isg' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                <Plus className="w-4 h-4 mr-1"/> {t('create_acc_btn')}
+              </button>
+            </form>
+
+            <div>
+              <h3 className="font-bold text-gray-700 text-sm mb-3">{t('existing_accs')} ({filteredUsers.length})</h3>
+              <div className="space-y-2">
+                {filteredUsers.map(u => {
+                  const isVisible = visiblePasswords[u.id];
+                  return (
+                    <div key={u.id} className="flex justify-between items-center p-3.5 border rounded-xl hover:bg-gray-50 transition-colors">
+                      <div>
+                        <p className="font-bold text-gray-800 text-sm">{u.name} <span className="text-xs text-gray-400 font-normal ml-2">@{u.username}</span></p>
+                        <p className="text-xs text-gray-500 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        {/* Admin şifre görebilme özelliği */}
+                        {currentUser?.username === 'agiradar' && (
+                          <div className="flex items-center bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
+                            <span className="text-xs font-mono font-bold text-gray-700 mr-2">
+                              {isVisible ? u.password : '••••••••'}
+                            </span>
+                            <button onClick={() => togglePasswordVisibility(u.id)} className="text-gray-500 hover:text-gray-800 focus:outline-none">
+                              {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        )}
+                        {u.id !== "1" && <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md"><Trash2 className="w-4 h-4"/></button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      if (adminSystemMode === 'yukleme') {
+         const totalTonnageAll = loadings.reduce((acc, l) => acc + (parseFloat(l.tonnage) || 0), 0);
+
+         return (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-gray-100 pb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-3 text-orange-500"/> {t('all_reports')}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} kg/Ton</b></p>
+              </div>
+              <span className="bg-orange-100 text-orange-800 font-bold px-3 py-1 rounded-lg text-sm">{loadings.length} {t('records')}</span>
+            </div>
+            <div className="space-y-4">
+              {loadings.length === 0 ? <p className="text-gray-500 text-center py-10">{t('no_records')}</p> : (
+                loadings.map(load => (
+                  <div key={load.id} className="border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-shadow bg-gray-50/50">
+                    <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-3 border-b border-gray-100 gap-3">
+                      <div>
+                        <div className="flex items-center space-x-3 mb-1">
+                          <span className="text-xl font-extrabold text-gray-800">{load.plaka}</span>
+                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${load.status === 'tamamlandi' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                            {load.status === 'tamamlandi' ? t('status_done') : t('status_progress')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 font-medium"><Calendar className="w-3 h-3 inline mr-1"/> {load.createdAtDate} - {load.createdAtTime} {load.finishedAtTime && `| Çıkış: ${load.finishedAtTime}`}</p>
+                      </div>
+                      <div className="bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600"><User className="w-4 h-4 inline text-gray-400 mr-1"/> {load.sofor || '-'}</div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs bg-white p-3 rounded-xl border border-gray-100 mb-4">
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800">{load.destLocation || '-'}</span></div>
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800">{load.destCompany || '-'}</span></div>
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-600">{load.tonnage ? `${load.tonnage} kg/Ton` : '-'}</span></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">{t('before')}</span>
+                        {load.preImgUrl ? (
+                          <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.preImgUrl)}>
+                             <img src={load.preImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
+                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                          </div>
+                        ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
+                        <p className="text-sm text-gray-700 italic">"{load.preNote || "-"}"</p>
+                      </div>
+                      <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col">
+                        <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">{t('after')}</span>
+                        {load.status === 'devam_ediyor' ? <div className="w-full h-44 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-orange-400 text-sm font-medium mb-2">{t('loading_progress')}</div> : (
+                          <>{load.postImgUrl ? (
+                            <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.postImgUrl)}>
+                               <img src={load.postImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
+                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                            </div>
+                          ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
+                          <p className="text-sm text-gray-700 italic">"{load.postNote || "-"}"</p></>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+         );
+      }
+
+      if (selectedAdminDept || selectedAdminDate) {
+        const filterTasks = selectedAdminDept ? tasks.filter(t => t.dept === selectedAdminDept) : tasks.filter(t => t.createdAt === selectedAdminDate);
+        return (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+            <div className="flex justify-between items-start mb-6 border-b pb-4 border-gray-100">
+              <div>
+                <button onClick={() => { setSelectedAdminDept(null); setSelectedAdminDate(null); }} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4">
+                  <ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}
+                </button>
+                <h2 className="text-2xl font-bold text-gray-800">{selectedAdminDept || selectedAdminDate} Raporu</h2>
+                <p className="text-gray-500 mt-1">{t('total_record')} {filterTasks.length}</p>
+              </div>
+              {selectedAdminDept && (
+              <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center">
+                 <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">{t('current_score')}</p>
+                 <p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p>
+              </div>)}
+            </div>
+
+            <div className="space-y-4">
+              {filterTasks.length === 0 ? <p className="text-sm text-gray-500">{t('no_records')}</p> : (
+                filterTasks.map(task => {
                   const statusDef = STATUS_INFO[task.status];
                   const Icon = statusDef.icon;
                   return (
-                    <div key={task.id} className={`p-5 rounded-xl shadow-sm border-l-4 bg-gray-50 flex flex-col md:flex-row gap-6 ${statusDef.color.split(' ')[2]}`}>
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start mb-3">
-                          <span className="text-sm text-gray-800 font-bold">{task.dept} Departmanı</span>
-                          <span className={`text-[10px] px-2.5 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
-                            <Icon className="w-3.5 h-3.5 mr-1" /> {statusDef.label}
-                          </span>
+                    <div key={task.id} className={`p-5 rounded-2xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]}`}>
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                           <span className="font-bold text-gray-800 block">{task.dept}</span>
+                           <span className="text-xs text-gray-500 font-medium">{task.createdAt}</span>
                         </div>
-                        <p className="text-gray-600 text-sm font-medium mb-4 bg-white p-3 rounded-lg border border-gray-100">{task.desc}</p>
-                        <span className={`text-xs px-2.5 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
+                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
+                          <Icon className="w-3 h-3 mr-1" /> {t(statusDef.label_key)}
+                        </span>
                       </div>
-                      
-                      {/* Fotoğraflar (Öncesi ve Sonrası) */}
-                      <div className="flex gap-3 md:w-64 shrink-0 mt-4 md:mt-0 items-center justify-center border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-4">
-                        {task.imgUrl ? (
-                           <div className="text-center group cursor-zoom-in" onClick={() => setLightboxImg(task.imgUrl)}>
-                             <div className="w-20 h-20 bg-gray-200 rounded-lg border border-gray-300 overflow-hidden relative">
-                               <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><ZoomIn className="text-white w-6 h-6"/></div>
-                               <ImageIcon className="w-8 h-8 m-auto mt-6 text-gray-400" />
-                             </div>
-                             <span className="text-[10px] font-bold text-gray-500 mt-1 block">ÖNCESİ</span>
-                           </div>
-                        ) : null}
-                        
-                        {task.afterImgUrl ? (
-                           <div className="text-center group cursor-zoom-in" onClick={() => setLightboxImg(task.afterImgUrl)}>
-                             <div className="w-20 h-20 bg-green-50 rounded-lg border border-green-300 overflow-hidden relative">
-                               <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><ZoomIn className="text-white w-6 h-6"/></div>
-                               <CheckCircle className="w-8 h-8 m-auto mt-6 text-green-400" />
-                             </div>
-                             <span className="text-[10px] font-bold text-green-600 mt-1 block">SONRASI</span>
-                           </div>
-                        ) : null}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                         <div className="bg-white p-3 rounded-xl border border-gray-200 flex flex-col items-center">
+                           <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 w-full text-left">{t('before')}</span>
+                           {task.imgUrl ? (
+                              <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full" onClick={() => setPreviewModalImg(task.imgUrl)}>
+                                <img src={task.imgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                              </div>
+                           ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
+                           <p className="text-sm text-gray-800 w-full text-left">{task.desc}</p>
+                         </div>
+                         <div className="bg-white p-3 rounded-xl border border-gray-200 flex flex-col items-center opacity-90">
+                           <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 w-full text-left">{t('solution_after')}</span>
+                           {task.status === 'cozuldu' || task.status === 'onay_bekliyor' ? (
+                             <>{task.afterImgUrl ? (
+                                <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full" onClick={() => setPreviewModalImg(task.afterImgUrl)}>
+                                  <img src={task.afterImgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                                </div>
+                             ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
+                             <p className="text-sm text-gray-700 italic w-full text-left">"{task.chiefNote}"</p></>
+                           ) : <div className="w-full h-full min-h-[8rem] bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-xs">{t('stat_acik')}</div>}
+                         </div>
+                      </div>
+                      <div className="mt-4 flex justify-between items-center">
+                         <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{t(PRIORITIES[task.priority].label_key)} {t('risk')}</span>
+                         {task.status === 'acik' && <span className="text-xs text-red-600 font-bold"><Clock className="w-3 h-3 inline mr-1"/>{task.deadlineHours} {t('hours_left')}</span>}
                       </div>
                     </div>
                   );
@@ -558,289 +1099,43 @@ export default function App() {
         );
       }
 
-      // 3. Varsayılan (Geri Döndürülen) İSG Takvimi
-      const isgDate = new Date();
-      isgDate.setMonth(isgDate.getMonth() + isgMonthOffset);
-      const currentMonth = isgDate.getMonth();
-      const currentYear = isgDate.getFullYear();
+      const currDate = new Date();
+      const currentMonth = currDate.getMonth();
+      const currentYear = currDate.getFullYear();
       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
       const firstDay = new Date(currentYear, currentMonth, 1).getDay();
       const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
-      
-      const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-      const dayNames = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+      const dayNames = lang === 'tr' ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const monthNames = lang === 'tr' ? ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
       return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-          <div className="flex justify-between items-center mb-6">
-             <div className="flex items-center space-x-3">
-               <button onClick={() => setIsgMonthOffset(prev => prev - 1)} className="p-2 rounded-full hover:bg-gray-100"><ChevronLeft className="w-5 h-5 text-gray-600"/></button>
-               <h3 className="font-extrabold text-gray-800 text-2xl w-40 text-center">{monthNames[currentMonth]} {currentYear}</h3>
-               <button onClick={() => setIsgMonthOffset(prev => prev + 1)} className="p-2 rounded-full hover:bg-gray-100"><ChevronRight className="w-5 h-5 text-gray-600"/></button>
+          <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100">
+             <div>
+               <h3 className="font-extrabold text-gray-800 text-2xl flex items-center">
+                 <CalendarDays className="w-7 h-7 mr-3 text-blue-600"/> {monthNames[currentMonth]} {currentYear}
+               </h3>
              </div>
-             <span className="text-sm text-blue-800 bg-blue-50 px-3 py-1 rounded-lg font-bold flex items-center hidden sm:flex"><Calendar className="w-4 h-4 mr-2"/> Aylık İSG Takvimi</span>
           </div>
-          
           <div className="grid grid-cols-7 gap-2 text-center mb-3">
-            {dayNames.map(day => (
-              <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2">{day}</div>
-            ))}
+            {dayNames.map(day => <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2 bg-gray-50 rounded-lg">{day}</div>)}
           </div>
-          
           <div className="grid grid-cols-7 gap-2">
-             {Array.from({ length: startOffset }).map((_, i) => (
-               <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-transparent"></div>
-             ))}
-             
+             {Array.from({ length: startOffset }).map((_, i) => <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 border border-gray-100 opacity-50"></div>)}
              {Array.from({ length: daysInMonth }).map((_, i) => {
                const dayNum = i + 1;
                const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
-               
-               const realToday = new Date();
-               const isToday = dayNum === realToday.getDate() && currentMonth === realToday.getMonth() && currentYear === realToday.getFullYear();
-               
+               const isToday = dayNum === currDate.getDate();
                const dayTasks = tasks.filter(t => t.createdAt === formattedDateForCell);
-               const hasRed = dayTasks.some(t => t.status === 'acik' || t.status === 'itiraz_edildi');
-               const hasYellow = dayTasks.some(t => t.status === 'onay_bekliyor');
-               const hasGreen = dayTasks.some(t => t.status === 'cozuldu');
-
+               
                return (
-                 <div 
-                   key={dayNum} 
-                   onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)}
-                   className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all
-                     ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100' : 'bg-white border-gray-100 hover:border-blue-300'}
-                     ${dayTasks.length > 0 ? 'border-gray-300 shadow-sm hover:shadow-md' : ''}
-                   `}
-                 >
-                   <span className={`text-sm font-bold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{dayNum}</span>
-                   
-                   <div className="flex space-x-1.5 mt-2">
-                      {hasRed && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-red-500 rounded-full shadow-sm animate-pulse"></span>}
-                      {hasYellow && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-400 rounded-full shadow-sm"></span>}
-                      {hasGreen && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 rounded-full shadow-sm"></span>}
-                   </div>
+                 <div key={dayNum} onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                   <span className={`text-sm md:text-base font-bold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{dayNum}</span>
+                   {dayTasks.length > 0 && <span className="text-[9px] font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full mt-1 shadow-sm">{dayTasks.length} Rapor</span>}
                  </div>
                );
              })}
           </div>
-          
-          <div className="flex justify-center space-x-6 mt-8 border-t pt-6">
-             <div className="flex items-center text-xs font-medium text-gray-600"><span className="w-3 h-3 bg-red-500 rounded-full mr-2 shadow-sm"></span> İhlal / İtiraz Var</div>
-             <div className="flex items-center text-xs font-medium text-gray-600"><span className="w-3 h-3 bg-yellow-400 rounded-full mr-2 shadow-sm"></span> Onay Bekleniyor</div>
-             <div className="flex items-center text-xs font-medium text-gray-600"><span className="w-3 h-3 bg-green-500 rounded-full mr-2 shadow-sm"></span> Tümü Çözüldü</div>
-          </div>
-        </div>
-      );
-    };
-
-    const renderShippingCalendar = () => {
-      const shipDate = new Date();
-      shipDate.setMonth(shipDate.getMonth() + currentMonthOffset);
-      const currentMonth = shipDate.getMonth();
-      const currentYear = shipDate.getFullYear();
-      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-      const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
-      
-      const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-      
-      const getFilteredLoadings = () => {
-        const todayStr = formatDate(new Date());
-        return loadings.filter(load => {
-          const loadDateStr = formatDate(new Date(load.timestamp));
-          if (shipFilter === 'today') return loadDateStr === todayStr;
-          if (shipFilter === 'month') return new Date(load.timestamp).getMonth() === new Date().getMonth() && new Date(load.timestamp).getFullYear() === new Date().getFullYear();
-          if (shipFilter === 'year') return new Date(load.timestamp).getFullYear() === new Date().getFullYear();
-          return true; // 'all'
-        }).sort((a,b) => b.timestamp - a.timestamp);
-      };
-
-      const filteredLoadings = getFilteredLoadings();
-      const totalFilteredTonnage = filteredLoadings.reduce((sum, l) => sum + (parseFloat(l.tonnage)||0), 0);
-
-      return (
-        <div className="animate-slide-up space-y-6 w-full">
-          {/* Takvim Üstte */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex justify-between items-center mb-6">
-               <div className="flex items-center space-x-3">
-                 <button onClick={() => setCurrentMonthOffset(prev => prev - 1)} className="p-2 rounded-full hover:bg-gray-100"><ChevronLeft className="w-5 h-5 text-gray-600"/></button>
-                 <h3 className="font-extrabold text-gray-800 text-2xl w-40 text-center">{monthNames[currentMonth]} {currentYear}</h3>
-                 <button onClick={() => setCurrentMonthOffset(prev => prev + 1)} className="p-2 rounded-full hover:bg-gray-100"><ChevronRight className="w-5 h-5 text-gray-600"/></button>
-               </div>
-               <span className="text-sm text-orange-800 bg-orange-50 px-3 py-1 rounded-lg font-bold flex items-center hidden sm:flex"><Calendar className="w-4 h-4 mr-2"/> Aylık Yükleme Takvimi</span>
-            </div>
-            <div className="grid grid-cols-7 gap-2 text-center mb-3 text-xs font-bold text-gray-400 uppercase py-2">
-              <div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div>
-            </div>
-            <div className="grid grid-cols-7 gap-2">
-               {Array.from({ length: startOffset }).map((_, i) => <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-transparent"></div>)}
-               {Array.from({ length: daysInMonth }).map((_, i) => {
-                 const dayNum = i + 1;
-                 const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
-                 const realToday = new Date();
-                 const isToday = dayNum === realToday.getDate() && currentMonth === realToday.getMonth() && currentYear === realToday.getFullYear();
-                 const dayLoads = loadings.filter(l => formatDate(new Date(l.timestamp)) === formattedDateForCell);
-                 
-                 const hasWaiting = dayLoads.some(l => l.status === 'beklemede');
-                 const hasLoading = dayLoads.some(l => l.status === 'yukleniyor');
-                 const hasDone = dayLoads.some(l => l.status === 'gonderildi');
-  
-                 return (
-                   <div key={dayNum} onClick={() => { if(dayLoads.length>0){ setShipFilter('all'); } }}
-                     className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all
-                       ${isToday ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-100' : 'bg-white border-gray-100 hover:border-orange-300'}
-                       ${dayLoads.length > 0 ? 'border-gray-300 shadow-sm hover:shadow-md' : ''}
-                     `}
-                   >
-                     <span className={`text-sm font-bold ${isToday ? 'text-orange-700' : 'text-gray-700'}`}>{dayNum}</span>
-                     <div className="flex space-x-1.5 mt-2">
-                        {hasWaiting && <span className="w-2.5 h-2.5 bg-blue-500 rounded-full shadow-sm"></span>}
-                        {hasLoading && <span className="w-2.5 h-2.5 bg-orange-400 rounded-full shadow-sm"></span>}
-                        {hasDone && <span className="w-2.5 h-2.5 bg-green-500 rounded-full shadow-sm"></span>}
-                     </div>
-                   </div>
-                 );
-               })}
-            </div>
-          </div>
-
-          {/* Raporlar Altta */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-             <div className="flex flex-col md:flex-row justify-between items-center mb-6 border-b pb-4 gap-4">
-                <div>
-                  <h3 className="font-extrabold text-gray-800 text-2xl flex items-center"><Truck className="w-6 h-6 mr-2 text-orange-600"/> Sevkiyat Raporları</h3>
-                </div>
-                <div className="flex space-x-2 bg-gray-100 p-1.5 rounded-xl">
-                  <button onClick={()=>setShipFilter('today')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${shipFilter==='today'?'bg-white text-orange-600 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>Bugün</button>
-                  <button onClick={()=>setShipFilter('month')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${shipFilter==='month'?'bg-white text-orange-600 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>Bu Ay</button>
-                  <button onClick={()=>setShipFilter('year')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${shipFilter==='year'?'bg-white text-orange-600 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>Bu Yıl</button>
-                  <button onClick={()=>setShipFilter('all')} className={`px-4 py-2 text-sm font-bold rounded-lg transition-all ${shipFilter==='all'?'bg-white text-orange-600 shadow-sm':'text-gray-500 hover:text-gray-700'}`}>Tümü</button>
-                </div>
-             </div>
-
-             <div className="flex justify-between items-center mb-6 bg-orange-50 p-4 rounded-xl border border-orange-100">
-               <span className="text-sm font-bold text-orange-800">Seçili Dönem Toplam Yükleme:</span>
-               <span className="text-xl font-extrabold text-orange-600">{totalFilteredTonnage} Ton</span>
-             </div>
-
-             <div className="space-y-3">
-               {filteredLoadings.length === 0 ? (
-                 <div className="text-center py-8 text-gray-400 font-medium bg-gray-50 rounded-xl border border-dashed">Seçili döneme ait sevkiyat bulunamadı.</div>
-               ) : (
-                 filteredLoadings.map(load => {
-                   const sDef = SHIPPING_STATUS[load.status];
-                   const Icon = sDef.icon;
-                   const isExpanded = expandedId === load.id;
-
-                   return (
-                     <div key={load.id} className="border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-all">
-                       <div onClick={() => setExpandedId(isExpanded ? null : load.id)} className={`p-4 flex flex-col md:flex-row justify-between items-start md:items-center cursor-pointer bg-white hover:bg-gray-50`}>
-                          <div className="flex items-center space-x-4 mb-2 md:mb-0">
-                            <div className="bg-gray-100 p-3 rounded-xl hidden sm:block"><Globe className="w-5 h-5 text-gray-500"/></div>
-                            <div>
-                              <p className="font-bold text-gray-800 text-lg flex items-center">
-                                {load.country} / {load.city}
-                              </p>
-                              <p className="text-sm text-gray-500">{load.company} <span className="mx-2">•</span> Plaka: <span className="font-bold text-gray-700">{load.plate}</span></p>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-4 w-full md:w-auto justify-between md:justify-end">
-                            <span className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center ${sDef.color.split(' ').slice(0,2).join(' ')} border ${sDef.color.split(' ')[2]}`}>
-                              <Icon className="w-4 h-4 mr-1.5" /> {sDef.label}
-                            </span>
-                            {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400"/> : <ChevronDown className="w-5 h-5 text-gray-400"/>}
-                          </div>
-                       </div>
-                       
-                       {/* Yükleme Detayları (Accordion) */}
-                       {isExpanded && (
-                         <div className="p-4 bg-gray-50 border-t border-gray-200 grid grid-cols-1 lg:grid-cols-2 gap-6 animate-slide-up">
-                            <div className="space-y-4">
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white p-3 rounded-lg border shadow-sm"><span className="block text-[10px] text-gray-400 uppercase font-bold">Proje No</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
-                                <div className="bg-white p-3 rounded-lg border shadow-sm"><span className="block text-[10px] text-gray-400 uppercase font-bold">Yüklenen Tonaj</span><span className="font-bold text-gray-800">{load.tonnage} Ton</span></div>
-                                <div className="bg-white p-3 rounded-lg border shadow-sm col-span-2"><span className="block text-[10px] text-gray-400 uppercase font-bold">Kayıt Tarihi</span><span className="font-bold text-gray-800">{formatDate(new Date(load.timestamp))} {new Date(load.timestamp).toLocaleTimeString('tr-TR', {hour:'2-digit', minute:'2-digit'})}</span></div>
-                              </div>
-                              {load.desc && (
-                                <div className="bg-white p-3 rounded-lg border shadow-sm">
-                                  <span className="block text-[10px] text-gray-400 uppercase font-bold mb-1">Şoför / Ek Notlar</span>
-                                  <p className="text-sm text-gray-700">{load.desc}</p>
-                                </div>
-                              )}
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
-                              {load.startImg ? (
-                                <div onClick={()=>setLightboxImg(load.startImg)} className="relative h-32 bg-gray-200 rounded-xl overflow-hidden border cursor-zoom-in group">
-                                  <img src={load.startImg} alt="Kayıt Fotoğrafı" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><ZoomIn className="text-white w-8 h-8"/></div>
-                                  <span className="absolute bottom-2 left-2 text-[9px] bg-black/60 text-white px-2 py-1 rounded font-bold">ARAÇ GİRİŞ</span>
-                                </div>
-                              ) : <div className="h-32 bg-gray-100 rounded-xl border-2 border-dashed flex items-center justify-center text-xs font-bold text-gray-400">Giriş Fotoğrafı Yok</div>}
-                              
-                              {load.endImg ? (
-                                <div onClick={()=>setLightboxImg(load.endImg)} className="relative h-32 bg-gray-200 rounded-xl overflow-hidden border cursor-zoom-in group">
-                                  <img src={load.endImg} alt="Bitiş Fotoğrafı" className="w-full h-full object-cover" />
-                                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><ZoomIn className="text-white w-8 h-8"/></div>
-                                  <span className="absolute bottom-2 left-2 text-[9px] bg-black/60 text-white px-2 py-1 rounded font-bold">YÜKLEME SONU</span>
-                                </div>
-                              ) : <div className="h-32 bg-gray-100 rounded-xl border-2 border-dashed flex items-center justify-center text-xs font-bold text-gray-400">Çıkış Fotoğrafı Yok</div>}
-                            </div>
-                         </div>
-                       )}
-                     </div>
-                   );
-                 })
-               )}
-             </div>
-          </div>
-        </div>
-      );
-    };
-
-    const renderShippingAnalysis = () => {
-      const statsByCountry = {};
-      const statsByCompany = {};
-
-      loadings.forEach(l => {
-        const ton = parseFloat(l.tonnage) || 0;
-        if(l.country) { statsByCountry[l.country] = (statsByCountry[l.country] || 0) + ton; }
-        if(l.company) { statsByCompany[l.company] = (statsByCompany[l.company] || 0) + ton; }
-      });
-
-      const sortedCountries = Object.entries(statsByCountry).sort((a,b)=>b[1]-a[1]);
-      const sortedCompanies = Object.entries(statsByCompany).sort((a,b)=>b[1]-a[1]);
-
-      return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up w-full">
-           <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center"><BarChart3 className="w-6 h-6 mr-2 text-orange-600"/> Lojistik & Sevkiyat Analizi</h2>
-           <p className="text-gray-500 text-sm mb-8">Sisteme kaydedilmiş tüm zamanların toplam sevkiyat tonaj verileri.</p>
-
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div>
-                 <h3 className="font-bold text-gray-700 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200 flex items-center"><Globe className="w-4 h-4 mr-2"/> Ülkelere Göre Tonaj</h3>
-                 <div className="space-y-3">
-                   {sortedCountries.length === 0 ? <p className="text-sm text-gray-400">Kayıtlı veri yok</p> : sortedCountries.map(([c, ton], idx) => (
-                     <div key={c} className="flex justify-between items-center p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <span className="font-medium text-gray-800"><span className="text-gray-400 mr-2">{idx+1}.</span>{c}</span>
-                        <span className="font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg">{ton} Ton</span>
-                     </div>
-                   ))}
-                 </div>
-              </div>
-              <div>
-                 <h3 className="font-bold text-gray-700 mb-4 bg-gray-50 p-3 rounded-lg border border-gray-200 flex items-center"><Building className="w-4 h-4 mr-2"/> Firmalara Göre Tonaj</h3>
-                 <div className="space-y-3">
-                   {sortedCompanies.length === 0 ? <p className="text-sm text-gray-400">Kayıtlı veri yok</p> : sortedCompanies.map(([comp, ton], idx) => (
-                     <div key={comp} className="flex justify-between items-center p-3 border-b border-gray-100 hover:bg-gray-50 transition-colors">
-                        <span className="font-medium text-gray-800"><span className="text-gray-400 mr-2">{idx+1}.</span>{comp}</span>
-                        <span className="font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg">{ton} Ton</span>
-                     </div>
-                   ))}
-                 </div>
-              </div>
-           </div>
         </div>
       );
     };
@@ -850,241 +1145,110 @@ export default function App() {
 
     return (
       <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-6 flex flex-col xl:flex-row justify-between items-center gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-2">Yönetici Paneli</h1>
-            <p className="text-gray-500">Fabrika genel durumunu, risk haritasını ve sevkiyatları takip edin.</p>
+        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-6 flex flex-col xl:flex-row justify-between items-center gap-6">
+          <div className="flex flex-col md:flex-row items-center gap-6">
+            <div><h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-1">{t('admin_panel')}</h1><p className="text-gray-500 text-sm">{t('admin_desc')}</p></div>
+            <div className="h-10 w-px bg-gray-200 hidden md:block"></div>
+            <div className="flex bg-gray-100 p-1.5 rounded-xl shadow-inner">
+               <button onClick={() => { setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); }} className={`py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center ${adminSystemMode === 'isg' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
+               <button onClick={() => { setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); }} className={`py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center ${adminSystemMode === 'yukleme' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
+            </div>
           </div>
-          
-          {/* Ana Gezinme Tuşları - 3 Ana Sekme */}
-          <div className="flex bg-gray-100 p-1.5 rounded-xl shadow-inner w-full md:w-auto overflow-x-auto">
-             <button onClick={() => setAdminViewMode('isg')} className={`px-6 py-3 font-bold text-sm rounded-lg transition-all flex items-center whitespace-nowrap ${adminViewMode==='isg'?'bg-white text-blue-700 shadow-sm':'text-gray-500 hover:text-gray-700'}`}><ShieldAlert className="w-4 h-4 mr-2"/> İSG Yönetimi</button>
-             <button onClick={() => setAdminViewMode('yukleme')} className={`px-6 py-3 font-bold text-sm rounded-lg transition-all flex items-center whitespace-nowrap ${adminViewMode==='yukleme'?'bg-white text-orange-700 shadow-sm':'text-gray-500 hover:text-gray-700'}`}><Truck className="w-4 h-4 mr-2"/> Yükleme Sistemi</button>
-             <button onClick={() => setAdminViewMode('users')} className={`px-6 py-3 font-bold text-sm rounded-lg transition-all flex items-center whitespace-nowrap ${adminViewMode==='users'?'bg-white text-purple-700 shadow-sm':'text-gray-500 hover:text-gray-700'}`}><Users className="w-4 h-4 mr-2"/> Kullanıcı Yönetimi</button>
-          </div>
+          {adminSystemMode === 'isg' && (
+            <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100">
+              <Calendar className="w-6 h-6 text-blue-600 mr-3" />
+              <div><p className="text-xs font-bold text-blue-800 uppercase tracking-wider">{t('next_reset')}</p><p className="text-lg font-bold text-blue-900">{getLastFridayOfCurrentMonth()}</p></div>
+            </div>
+          )}
         </div>
 
-        {/* Görünüm 1: İSG */}
-        {adminViewMode === 'isg' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-1 space-y-4">
+            <button onClick={() => {setAdminViewMode('users'); setSelectedAdminDept(null);}} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-2xl shadow-sm flex items-center justify-center transition-colors">
+              <Users className="w-5 h-5 mr-2" /> {t('btn_users')}
+            </button>
+            
+            {adminSystemMode === 'isg' && (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-5 border-b border-gray-100 flex items-center bg-gray-50 justify-between">
-                  <div className="flex items-center">
-                     <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                     <h3 className="font-bold text-gray-800">Risk Haritası</h3>
-                  </div>
-                </div>
+                <div className="p-5 border-b border-gray-100 flex items-center bg-gray-50 justify-between"><div className="flex items-center"><AlertCircle className="w-5 h-5 text-red-500 mr-2" /><h3 className="font-bold text-gray-800">{t('risk_map')}</h3></div></div>
                 <div className="divide-y divide-gray-50">
                   {sortedDeptsAdmin.map((dept, index) => {
                     const redCount = getRedTaskCount(dept);
                     const isSelected = selectedAdminDept === dept;
                     return (
-                    <div 
-                      key={dept} 
-                      onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); }}
-                      className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}
-                    >
+                    <div key={dept} onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); setAdminViewMode('calendar'); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
+                      <div className="flex items-center"><span className="w-6 text-center text-sm font-bold mr-3 text-gray-400">{index + 1}.</span><span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}`}>{dept}</span></div>
                       <div className="flex items-center">
-                        <span className="w-6 text-center text-sm font-bold mr-3 text-gray-400">{index + 1}.</span>
-                        <span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}`}>{dept}</span>
-                      </div>
-                      <div className="flex items-center">
-                         {redCount > 0 ? (
-                           <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm">
-                             <div className="relative flex items-center justify-center w-2.5 h-2.5 mr-2">
-                               <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping"></span>
-                               <span className="relative inline-flex rounded-full h-full w-full bg-red-600"></span>
-                             </div>
-                             <span className="font-bold text-xs">{redCount} Problem</span>
-                           </div>
-                         ) : (
-                           <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90">
-                             <CheckCircle className="w-3 h-3 mr-1" />
-                             <span className="font-bold text-xs">Sorunsuz</span>
-                           </div>
-                         )}
+                         {redCount > 0 ? <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm"><span className="font-bold text-xs">{redCount} {t('problem')}</span></div> : <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90"><span className="font-bold text-xs">{t('no_problem')}</span></div>}
                          <ChevronRight className={`w-5 h-5 transition-transform ${isSelected ? 'text-blue-500 translate-x-1' : 'text-gray-300'}`} />
                       </div>
                     </div>
                   )})}
                 </div>
               </div>
-            </div>
-            <div className="lg:col-span-2">
-               {renderIsgRightPanel()}
-            </div>
-          </div>
-        )}
-
-        {/* Görünüm 2: Yükleme Sistemi */}
-        {adminViewMode === 'yukleme' && (
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <div className="lg:col-span-1 space-y-4">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <button onClick={() => setYuklemeTab('calendar')} className={`w-full text-left p-5 font-bold flex items-center transition-all border-l-4 ${yuklemeTab === 'calendar' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-transparent text-gray-600 hover:bg-gray-50'}`}><CalendarDays className="w-5 h-5 mr-3"/> Sevkiyat Raporları</button>
-                <button onClick={() => setYuklemeTab('analiz')} className={`w-full text-left p-5 font-bold flex items-center transition-all border-l-4 border-t border-t-gray-50 ${yuklemeTab === 'analiz' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'bg-white border-transparent text-gray-600 hover:bg-gray-50'}`}><BarChart3 className="w-5 h-5 mr-3"/> Lojistik Analizi</button>
-              </div>
-              <div className="bg-gradient-to-br from-orange-500 to-orange-700 p-6 rounded-2xl shadow-sm text-white text-center">
-                 <Weight className="w-10 h-10 mx-auto mb-2 opacity-80" />
-                 <p className="text-orange-100 text-xs font-bold uppercase tracking-wider mb-1">Son 24 Saat Yükleme</p>
-                 <p className="text-4xl font-extrabold">{get24HourTonnage()} <span className="text-lg">Ton</span></p>
-              </div>
-            </div>
-            <div className="lg:col-span-3">
-              {yuklemeTab === 'calendar' ? renderShippingCalendar() : renderShippingAnalysis()}
-            </div>
-          </div>
-        )}
-
-        {/* Görünüm 3: Kullanıcı Yönetimi */}
-        {adminViewMode === 'users' && (
-          <div className="flex justify-center w-full">
-             {renderUsers()}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const YuklemeciDashboard = () => {
-    const [plate, setPlate] = useState('');
-    const [driver, setDriver] = useState('');
-    const [country, setCountry] = useState(COUNTRIES[0]);
-    const [city, setCity] = useState('');
-    const [company, setCompany] = useState('');
-    const [projectNo, setProjectNo] = useState('');
-    const [tonnage, setTonnage] = useState('');
-    const [desc, setDesc] = useState('');
-
-    const activeLoadings = loadings.filter(l => l.status !== 'gonderildi');
-
-    const handleCreateLoading = (e) => {
-      e.preventDefault();
-      const newLoad = {
-        id: Date.now(), timestamp: Date.now(), plate, driver, country, city, company, projectNo, tonnage, desc,
-        status: 'beklemede', startImg: null, endImg: null
-      };
-      setLoadings([newLoad, ...loadings]);
-      setPlate(''); setDriver(''); setCity(''); setCompany(''); setProjectNo(''); setTonnage(''); setDesc('');
-    };
-
-    const updateStatus = (id, newStatus, imgType) => {
-      const mockImg = "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=800";
-      setLoadings(loadings.map(l => l.id === id ? { ...l, status: newStatus, [imgType]: mockImg } : l));
-    };
-
-    return (
-      <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-        <div className="bg-gradient-to-r from-orange-600 to-orange-800 p-8 md:p-10 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-center relative overflow-hidden mb-8">
-          <div className="z-10">
-            <h1 className="text-3xl md:text-4xl font-extrabold mb-2">Yükleme & Sevkiyat</h1>
-            <p className="text-orange-200 font-medium text-lg">Araç kayıt ve lojistik takip ekranı</p>
-          </div>
-          <div className="z-10 mt-6 md:mt-0 text-center bg-white/10 backdrop-blur-md px-8 py-4 rounded-2xl border border-white/20">
-             <p className="text-xs font-bold uppercase tracking-widest text-orange-200 mb-1">24 Saatlik Hacim</p>
-             <p className="text-3xl font-extrabold">{get24HourTonnage()} <span className="text-lg font-medium">Ton</span></p>
-          </div>
-          <Truck className="w-64 h-64 text-orange-400 opacity-10 absolute right-0 -bottom-10 z-0 transform -scale-x-100" />
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-          <div className="lg:col-span-1">
-            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
-              <h3 className="font-bold text-lg text-gray-800 mb-6 flex items-center"><Plus className="w-5 h-5 mr-2 text-orange-600"/> Yeni Araç Kaydı</h3>
-              <form onSubmit={handleCreateLoading} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-bold text-gray-500 mb-1">Araç Plakası *</label><input type="text" required value={plate} onChange={e=>setPlate(e.target.value.toUpperCase())} className="w-full border rounded-xl p-3 bg-gray-50 uppercase font-bold" /></div>
-                  <div><label className="block text-xs font-bold text-gray-500 mb-1">Şoför Adı</label><input type="text" value={driver} onChange={e=>setDriver(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50" /></div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">Ülke *</label>
-                    <select value={country} onChange={e=>setCountry(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50 font-bold text-gray-700">
-                      {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div><label className="block text-xs font-bold text-gray-500 mb-1">Şehir *</label><input type="text" required value={city} onChange={e=>setCity(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50" /></div>
-                </div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Gideceği Firma *</label><input type="text" required value={company} onChange={e=>setCompany(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50" /></div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div><label className="block text-xs font-bold text-gray-500 mb-1">Proje No</label><input type="text" value={projectNo} onChange={e=>setProjectNo(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50 font-mono" /></div>
-                  <div><label className="block text-xs font-bold text-gray-500 mb-1">Tonaj (Ton) *</label><input type="number" step="0.1" required value={tonnage} onChange={e=>setTonnage(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50" /></div>
-                </div>
-                <div><label className="block text-xs font-bold text-gray-500 mb-1">Ek Notlar (Zorunlu Değil)</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50 h-20 resize-none"></textarea></div>
-                <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 rounded-xl font-bold shadow-md transition-colors">Araç Kaydını Aç</button>
-              </form>
-            </div>
-          </div>
-          <div className="lg:col-span-2 space-y-6">
-            <h3 className="font-bold text-xl text-gray-800 border-b pb-4">Aktif Yüklemeler ({activeLoadings.length})</h3>
-            {activeLoadings.length === 0 ? (
-              <div className="bg-white p-12 rounded-3xl text-center text-gray-500 border border-gray-100">
-                <Truck className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <p className="font-bold text-xl text-gray-800">Saha Boş</p>
-                <p>Şu anda işlem bekleyen veya devam eden araç bulunmuyor.</p>
-              </div>
-            ) : (
-              <div className="grid gap-6">
-                {activeLoadings.map(load => (
-                  <div key={load.id} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6 items-center">
-                    <div className="flex-1 w-full space-y-3">
-                       <div className="flex justify-between items-start">
-                         <div>
-                           <div className="text-2xl font-black text-gray-900 bg-gray-100 px-3 py-1 rounded-lg inline-block border-2 border-gray-300">{load.plate}</div>
-                           <p className="text-gray-500 font-medium mt-2"><MapPin className="inline w-4 h-4 mr-1"/>{load.country} / {load.city} - {load.company}</p>
-                         </div>
-                         <div className="text-right">
-                           <span className="block text-2xl font-bold text-orange-600">{load.tonnage} <span className="text-sm">Ton</span></span>
-                           <span className="text-xs text-gray-400 font-mono">Prj: {load.projectNo || '-'}</span>
-                         </div>
-                       </div>
-                    </div>
-                    <div className="w-full md:w-64 shrink-0 flex flex-col space-y-3 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
-                      {load.status === 'beklemede' && (
-                        <>
-                          <div className="text-center mb-2"><span className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200">Beklemede</span></div>
-                          <button onClick={() => updateStatus(load.id, 'yukleniyor', 'startImg')} className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-xl font-bold flex items-center justify-center shadow-md">
-                            <Camera className="w-5 h-5 mr-2"/> Yüklemeyi Başlat (Fotoğraf)
-                          </button>
-                        </>
-                      )}
-                      {load.status === 'yukleniyor' && (
-                        <>
-                           <div className="text-center mb-2"><span className="text-xs font-bold text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200 animate-pulse">Yükleniyor...</span></div>
-                           <button onClick={() => updateStatus(load.id, 'gonderildi', 'endImg')} className="w-full bg-green-600 hover:bg-green-700 text-white py-4 rounded-xl font-bold flex items-center justify-center shadow-md">
-                            <Camera className="w-5 h-5 mr-2"/> İşi Bitir & Gönder (Fotoğraf)
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
             )}
           </div>
+          <div className="lg:col-span-2">{renderRightPanel()}</div>
         </div>
+
+        {currentUser.username === 'agiradar' && (
+          <div className="mt-8 bg-red-50 border border-red-200 rounded-3xl p-6 md:p-8 animate-slide-up">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <div><h3 className="text-xl font-bold text-red-700 flex items-center mb-2"><AlertTriangle className="w-6 h-6 mr-2"/> {t('delete_history')}</h3><p className="text-sm text-red-600 font-medium">{t('delete_desc')}</p></div>
+              <div className="flex w-full md:w-auto space-x-3 items-center">
+                <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} className="flex-1 md:w-48 border border-red-200 rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-red-500 font-bold text-gray-700 cursor-pointer">
+                  <option value="1">{t('month_1')}</option><option value="3">{t('month_3')}</option><option value="6">{t('month_6')}</option><option value="all">{t('month_all')}</option>
+                </select>
+                <button onClick={() => { setShowDeleteModal(true); setDeleteCountdown(10); }} className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-md whitespace-nowrap">{t('delete_btn')}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-4">
+            <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+              <div className="p-6 bg-red-600 text-white flex justify-between items-center"><h3 className="font-bold text-xl flex items-center"><ShieldAlert className="w-6 h-6 mr-2"/> {t('are_you_sure')}</h3><button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="p-1 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button></div>
+              <div className="p-8 text-center space-y-6">
+                <AlertTriangle className="w-16 h-16 text-red-500 mx-auto animate-pulse" />
+                <div>
+                  <h4 className="text-lg font-bold text-gray-800 mb-2">{t('are_you_sure')}</h4>
+                  <p className="text-gray-600 text-sm">{historyFilter === 'all' ? t('del_warn_all') : `${t('del_warn_1')} ${historyFilter} ${t('del_warn_2')}`} <b className="text-red-600">{t('del_warn_end')}</b></p>
+                </div>
+                <div className="flex space-x-3 pt-4">
+                  <button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="flex-1 py-4 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200">{t('cancel')}</button>
+                  <button onClick={executeHistoryDelete} disabled={deleteCountdown > 0} className={`flex-1 py-4 font-bold rounded-xl shadow-md ${deleteCountdown > 0 ? 'bg-red-200 text-red-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}>
+                    {deleteCountdown > 0 ? `${t('wait')} (${deleteCountdown}s)` : t('perm_delete')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 w-full relative">
-      <style>{`@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }`}</style>
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 w-full">
+      <style>{`
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      `}</style>
+
       <ImageLightboxModal />
       
-      {!currentUser ? <LoginScreen /> : (
+      {!currentUser ? (
+        <LoginScreen />
+      ) : (
         <>
           <TopBar theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'} />
           <main className="flex-1 w-full flex">
              {currentUser.role === 'admin' && <AdminDashboard />}
-             {(currentUser.role === 'mod' || currentUser.role === 'sef') && <div className="p-8 text-center w-full mt-12 text-gray-500 font-medium">Bu panel sadece İSG yetkilileri içindir. Lütfen Admin hesabınızı kullanın.</div>}
+             {currentUser.role === 'mod' && <div className="p-8 text-xl font-bold flex-1 text-center mt-10">ISG Mod Paneli (Active)</div>}
+             {currentUser.role === 'sef' && <div className="p-8 text-xl font-bold flex-1 text-center mt-10">Birim Şefi Paneli (Active)</div>}
              {currentUser.role === 'yuklemeci' && <YuklemeciDashboard />}
           </main>
-          
-          <footer className="w-full text-center py-5 mt-auto border-t border-gray-200 bg-white shadow-inner">
-             <span className="text-xs text-gray-400 italic font-medium tracking-wider">by agiradar</span>
-          </footer>
         </>
       )}
     </div>
