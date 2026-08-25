@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp } from 'lucide-react';
+import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, PieChart, BarChart3, Map } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
@@ -17,6 +17,14 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const DEPARTMENTS = ["Boyahane", "Altyapı", "Dalgaduvar", "Lazer", "Güç", "Kaynaklı imalat", "Dış alan", "Bakım & Onarım"];
+
+const COUNTRIES = [
+  "Türkiye", "Almanya", "Amerika Birleşik Devletleri", "Avusturya", "Azerbaycan", 
+  "Belçika", "Birleşik Arap Emirlikleri", "Birleşik Krallık", "Bulgaristan", 
+  "Cezayir", "Fas", "Fransa", "Gürcistan", "Hollanda", "Irak", "İran", "İspanya", 
+  "İsrail", "İsveç", "İsviçre", "İtalya", "Katar", "Mısır", "Polonya", "Romanya", 
+  "Rusya", "Suudi Arabistan", "Ukrayna", "Yunanistan"
+];
 
 const DICT = {
   tr: {
@@ -48,10 +56,12 @@ const DICT = {
     load_form_title: "Araç ve Sevkiyat Giriş Formu",
     plate_no: "Araç Plakası veya İrsaliye No *",
     driver_name: "Şoför Adı Soyadı (İsteğe Bağlı)",
-    dest_location: "Gideceği Lokasyon / Şehir *",
+    dest_country: "Gideceği Ülke *",
+    select_country: "Ülke Seçiniz...",
+    dest_city: "Gideceği Şehir *",
     dest_company: "Gideceği Firma *",
     project_no: "Proje No / Sipariş Kodu *",
-    tonnage: "Yüklenen Tonaj (kg veya Ton) *",
+    tonnage: "Yüklenen Tonaj (Sadece Ton) *",
     cam_pre: "Boş Kasa / Durum Fotoğrafı (İsteğe Bağlı)",
     cam_open: "Kamerayı Aç / Fotoğraf Yükle",
     optional: "(Zorunlu Değil)",
@@ -74,6 +84,11 @@ const DICT = {
     close_job: "İşi Kapat",
     status_done: "Tamamlandı",
     status_progress: "Devam Ediyor",
+    stat_beklemede: "Yükleme İçin Beklemede",
+    stat_yukleniyor: "Yükleniyor",
+    stat_gonderildi: "Yüklenip Gönderildi",
+    btn_start_load_process: "Yüklemeyi Başlat",
+    details: "Detayları Göster",
 
     // Admin Panel
     admin_panel: "Yönetici Paneli",
@@ -116,8 +131,12 @@ const DICT = {
     risk: "Risk",
     hours_left: "Saat Kaldı",
     solution_rate: "Çözüm Oranı",
-    tonnage_24h: "Son 24 Saatte Yüklenen Toplam Tonaj",
-    total_tonnage: "Toplam Tonaj"
+    tonnage_24h: "Son 24 Saatte Yüklenen Tonaj",
+    total_tonnage: "Toplam Tonaj",
+    analytics: "Analiz",
+    analytics_title: "Sevkiyat Analizleri",
+    total_by_country: "Ülkelere Göre Toplam Tonaj",
+    total_by_company: "Firmalara Göre Toplam Tonaj"
   },
   en: {
     isg_tab: "OHS & Cleanliness",
@@ -148,10 +167,12 @@ const DICT = {
     load_form_title: "Vehicle & Shipment Entry Form",
     plate_no: "License Plate or Waybill No *",
     driver_name: "Driver Full Name (Optional)",
-    dest_location: "Destination Location / City *",
+    dest_country: "Destination Country *",
+    select_country: "Select Country...",
+    dest_city: "Destination City *",
     dest_company: "Destination Company *",
     project_no: "Project No / Order Code *",
-    tonnage: "Loaded Tonnage (kg or Tons) *",
+    tonnage: "Loaded Tonnage (Tons only) *",
     cam_pre: "Empty Trailer / Status Photo (Optional)",
     cam_open: "Open Camera / Upload Photo",
     optional: "(Optional)",
@@ -174,6 +195,11 @@ const DICT = {
     close_job: "Close Job",
     status_done: "Completed",
     status_progress: "In Progress",
+    stat_beklemede: "Pending for Loading",
+    stat_yukleniyor: "Loading in Progress",
+    stat_gonderildi: "Loaded & Dispatched",
+    btn_start_load_process: "Start Loading",
+    details: "Show Details",
 
     // Admin Panel
     admin_panel: "Admin Panel",
@@ -217,7 +243,11 @@ const DICT = {
     hours_left: "Hours Left",
     solution_rate: "Resolution Rate",
     tonnage_24h: "Total Tonnage Loaded in 24 Hours",
-    total_tonnage: "Total Tonnage"
+    total_tonnage: "Total Tonnage",
+    analytics: "Analytics",
+    analytics_title: "Shipment Analytics",
+    total_by_country: "Total Tonnage by Country",
+    total_by_company: "Total Tonnage by Company"
   }
 };
 
@@ -279,9 +309,7 @@ export default function App() {
   const [selectedAdminDept, setSelectedAdminDept] = useState(null);
   const [selectedAdminDate, setSelectedAdminDate] = useState(null);
 
-  // Full-screen Image Modal Viewer
   const [previewModalImg, setPreviewModalImg] = useState(null);
-  const [previewModalTitle, setPreviewModalTitle] = useState('');
 
   const t = (key) => DICT[lang][key] || key;
 
@@ -355,46 +383,19 @@ export default function App() {
     localStorage.removeItem('isg_logged_in_user');
   };
 
-  const createTask = async (dept, priority, desc, deadlineHours, imgUrl) => {
-    const taskId = Date.now().toString();
-    const newTask = {
-      id: taskId, dept, priority, desc, status: 'acik', 
-      createdAt: formatDate(new Date()), timestamp: Date.now(), 
-      deadlineHours, imgUrl: imgUrl || '', modNote: ''
-    };
-    await setDoc(doc(db, "tasks", taskId), newTask);
-  };
-
-  const updateTaskStatus = async (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
-    const taskRef = doc(db, "tasks", id);
-    const updates = { status: newStatus };
-    if (chiefNote) updates.chiefNote = chiefNote;
-    if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
-    if (modNote) updates.modNote = modNote;
-    await updateDoc(taskRef, updates);
-  };
-
-  const createLoading = async (plaka, sofor, destLocation, destCompany, projectNo, tonnage, not, imgUrl) => {
+  const createLoading = async (plaka, sofor, destCountry, destCity, destCompany, projectNo, tonnage, not, imgUrl) => {
     const loadId = Date.now().toString();
     const newLoad = {
-      id: loadId, 
-      plaka, 
-      sofor, 
-      destLocation: destLocation || '', 
+      id: loadId, plaka, sofor, 
+      destCountry: destCountry || '', 
+      destCity: destCity || '', 
       destCompany: destCompany || '', 
       projectNo: projectNo || '', 
       tonnage: tonnage || '', 
-      preNote: not, 
-      preImgUrl: imgUrl || '', 
-      status: 'devam_ediyor', 
-      creatorId: currentUser.id, 
-      creatorName: currentUser.name,
-      createdAtDate: formatDate(new Date()), 
-      createdAtTime: formatTime(new Date()), 
-      timestamp: Date.now(),
-      postImgUrl: '', 
-      postNote: '', 
-      finishedAtTime: ''
+      preNote: not, preImgUrl: imgUrl || '', 
+      status: 'beklemede', creatorId: currentUser.id, creatorName: currentUser.name,
+      createdAtDate: formatDate(new Date()), createdAtTime: formatTime(new Date()), timestamp: Date.now(),
+      postImgUrl: '', postNote: '', finishedAtTime: ''
     };
     await setDoc(doc(db, "loadings", loadId), newLoad);
   };
@@ -402,22 +403,18 @@ export default function App() {
   const finishLoading = async (loadId, postNot, postImgUrl) => {
     const loadRef = doc(db, "loadings", loadId);
     await updateDoc(loadRef, {
-      status: 'tamamlandi',
-      postNote: postNot,
-      postImgUrl: postImgUrl || '',
-      finishedAtTime: formatTime(new Date())
+      status: 'gonderildi', postNote: postNot, postImgUrl: postImgUrl || '', finishedAtTime: formatTime(new Date())
     });
   };
 
-  // 24 Hour Tonnage Analytics Calculation
+  const startLoadingProcess = async (loadId) => {
+    const loadRef = doc(db, "loadings", loadId);
+    await updateDoc(loadRef, { status: 'yukleniyor' });
+  };
+
   const get24HourTonnage = () => {
     const past24h = Date.now() - (24 * 60 * 60 * 1000);
-    return loadings
-      .filter(l => l.timestamp >= past24h)
-      .reduce((total, load) => {
-        const val = parseFloat(load.tonnage) || 0;
-        return total + val;
-      }, 0);
+    return loadings.filter(l => l.timestamp >= past24h).reduce((total, load) => total + (parseFloat(load.tonnage) || 0), 0);
   };
 
   const CompanyLogo = ({ className = "", scale = "scale-100", theme = 'blue' }) => (
@@ -439,26 +436,15 @@ export default function App() {
     </div>
   );
 
-  // Full Screen Image Modal Lightbox Component
   const ImageLightboxModal = () => {
     if (!previewModalImg) return null;
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-slide-up" onClick={() => setPreviewModalImg(null)}>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-slide-up" onClick={() => setPreviewModalImg(null)}>
         <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
           <div className="absolute top-4 right-4 z-10 flex space-x-2">
-            <button onClick={() => setPreviewModalImg(null)} className="p-3 bg-white/20 hover:bg-white/40 text-white rounded-full transition-colors shadow-lg">
-              <X className="w-6 h-6" />
-            </button>
+            <button onClick={() => setPreviewModalImg(null)} className="p-3 bg-white/20 hover:bg-white/40 text-white rounded-full transition-colors shadow-lg"><X className="w-6 h-6" /></button>
           </div>
-          {previewModalTitle && (
-            <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/10">
-              {previewModalTitle}
-            </div>
-          )}
           <img src={previewModalImg} alt="Büyütülmüş Fotoğraf" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/20" />
-          <p className="text-white/70 text-xs mt-3 flex items-center">
-            <Maximize2 className="w-3.5 h-3.5 mr-1" /> Kapatmak için görsele veya boşluğa tıklayabilirsiniz
-          </p>
         </div>
       </div>
     );
@@ -476,21 +462,13 @@ export default function App() {
       const account = users.find(u => u.username === username.toLowerCase().trim());
       
       if (account && account.password === password) {
-        if (loginTheme === 'isg' && account.role === 'yuklemeci') {
-            setLoginErr(t('err_isg_module')); return;
-        }
-        if (loginTheme === 'yukleme' && (account.role === 'sef' || account.role === 'mod')) {
-            setLoginErr(t('err_yukleme_module')); return;
-        }
+        if (loginTheme === 'isg' && account.role === 'yuklemeci') { setLoginErr(t('err_isg_module')); return; }
+        if (loginTheme === 'yukleme' && (account.role === 'sef' || account.role === 'mod')) { setLoginErr(t('err_yukleme_module')); return; }
 
-        if (rememberMe) {
-          localStorage.setItem('isg_logged_in_user', account.id);
-        }
+        if (rememberMe) { localStorage.setItem('isg_logged_in_user', account.id); }
         setCurrentUser(account);
         setLoginErr('');
-      } else {
-        setLoginErr(t('err_wrong_cred'));
-      }
+      } else { setLoginErr(t('err_wrong_cred')); }
     };
 
     if (isFirebaseLoading) {
@@ -501,75 +479,41 @@ export default function App() {
         </div>
       );
     }
-
     const isISG = loginTheme === 'isg';
-
     return (
       <div className={`flex flex-col items-center justify-center min-h-screen p-6 transition-colors duration-500 ${isISG ? 'bg-gray-100' : 'bg-orange-50'}`}>
         <div className="absolute top-6 right-6">
             <button onClick={toggleLang} className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-700 hover:bg-gray-50 border border-gray-200">
-                <Globe className="w-4 h-4 text-blue-500" />
-                <span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
+                <Globe className="w-4 h-4 text-blue-500" /><span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
             </button>
         </div>
 
         <div className="bg-white p-1.5 rounded-full shadow-md mb-8 flex space-x-1 border border-gray-200">
-          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
-            <ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}
-          </button>
-          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
-            <Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}
-          </button>
+          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
+          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
         </div>
 
         <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
           <div className={`hidden md:flex flex-col items-center justify-center w-1/2 p-12 border-r border-gray-100 transition-colors duration-500 ${isISG ? 'bg-blue-50' : 'bg-orange-100/50'}`}>
             <CompanyLogo className="bg-transparent shadow-none mb-6" scale="scale-150" theme={isISG ? 'blue' : 'orange'} />
-            <h1 className={`text-3xl font-bold text-center mt-8 ${isISG ? 'text-blue-900' : 'text-orange-900'}`}>
-              {isISG ? t('sys_isg_title') : t('sys_yukleme_title')}<br/>{t('sys_management')}
-            </h1>
+            <h1 className={`text-3xl font-bold text-center mt-8 ${isISG ? 'text-blue-900' : 'text-orange-900'}`}>{isISG ? t('sys_isg_title') : t('sys_yukleme_title')}<br/>{t('sys_management')}</h1>
           </div>
 
           <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
-            <div className="md:hidden text-center mb-8">
-              <CompanyLogo className="mx-auto" scale="scale-110" theme={isISG ? 'blue' : 'orange'} />
-              <h1 className="text-xl font-bold text-gray-800 mt-4">{isISG ? t('sys_isg_title') : t('sys_yukleme_title')}</h1>
-            </div>
-
             <h2 className="text-2xl font-bold text-gray-800 mb-2">{t('welcome')}</h2>
             <p className="text-gray-500 mb-8 text-sm">{t('login_desc')}</p>
-            
             <form onSubmit={handleLogin} className="space-y-5">
-              {loginErr && (
-                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl flex items-center font-medium border border-red-100">
-                  <AlertCircle className="w-5 h-5 mr-2 shrink-0" /> {loginErr}
-                </div>
-              )}
-              
+              {loginErr && <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl flex items-center font-medium border border-red-100"><AlertCircle className="w-5 h-5 mr-2 shrink-0" /> {loginErr}</div>}
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">{t('username')}</label>
-                <div className="relative">
-                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className={`w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 focus:bg-white transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required />
-                </div>
+                <div className="relative"><User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" /><input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className={`w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 focus:bg-white transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required /></div>
               </div>
-              
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-2">{t('password')}</label>
-                <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 focus:bg-white transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required />
-                </div>
+                <div className="relative"><Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" /><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 focus:bg-white transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required /></div>
               </div>
-              
-              <div className="flex items-center mt-2 pl-1">
-                <input type="checkbox" id="rememberMe" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className={`w-4 h-4 bg-gray-100 border-gray-300 rounded cursor-pointer ${isISG ? 'text-blue-600 focus:ring-blue-500' : 'text-orange-600 focus:ring-orange-500'}`} />
-                <label htmlFor="rememberMe" className="ml-2 text-sm font-bold text-gray-600 cursor-pointer select-none">{t('remember_me')}</label>
-              </div>
-              
-              <button type="submit" className={`w-full py-4 text-white rounded-xl font-bold shadow-lg transition-colors mt-4 ${isISG ? 'bg-blue-700 hover:bg-blue-800' : 'bg-orange-600 hover:bg-orange-700'}`}>
-                {t('login_btn')}
-              </button>
+              <div className="flex items-center mt-2 pl-1"><input type="checkbox" id="rememberMe" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="w-4 h-4 bg-gray-100 border-gray-300 rounded cursor-pointer" /><label htmlFor="rememberMe" className="ml-2 text-sm font-bold text-gray-600 cursor-pointer">{t('remember_me')}</label></div>
+              <button type="submit" className={`w-full py-4 text-white rounded-xl font-bold shadow-lg mt-4 ${isISG ? 'bg-blue-700 hover:bg-blue-800' : 'bg-orange-600 hover:bg-orange-700'}`}>{t('login_btn')}</button>
             </form>
           </div>
         </div>
@@ -577,60 +521,35 @@ export default function App() {
     );
   };
 
-  const TopBar = ({ theme = 'blue' }) => {
-    let roleText = currentUser.role;
-    if (currentUser.role === 'sef') roleText = `${currentUser.dept} Birimi`;
-    if (currentUser.role === 'yuklemeci') roleText = `Yükleme Sorumlusu`;
-    
-    return (
-      <header className="bg-white px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200">
-        <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1 scale-75 md:scale-90 origin-left">
-              <CompanyLogo className="bg-transparent shadow-none !p-0" theme={theme} />
-            </div>
-            <div className="border-l pl-4 border-gray-300">
-              <h2 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{currentUser.name}</h2>
-              <span className="text-[10px] md:text-xs text-gray-500 capitalize leading-tight">{roleText}</span>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-             <button onClick={toggleLang} className="hidden sm:flex items-center space-x-1 text-gray-500 hover:text-gray-800 text-xs font-bold bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
-                 <Globe className="w-3.5 h-3.5" /> <span>{lang === 'tr' ? 'EN' : 'TR'}</span>
-             </button>
-             <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
-               <span className="hidden sm:inline">{t('logout')}</span>
-               <LogOut className="w-5 h-5" />
-             </button>
-          </div>
+  const TopBar = ({ theme = 'blue' }) => (
+    <header className="bg-white px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200">
+      <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-1 scale-75 md:scale-90 origin-left"><CompanyLogo className="bg-transparent shadow-none !p-0" theme={theme} /></div>
+          <div className="border-l pl-4 border-gray-300"><h2 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{currentUser.name}</h2><span className="text-[10px] md:text-xs text-gray-500 capitalize leading-tight">{currentUser.role === 'sef' ? `${currentUser.dept} Birimi` : (currentUser.role === 'yuklemeci' ? 'Yükleme Sorumlusu' : currentUser.role)}</span></div>
         </div>
-      </header>
-    );
-  };
+        <div className="flex items-center space-x-4">
+           <button onClick={toggleLang} className="hidden sm:flex items-center space-x-1 text-gray-500 hover:text-gray-800 text-xs font-bold bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200"><Globe className="w-3.5 h-3.5" /> <span>{lang === 'tr' ? 'EN' : 'TR'}</span></button>
+           <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm"><span className="hidden sm:inline">{t('logout')}</span><LogOut className="w-5 h-5" /></button>
+        </div>
+      </div>
+    </header>
+  );
 
   const YuklemeciDashboard = () => {
     const [isCreating, setIsCreating] = useState(false);
-    const [form, setForm] = useState({ 
-      plaka: '', 
-      sofor: '', 
-      destLocation: '', 
-      destCompany: '', 
-      projectNo: '', 
-      tonnage: '', 
-      not: '' 
-    });
+    const [form, setForm] = useState({ plaka: '', sofor: '', destCountry: '', destCity: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
     const [imgPreview, setImgPreview] = useState(null);
     const [finishModal, setFinishModal] = useState({ isOpen: false, loadId: null, note: '', imgPreview: null });
 
-    const activeLoadings = loadings.filter(l => l.status === 'devam_ediyor');
+    const activeLoadings = loadings.filter(l => l.status === 'beklemede' || l.status === 'yukleniyor' || l.status === 'devam_ediyor');
     const tonnage24h = get24HourTonnage();
 
     const handleStartLoading = (e) => {
       e.preventDefault();
-      createLoading(form.plaka, form.sofor, form.destLocation, form.destCompany, form.projectNo, form.tonnage, form.not, imgPreview);
-      setForm({ plaka: '', sofor: '', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
-      setImgPreview(null);
-      setIsCreating(false);
+      createLoading(form.plaka, form.sofor, form.destCountry, form.destCity, form.destCompany, form.projectNo, form.tonnage, form.not, imgPreview);
+      setForm({ plaka: '', sofor: '', destCountry: '', destCity: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
+      setImgPreview(null); setIsCreating(false);
     };
 
     const handleFinishLoading = () => {
@@ -641,24 +560,17 @@ export default function App() {
     return (
       <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 bg-orange-50/30">
         <div className="bg-gradient-to-r from-orange-600 to-amber-700 p-6 md:p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden mb-8 gap-4">
-          <div className="z-10">
-            <h1 className="text-3xl font-extrabold mb-2 flex items-center"><Truck className="w-8 h-8 mr-3"/> {t('yuk_title')}</h1>
-            <p className="text-orange-100 font-medium">{t('yuk_desc')}</p>
-          </div>
+          <div className="z-10"><h1 className="text-3xl font-extrabold mb-2 flex items-center"><Truck className="w-8 h-8 mr-3"/> {t('yuk_title')}</h1><p className="text-orange-100 font-medium">{t('yuk_desc')}</p></div>
           <div className="z-10 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex items-center space-x-3">
              <div className="bg-white/20 p-2 rounded-xl"><Scale className="w-6 h-6 text-white" /></div>
-             <div>
-               <p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">{t('tonnage_24h')}</p>
-               <p className="text-2xl font-extrabold text-white">{tonnage24h.toLocaleString('tr-TR')} <span className="text-sm font-medium">kg / ton</span></p>
-             </div>
+             <div><p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">{t('tonnage_24h')}</p><p className="text-2xl font-extrabold text-white">{tonnage24h.toLocaleString('tr-TR')} <span className="text-sm font-medium">Ton</span></p></div>
           </div>
           <Package className="w-48 h-48 text-white opacity-10 absolute right-0 -bottom-10 z-0 transform -rotate-12 pointer-events-none" />
         </div>
 
         {!isCreating && (
           <button onClick={() => setIsCreating(true)} className="w-full bg-white border-2 border-dashed border-orange-300 hover:border-orange-500 text-orange-700 py-6 rounded-2xl font-bold shadow-sm hover:shadow-md transition-all flex justify-center items-center space-x-3 mb-8 group">
-            <div className="bg-orange-100 p-2 rounded-full group-hover:scale-110 transition-transform"><Plus className="w-6 h-6" /></div>
-            <span className="text-lg">{t('new_load_btn')}</span>
+            <div className="bg-orange-100 p-2 rounded-full group-hover:scale-110 transition-transform"><Plus className="w-6 h-6" /></div><span className="text-lg">{t('new_load_btn')}</span>
           </button>
         )}
 
@@ -666,7 +578,7 @@ export default function App() {
           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-orange-100 mb-8 animate-slide-up">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
               <h3 className="font-bold text-xl text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-2 text-orange-500"/> {t('load_form_title')}</h3>
-              <button onClick={() => {setIsCreating(false); setImgPreview(null); setForm({plaka:'', sofor:'', destLocation:'', destCompany:'', projectNo:'', tonnage:'', not:''});}} className="text-gray-400 hover:text-gray-700"><X className="w-6 h-6"/></button>
+              <button onClick={() => {setIsCreating(false); setImgPreview(null); setForm({plaka:'', sofor:'', destCountry:'', destCity:'', destCompany:'', projectNo:'', tonnage:'', not:''});}} className="text-gray-400 hover:text-gray-700"><X className="w-6 h-6"/></button>
             </div>
             <form onSubmit={handleStartLoading} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -678,13 +590,26 @@ export default function App() {
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('driver_name')}</label>
                   <input type="text" value={form.sofor} onChange={e=>setForm({...form, sofor: e.target.value})} className="w-full border border-gray-300 rounded-xl p-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" />
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_location')}</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_country')}</label>
                   <div className="relative">
-                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input required type="text" value={form.destLocation} onChange={e=>setForm({...form, destLocation: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: İstanbul / Dilovası" />
+                    <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <select required value={form.destCountry} onChange={e=>setForm({...form, destCountry: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 appearance-none font-medium">
+                       <option value="">{t('select_country')}</option>
+                       {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
                   </div>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_city')}</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="text" value={form.destCity} onChange={e=>setForm({...form, destCity: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: Münih / Berlin" />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_company')}</label>
                   <div className="relative">
@@ -703,7 +628,7 @@ export default function App() {
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('tonnage')}</label>
                   <div className="relative">
                     <Scale className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input required type="number" step="any" value={form.tonnage} onChange={e=>setForm({...form, tonnage: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder="Örn: 24500 (kg) veya 24.5" />
+                    <input required type="number" step="any" value={form.tonnage} onChange={e=>setForm({...form, tonnage: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder="Örn: 24.5" />
                   </div>
                 </div>
               </div>
@@ -712,8 +637,7 @@ export default function App() {
                 <input type="file" id="preLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImgPreview)} />
                 <div onClick={() => document.getElementById('preLoadCamera').click()} className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
                   {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
-                    <><div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 group-hover:text-orange-500" /></div>
-                    <span className="text-sm font-bold">{t('cam_open')}</span><span className="text-xs text-gray-400 mt-1">{t('optional')}</span></>
+                    <><div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 group-hover:text-orange-500" /></div><span className="text-sm font-bold">{t('cam_open')}</span><span className="text-xs text-gray-400 mt-1">{t('optional')}</span></>
                   )}
                 </div>
               </div>
@@ -726,16 +650,9 @@ export default function App() {
           </div>
         )}
 
-        <div className="mb-4">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center"><Activity className="w-5 h-5 mr-2 text-blue-500"/> {t('active_loads')} ({activeLoadings.length})</h2>
-        </div>
-
+        <div className="mb-4"><h2 className="text-lg font-bold text-gray-800 flex items-center"><Activity className="w-5 h-5 mr-2 text-blue-500"/> {t('active_loads')} ({activeLoadings.length})</h2></div>
         {activeLoadings.length === 0 ? (
-          <div className="bg-white p-10 rounded-3xl text-center border border-gray-100 shadow-sm">
-            <CheckCircle className="w-16 h-16 mx-auto text-green-400 mb-4" />
-            <p className="font-bold text-xl text-gray-800">{t('no_active_loads')}</p>
-            <p className="text-gray-500 text-sm mt-2">{t('no_active_desc')}</p>
-          </div>
+          <div className="bg-white p-10 rounded-3xl text-center border border-gray-100 shadow-sm"><CheckCircle className="w-16 h-16 mx-auto text-green-400 mb-4" /><p className="font-bold text-xl text-gray-800">{t('no_active_loads')}</p><p className="text-gray-500 text-sm mt-2">{t('no_active_desc')}</p></div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activeLoadings.map(load => (
@@ -746,29 +663,23 @@ export default function App() {
                 </div>
                 <div className="p-5 flex-1 flex flex-col space-y-3">
                   {load.sofor && <p className="text-xs text-gray-600 font-medium"><User className="w-3.5 h-3.5 inline mr-1 text-gray-400"/> {t('driver')}: <span className="text-gray-800 font-bold">{load.sofor}</span></p>}
-                  
                   <div className="grid grid-cols-2 gap-2 text-xs bg-orange-50/60 p-3 rounded-xl border border-orange-100">
-                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800">{load.destLocation || '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_country')} / {t('dest_city')}</span><span className="font-bold text-gray-800">{load.destCountry || load.destLocation || '-'} {load.destCity ? `/ ${load.destCity}` : ''}</span></div>
                     <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800">{load.destCompany || '-'}</span></div>
                     <div><span className="text-gray-400 font-bold block text-[10px]">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
-                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-700">{load.tonnage ? `${load.tonnage} kg/Ton` : '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">Tonaj</span><span className="font-extrabold text-orange-700">{load.tonnage ? `${load.tonnage} Ton` : '-'}</span></div>
                   </div>
-
                   <div className="flex items-start space-x-4 bg-gray-50 p-3 rounded-xl border border-gray-100 mt-auto">
                     <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0 overflow-hidden relative group cursor-pointer" onClick={() => load.preImgUrl && setPreviewModalImg(load.preImgUrl)}>
-                       {load.preImgUrl ? (
-                          <>
-                            <img src={load.preImgUrl} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
-                          </>
-                       ) : <><ImageIcon className="w-5 h-5 mb-1"/><span className="text-[8px] font-bold">{t('no_photo')}</span></>}
+                       {load.preImgUrl ? (<><img src={load.preImgUrl} className="w-full h-full object-cover" /><div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div></>) : <><ImageIcon className="w-5 h-5 mb-1"/><span className="text-[8px] font-bold">{t('no_photo')}</span></>}
                     </div>
-                    <div>
-                      <p className="text-[10px] text-gray-400 font-bold mb-1 uppercase tracking-wider">{t('pre_note_title')}</p>
-                      <p className="text-sm text-gray-800 font-medium">{load.preNote || t('no_note')}</p>
-                    </div>
+                    <div><p className="text-[10px] text-gray-400 font-bold mb-1 uppercase tracking-wider">{t('pre_note_title')}</p><p className="text-sm text-gray-800 font-medium">{load.preNote || t('no_note')}</p></div>
                   </div>
-                  <button onClick={() => setFinishModal({isOpen: true, loadId: load.id, note: '', imgPreview: null})} className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center mt-2"><CheckSquare className="w-5 h-5 mr-2" /> {t('finish_load_btn')}</button>
+                  {load.status === 'beklemede' ? (
+                    <button onClick={() => startLoadingProcess(load.id)} className="w-full bg-blue-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center mt-2 hover:bg-blue-700 transition-colors"><Truck className="w-5 h-5 mr-2" /> {t('btn_start_load_process')}</button>
+                  ) : (
+                    <button onClick={() => setFinishModal({isOpen: true, loadId: load.id, note: '', imgPreview: null})} className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center mt-2 hover:bg-green-700 transition-colors"><CheckSquare className="w-5 h-5 mr-2" /> {t('finish_load_btn')}</button>
+                  )}
                 </div>
               </div>
             ))}
@@ -778,29 +689,17 @@ export default function App() {
         {finishModal.isOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
             <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
-              <div className="p-6 bg-green-600 text-white flex justify-between items-center">
-                <h3 className="font-bold text-xl flex items-center"><Save className="w-6 h-6 mr-3"/> {t('finish_form_title')}</h3>
-                <button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="p-2 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button>
-              </div>
+              <div className="p-6 bg-green-600 text-white flex justify-between items-center"><h3 className="font-bold text-xl flex items-center"><Save className="w-6 h-6 mr-3"/> {t('finish_form_title')}</h3><button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="p-2 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button></div>
               <div className="p-8 space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('cam_post')}</label>
                   <input type="file" id="postLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setFinishModal({...finishModal, imgPreview: img}))} />
                   <div onClick={() => document.getElementById('postLoadCamera').click()} className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
-                    {finishModal.imgPreview ? ( <img src={finishModal.imgPreview} className="w-full h-full object-cover" /> ) : (
-                      <><div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 group-hover:text-green-500" /></div>
-                      <span className="text-sm font-bold">{t('cam_open')}</span></>
-                    )}
+                    {finishModal.imgPreview ? ( <img src={finishModal.imgPreview} className="w-full h-full object-cover" /> ) : (<><div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 group-hover:text-green-500" /></div><span className="text-sm font-bold">{t('cam_open')}</span></>)}
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('note_post')}</label>
-                  <input type="text" value={finishModal.note} onChange={e=>setFinishModal({...finishModal, note: e.target.value})} className="w-full border border-gray-300 rounded-xl p-4 bg-gray-50 outline-none focus:ring-2 focus:ring-green-500" />
-                </div>
-                <div className="flex space-x-3 pt-4 border-t border-gray-100">
-                  <button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="flex-1 py-4 font-bold text-gray-600 bg-gray-100 rounded-xl">{t('cancel')}</button>
-                  <button onClick={handleFinishLoading} className="flex-1 py-4 font-bold text-white bg-green-600 rounded-xl shadow-lg">{t('close_job')}</button>
-                </div>
+                <div><label className="block text-sm font-bold text-gray-700 mb-2">{t('note_post')}</label><input type="text" value={finishModal.note} onChange={e=>setFinishModal({...finishModal, note: e.target.value})} className="w-full border border-gray-300 rounded-xl p-4 bg-gray-50 outline-none focus:ring-2 focus:ring-green-500" /></div>
+                <div className="flex space-x-3 pt-4 border-t border-gray-100"><button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="flex-1 py-4 font-bold text-gray-600 bg-gray-100 rounded-xl">{t('cancel')}</button><button onClick={handleFinishLoading} className="flex-1 py-4 font-bold text-white bg-green-600 rounded-xl shadow-lg">{t('close_job')}</button></div>
               </div>
             </div>
           </div>
@@ -812,7 +711,7 @@ export default function App() {
   const AdminDashboard = () => {
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
     const [accountTab, setAccountTab] = useState('isg');
-    
+    const [expandedLoadId, setExpandedLoadId] = useState(null);
     const [historyFilter, setHistoryFilter] = useState('1');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteCountdown, setDeleteCountdown] = useState(10);
@@ -820,15 +719,9 @@ export default function App() {
 
     useEffect(() => {
       let timer;
-      if (showDeleteModal && deleteCountdown > 0) {
-        timer = setTimeout(() => setDeleteCountdown(deleteCountdown - 1), 1000);
-      }
+      if (showDeleteModal && deleteCountdown > 0) { timer = setTimeout(() => setDeleteCountdown(deleteCountdown - 1), 1000); }
       return () => clearTimeout(timer);
     }, [showDeleteModal, deleteCountdown]);
-
-    const togglePasswordVisibility = (userId) => {
-      setVisiblePasswords(prev => ({ ...prev, [userId]: !prev[userId] }));
-    };
 
     const handleCreateUser = async (e) => {
       e.preventDefault();
@@ -836,94 +729,45 @@ export default function App() {
       const newUserId = Date.now().toString();
       const finalRole = accountTab === 'yukleme' ? 'yuklemeci' : newUser.role;
       const finalDept = finalRole === 'sef' ? newUser.dept : null;
-      
-      const userObj = { ...newUser, role: finalRole, id: newUserId, dept: finalDept };
-      await setDoc(doc(db, "users", newUserId), userObj);
+      await setDoc(doc(db, "users", newUserId), { ...newUser, role: finalRole, id: newUserId, dept: finalDept });
       setNewUser({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
     };
 
-    const handleDeleteUser = async (id) => {
-      if(id === "1") return; 
-      if(window.confirm("Delete user?")) { await deleteDoc(doc(db, "users", id)); }
-    };
+    const handleDeleteUser = async (id) => { if(id !== "1" && window.confirm("Delete user?")) { await deleteDoc(doc(db, "users", id)); } };
 
     const executeHistoryDelete = async () => {
-      const now = Date.now();
-      const oneMonth = 30 * 24 * 60 * 60 * 1000;
-      let cutoff = 0;
-      if (historyFilter === '1') cutoff = now - (1 * oneMonth);
-      else if (historyFilter === '3') cutoff = now - (3 * oneMonth);
-      else if (historyFilter === '6') cutoff = now - (6 * oneMonth);
-      else if (historyFilter === 'all') cutoff = now + 10000;
-
-      const tasksToDelete = tasks.filter(t => t.timestamp <= cutoff);
-      for (const t of tasksToDelete) { await deleteDoc(doc(db, "tasks", t.id)); }
-      const loadsToDelete = loadings.filter(l => l.timestamp <= cutoff);
-      for (const l of loadsToDelete) { await deleteDoc(doc(db, "loadings", l.id)); }
-
+      const now = Date.now(), oneMonth = 30 * 24 * 60 * 60 * 1000;
+      let cutoff = historyFilter === '1' ? now - (oneMonth) : historyFilter === '3' ? now - (3*oneMonth) : historyFilter === '6' ? now - (6*oneMonth) : now + 10000;
+      for (const t of tasks.filter(t => t.timestamp <= cutoff)) { await deleteDoc(doc(db, "tasks", t.id)); }
+      for (const l of loadings.filter(l => l.timestamp <= cutoff)) { await deleteDoc(doc(db, "loadings", l.id)); }
       setShowDeleteModal(false); setDeleteCountdown(10);
     };
 
     const renderRightPanel = () => {
       if (adminViewMode === 'users') {
         const filteredUsers = users.filter(u => accountTab === 'isg' ? (u.role !== 'yuklemeci') : (u.role === 'yuklemeci'));
-        
         return (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Users className="w-6 h-6 mr-2 text-blue-600"/> {t('user_management')}</h2>
-            </div>
-
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center"><Users className="w-6 h-6 mr-2 text-blue-600"/> {t('user_management')}</h2>
             <div className="flex bg-gray-100 p-1.5 rounded-xl shadow-inner mb-6">
-               <button onClick={() => setAccountTab('isg')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'isg' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
-                 <ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_accounts')}
-               </button>
-               <button onClick={() => setAccountTab('yukleme')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'yukleme' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}>
-                 <Truck className="w-4 h-4 mr-2" /> {t('yukleme_accounts')}
-               </button>
+               <button onClick={() => setAccountTab('isg')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'isg' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_accounts')}</button>
+               <button onClick={() => setAccountTab('yukleme')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'yukleme' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_accounts')}</button>
             </div>
-            
             <form onSubmit={handleCreateUser} className="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8 space-y-4">
-              <h3 className="font-bold text-gray-700 text-sm mb-2 border-b pb-2">{t('new_account')} ({accountTab === 'isg' ? 'İSG' : 'Yükleme'})</h3>
+              <h3 className="font-bold text-gray-700 text-sm mb-2 border-b pb-2">{t('new_account')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">{t('fullname')}</label>
-                  <input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">{t('username')}</label>
-                  <input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">{t('password')}</label>
-                  <input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
-                </div>
-                
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">{t('fullname')}</label><input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">{t('username')}</label><input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" /></div>
+                <div><label className="block text-xs font-bold text-gray-500 mb-1">{t('password')}</label><input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border rounded-lg p-2 text-sm" /></div>
                 {accountTab === 'isg' && (
-                    <div>
-                    <label className="block text-xs font-bold text-gray-500 mb-1">{t('sys_role')}</label>
-                    <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
-                        <option value="sef">Birim Şefi</option>
-                        <option value="mod">İSG Uzmanı (Moderatör)</option>
-                        <option value="admin">Sistem Yöneticisi</option>
-                    </select>
-                    </div>
+                    <div><label className="block text-xs font-bold text-gray-500 mb-1">{t('sys_role')}</label><select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2 text-sm"><option value="sef">Birim Şefi</option><option value="mod">İSG Uzmanı (Moderatör)</option><option value="admin">Sistem Yöneticisi</option></select></div>
                 )}
-                
                 {accountTab === 'isg' && newUser.role === 'sef' && (
-                  <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-gray-500 mb-1">{t('dept')}</label>
-                    <select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
-                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
-                    </select>
-                  </div>
+                  <div className="md:col-span-2"><label className="block text-xs font-bold text-gray-500 mb-1">{t('dept')}</label><select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border rounded-lg p-2 text-sm">{DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}</select></div>
                 )}
               </div>
-              <button type="submit" className={`text-white font-bold py-2 px-4 rounded-lg text-sm w-full flex justify-center items-center ${accountTab === 'isg' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
-                <Plus className="w-4 h-4 mr-1"/> {t('create_acc_btn')}
-              </button>
+              <button type="submit" className={`text-white font-bold py-2 px-4 rounded-lg text-sm w-full flex justify-center items-center ${accountTab === 'isg' ? 'bg-blue-600' : 'bg-orange-600'}`}><Plus className="w-4 h-4 mr-1"/> {t('create_acc_btn')}</button>
             </form>
-
             <div>
               <h3 className="font-bold text-gray-700 text-sm mb-3">{t('existing_accs')} ({filteredUsers.length})</h3>
               <div className="space-y-2">
@@ -931,22 +775,10 @@ export default function App() {
                   const isVisible = visiblePasswords[u.id];
                   return (
                     <div key={u.id} className="flex justify-between items-center p-3.5 border rounded-xl hover:bg-gray-50 transition-colors">
-                      <div>
-                        <p className="font-bold text-gray-800 text-sm">{u.name} <span className="text-xs text-gray-400 font-normal ml-2">@{u.username}</span></p>
-                        <p className="text-xs text-gray-500 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p>
-                      </div>
-                      
+                      <div><p className="font-bold text-gray-800 text-sm">{u.name} <span className="text-xs text-gray-400 font-normal ml-2">@{u.username}</span></p><p className="text-xs text-gray-500 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p></div>
                       <div className="flex items-center space-x-3">
-                        {/* Admin şifre görebilme özelliği */}
                         {currentUser?.username === 'agiradar' && (
-                          <div className="flex items-center bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
-                            <span className="text-xs font-mono font-bold text-gray-700 mr-2">
-                              {isVisible ? u.password : '••••••••'}
-                            </span>
-                            <button onClick={() => togglePasswordVisibility(u.id)} className="text-gray-500 hover:text-gray-800 focus:outline-none">
-                              {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
+                          <div className="flex items-center bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200"><span className="text-xs font-mono font-bold text-gray-700 mr-2">{isVisible ? u.password : '••••••••'}</span><button onClick={() => setVisiblePasswords(p => ({...p, [u.id]: !p[u.id]}))} className="text-gray-500">{isVisible ? <EyeOff className="w-3.5 h-3.5"/> : <Eye className="w-3.5 h-3.5"/>}</button></div>
                         )}
                         {u.id !== "1" && <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md"><Trash2 className="w-4 h-4"/></button>}
                       </div>
@@ -960,67 +792,167 @@ export default function App() {
       }
 
       if (adminSystemMode === 'yukleme') {
-         const totalTonnageAll = loadings.reduce((acc, l) => acc + (parseFloat(l.tonnage) || 0), 0);
+         if (adminViewMode === 'analytics') {
+           const countryStats = {};
+           const companyStats = {};
+           loadings.forEach(l => {
+             const tVal = parseFloat(l.tonnage) || 0;
+             const country = l.destCountry || l.destLocation || "Belirsiz";
+             const company = l.destCompany || "Belirsiz";
+             countryStats[country] = (countryStats[country] || 0) + tVal;
+             companyStats[company] = (companyStats[company] || 0) + tVal;
+           });
+           const sortedCountries = Object.entries(countryStats).sort((a,b)=>b[1]-a[1]);
+           const sortedCompanies = Object.entries(companyStats).sort((a,b)=>b[1]-a[1]);
+
+           return (
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center mb-6"><PieChart className="w-6 h-6 mr-3 text-orange-500"/> {t('analytics_title')}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                 <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+                    <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center uppercase tracking-wider"><Globe className="w-4 h-4 mr-2 text-blue-500"/> {t('total_by_country')}</h3>
+                    <div className="space-y-3">
+                      {sortedCountries.length === 0 ? <p className="text-xs text-gray-500">Veri yok</p> : sortedCountries.map(([c, val], i) => (
+                         <div key={i} className="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                           <span className="font-bold text-gray-800">{c}</span>
+                           <span className="font-extrabold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100">{val.toLocaleString('tr-TR')} Ton</span>
+                         </div>
+                      ))}
+                    </div>
+                 </div>
+                 <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+                    <h3 className="text-sm font-bold text-gray-700 mb-4 flex items-center uppercase tracking-wider"><Building2 className="w-4 h-4 mr-2 text-blue-500"/> {t('total_by_company')}</h3>
+                    <div className="space-y-3">
+                      {sortedCompanies.length === 0 ? <p className="text-xs text-gray-500">Veri yok</p> : sortedCompanies.map(([c, val], i) => (
+                         <div key={i} className="flex justify-between items-center p-3 bg-white border border-gray-200 rounded-xl shadow-sm">
+                           <span className="font-bold text-gray-800">{c}</span>
+                           <span className="font-extrabold text-orange-600 bg-orange-50 px-2 py-1 rounded-lg border border-orange-100">{val.toLocaleString('tr-TR')} Ton</span>
+                         </div>
+                      ))}
+                    </div>
+                 </div>
+              </div>
+            </div>
+           );
+         }
+
+         const currDate = new Date();
+         const currentMonth = currDate.getMonth();
+         const currentYear = currDate.getFullYear();
+         const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+         const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+         const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+         const dayNames = lang === 'tr' ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+         const monthNames = lang === 'tr' ? ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+         let displayLoadings = loadings;
+         if (adminViewMode === 'calendar' && !selectedAdminDate) {
+            return (
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+                <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100"><h3 className="font-extrabold text-gray-800 text-2xl flex items-center"><CalendarDays className="w-7 h-7 mr-3 text-orange-600"/> {monthNames[currentMonth]} {currentYear}</h3></div>
+                <div className="grid grid-cols-7 gap-2 text-center mb-3">{dayNames.map(day => <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2 bg-gray-50 rounded-lg">{day}</div>)}</div>
+                <div className="grid grid-cols-7 gap-2">
+                   {Array.from({ length: startOffset }).map((_, i) => <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 border border-gray-100 opacity-50"></div>)}
+                   {Array.from({ length: daysInMonth }).map((_, i) => {
+                     const dayNum = i + 1;
+                     const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
+                     const isToday = dayNum === currDate.getDate();
+                     const dayLoads = loadings.filter(l => l.createdAtDate === formattedDateForCell);
+                     
+                     return (
+                       <div key={dayNum} onClick={() => dayLoads.length > 0 && setSelectedAdminDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-100 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                         <span className={`text-sm md:text-base font-bold ${isToday ? 'text-orange-700' : 'text-gray-700'}`}>{dayNum}</span>
+                         {dayLoads.length > 0 && (
+                           <div className="flex space-x-1 mt-1.5 flex-wrap justify-center px-1">
+                             {dayLoads.slice(0,3).map((l,idx) => (
+                               <span key={idx} className={`w-2.5 h-2.5 rounded-full ${l.status==='beklemede'?'bg-blue-400':l.status==='yukleniyor'?'bg-orange-400':'bg-green-400'}`}></span>
+                             ))}
+                             {dayLoads.length > 3 && <span className="text-[8px] font-bold text-gray-400">+{dayLoads.length - 3}</span>}
+                           </div>
+                         )}
+                       </div>
+                     );
+                   })}
+                </div>
+              </div>
+            );
+         }
+
+         if (adminViewMode === 'calendar' && selectedAdminDate) {
+           displayLoadings = loadings.filter(l => l.createdAtDate === selectedAdminDate);
+         }
+
+         const totalTonnageAll = displayLoadings.reduce((acc, l) => acc + (parseFloat(l.tonnage) || 0), 0);
 
          return (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-gray-100 pb-4">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-3 text-orange-500"/> {t('all_reports')}</h2>
-                <p className="text-xs text-gray-500 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} kg/Ton</b></p>
+                {selectedAdminDate && <button onClick={() => setSelectedAdminDate(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-3"><ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}</button>}
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-3 text-orange-500"/> {selectedAdminDate ? `${selectedAdminDate} Kayıtları` : t('all_reports')}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} Ton</b></p>
               </div>
-              <span className="bg-orange-100 text-orange-800 font-bold px-3 py-1 rounded-lg text-sm">{loadings.length} {t('records')}</span>
+              <span className="bg-orange-100 text-orange-800 font-bold px-3 py-1 rounded-lg text-sm">{displayLoadings.length} {t('records')}</span>
             </div>
             <div className="space-y-4">
-              {loadings.length === 0 ? <p className="text-gray-500 text-center py-10">{t('no_records')}</p> : (
-                loadings.map(load => (
-                  <div key={load.id} className="border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-shadow bg-gray-50/50">
-                    <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-3 border-b border-gray-100 gap-3">
-                      <div>
-                        <div className="flex items-center space-x-3 mb-1">
-                          <span className="text-xl font-extrabold text-gray-800">{load.plaka}</span>
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${load.status === 'tamamlandi' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {load.status === 'tamamlandi' ? t('status_done') : t('status_progress')}
-                          </span>
+              {displayLoadings.length === 0 ? <p className="text-gray-500 text-center py-10">{t('no_records')}</p> : (
+                displayLoadings.map(load => {
+                  let statusText = ''; let statusColor = '';
+                  if (load.status === 'beklemede') { statusText = t('stat_beklemede'); statusColor = 'bg-blue-100 text-blue-700 border-blue-200'; }
+                  else if (load.status === 'yukleniyor' || load.status === 'devam_ediyor') { statusText = t('stat_yukleniyor'); statusColor = 'bg-orange-100 text-orange-700 border-orange-200'; }
+                  else { statusText = t('stat_gonderildi'); statusColor = 'bg-green-100 text-green-700 border-green-200'; }
+                  const isExpanded = expandedLoadId === load.id;
+                  return (
+                  <div key={load.id} className="border border-gray-200 rounded-2xl bg-white overflow-hidden hover:shadow-md transition-shadow">
+                    <div onClick={() => setExpandedLoadId(isExpanded ? null : load.id)} className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center cursor-pointer bg-gray-50/50 hover:bg-gray-50 group">
+                      <div className="flex flex-col mb-3 md:mb-0">
+                         <div className="flex items-center space-x-2"><MapPin className="w-5 h-5 text-gray-400" /><span className="font-bold text-gray-800 text-lg">{load.destCountry || load.destLocation || '-'} {load.destCity ? `/ ${load.destCity}` : ''}</span><span className="text-gray-300 font-medium text-lg">/</span><span className="font-semibold text-gray-600 text-lg">{load.destCompany || '-'}</span></div>
+                         <div className="flex items-center mt-2 space-x-3 text-xs text-gray-500"><span className="bg-white px-2 py-0.5 rounded border border-gray-200 font-bold text-gray-700 shadow-sm">{load.plaka}</span><span className="flex items-center"><Calendar className="w-3 h-3 inline mr-1"/> {load.createdAtDate}</span></div>
+                      </div>
+                      <div className="flex items-center justify-between w-full md:w-auto md:space-x-4">
+                        <span className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider border shadow-sm ${statusColor}`}>{statusText}</span>
+                        <div className="flex items-center space-x-2 text-gray-400 group-hover:text-gray-700 transition-colors"><span className="text-xs font-bold">{t('details')}</span><ChevronRight className={`w-5 h-5 transition-transform duration-300 ${isExpanded ? 'rotate-90' : ''}`} /></div>
+                      </div>
+                    </div>
+                    {isExpanded && (
+                      <div className="p-5 border-t border-gray-100 bg-white animate-slide-up">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-gray-50 p-4 rounded-xl border border-gray-100 mb-5">
+                          <div><span className="text-gray-400 font-bold block text-xs mb-1 uppercase">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
+                          <div><span className="text-gray-400 font-bold block text-xs mb-1 uppercase">Tonaj</span><span className="font-extrabold text-orange-600 text-lg">{load.tonnage ? `${load.tonnage} Ton` : '-'}</span></div>
+                          <div><span className="text-gray-400 font-bold block text-xs mb-1 uppercase">{t('driver')}</span><span className="font-bold text-gray-800">{load.sofor || '-'}</span></div>
+                          <div><span className="text-gray-400 font-bold block text-xs mb-1 uppercase">Saat</span><span className="font-bold text-gray-800">{load.createdAtTime} {load.finishedAtTime && ` - ${load.finishedAtTime}`}</span></div>
                         </div>
-                        <p className="text-xs text-gray-500 font-medium"><Calendar className="w-3 h-3 inline mr-1"/> {load.createdAtDate} - {load.createdAtTime} {load.finishedAtTime && `| Çıkış: ${load.finishedAtTime}`}</p>
-                      </div>
-                      <div className="bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600"><User className="w-4 h-4 inline text-gray-400 mr-1"/> {load.sofor || '-'}</div>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs bg-white p-3 rounded-xl border border-gray-100 mb-4">
-                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800">{load.destLocation || '-'}</span></div>
-                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800">{load.destCompany || '-'}</span></div>
-                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
-                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-600">{load.tonnage ? `${load.tonnage} kg/Ton` : '-'}</span></div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">{t('before')}</span>
-                        {load.preImgUrl ? (
-                          <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.preImgUrl)}>
-                             <img src={load.preImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
-                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="bg-white p-4 rounded-xl border border-gray-100 flex flex-col shadow-sm">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase mb-3 flex items-center"><Camera className="w-3 h-3 mr-1"/> Kasa Giriş Durumu</span>
+                            {load.preImgUrl ? (
+                              <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-3" onClick={(e) => { e.stopPropagation(); setPreviewModalImg(load.preImgUrl); }}>
+                                 <img src={load.preImgUrl} className="w-full h-48 object-cover group-hover:scale-105 transition-transform" />
+                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-6 h-6" /></div>
+                              </div>
+                            ) : <div className="w-full h-48 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-3 border border-dashed border-gray-200">{t('no_photo')}</div>}
+                            <p className="text-sm text-gray-700 italic bg-gray-50 p-3 rounded-lg border border-gray-100">"{load.preNote || "-"}"</p>
                           </div>
-                        ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
-                        <p className="text-sm text-gray-700 italic">"{load.preNote || "-"}"</p>
+                          <div className="bg-white p-4 rounded-xl border border-gray-100 flex flex-col shadow-sm">
+                            <span className="text-[10px] font-bold text-gray-400 uppercase mb-3 flex items-center"><Camera className="w-3 h-3 mr-1"/> Bitiş / Yüklü Kasa</span>
+                            {load.status === 'beklemede' || load.status === 'yukleniyor' || load.status === 'devam_ediyor' ? (
+                              <div className="w-full h-48 bg-orange-50 border border-orange-100 rounded-lg flex flex-col items-center justify-center text-orange-500 text-sm font-bold mb-3"><Activity className="w-8 h-8 mb-2 animate-pulse" />{load.status === 'beklemede' ? t('stat_beklemede') : t('loading_progress')}</div>
+                            ) : (
+                              <>{load.postImgUrl ? (
+                                <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-3" onClick={(e) => { e.stopPropagation(); setPreviewModalImg(load.postImgUrl); }}>
+                                   <img src={load.postImgUrl} className="w-full h-48 object-cover group-hover:scale-105 transition-transform" />
+                                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-6 h-6" /></div>
+                                </div>
+                              ) : <div className="w-full h-48 bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-3 border border-dashed border-gray-200">{t('no_photo')}</div>}
+                              <p className="text-sm text-gray-700 italic bg-gray-50 p-3 rounded-lg border border-gray-100">"{load.postNote || "-"}"</p></>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col">
-                        <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">{t('after')}</span>
-                        {load.status === 'devam_ediyor' ? <div className="w-full h-44 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-orange-400 text-sm font-medium mb-2">{t('loading_progress')}</div> : (
-                          <>{load.postImgUrl ? (
-                            <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.postImgUrl)}>
-                               <img src={load.postImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
-                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
-                            </div>
-                          ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
-                          <p className="text-sm text-gray-700 italic">"{load.postNote || "-"}"</p></>
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -1033,38 +965,23 @@ export default function App() {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
             <div className="flex justify-between items-start mb-6 border-b pb-4 border-gray-100">
               <div>
-                <button onClick={() => { setSelectedAdminDept(null); setSelectedAdminDate(null); }} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}
-                </button>
-                <h2 className="text-2xl font-bold text-gray-800">{selectedAdminDept || selectedAdminDate} Raporu</h2>
-                <p className="text-gray-500 mt-1">{t('total_record')} {filterTasks.length}</p>
+                <button onClick={() => { setSelectedAdminDept(null); setSelectedAdminDate(null); }} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4"><ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}</button>
+                <h2 className="text-2xl font-bold text-gray-800">{selectedAdminDept || selectedAdminDate} Raporu</h2><p className="text-gray-500 mt-1">{t('total_record')} {filterTasks.length}</p>
               </div>
               {selectedAdminDept && (
-              <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center">
-                 <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">{t('current_score')}</p>
-                 <p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p>
-              </div>)}
+              <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center"><p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">{t('current_score')}</p><p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p></div>
+              )}
             </div>
-
             <div className="space-y-4">
               {filterTasks.length === 0 ? <p className="text-sm text-gray-500">{t('no_records')}</p> : (
                 filterTasks.map(task => {
-                  const statusDef = STATUS_INFO[task.status];
-                  const Icon = statusDef.icon;
+                  const statusDef = STATUS_INFO[task.status]; const Icon = statusDef.icon;
                   return (
                     <div key={task.id} className={`p-5 rounded-2xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]}`}>
-                      <div className="flex justify-between items-start mb-3">
-                        <div>
-                           <span className="font-bold text-gray-800 block">{task.dept}</span>
-                           <span className="text-xs text-gray-500 font-medium">{task.createdAt}</span>
-                        </div>
-                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
-                          <Icon className="w-3 h-3 mr-1" /> {t(statusDef.label_key)}
-                        </span>
-                      </div>
+                      <div className="flex justify-between items-start mb-3"><div><span className="font-bold text-gray-800 block">{task.dept}</span><span className="text-xs text-gray-500 font-medium">{task.createdAt}</span></div><span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}><Icon className="w-3 h-3 mr-1" /> {t(statusDef.label_key)}</span></div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="bg-white p-3 rounded-xl border border-gray-200 flex flex-col items-center">
-                           <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 w-full text-left">{t('before')}</span>
+                           <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 w-full text-left">Öncesi</span>
                            {task.imgUrl ? (
                               <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full" onClick={() => setPreviewModalImg(task.imgUrl)}>
                                 <img src={task.imgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
@@ -1086,10 +1003,7 @@ export default function App() {
                            ) : <div className="w-full h-full min-h-[8rem] bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-xs">{t('stat_acik')}</div>}
                          </div>
                       </div>
-                      <div className="mt-4 flex justify-between items-center">
-                         <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{t(PRIORITIES[task.priority].label_key)} {t('risk')}</span>
-                         {task.status === 'acik' && <span className="text-xs text-red-600 font-bold"><Clock className="w-3 h-3 inline mr-1"/>{task.deadlineHours} {t('hours_left')}</span>}
-                      </div>
+                      <div className="mt-4 flex justify-between items-center"><span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{t(PRIORITIES[task.priority].label_key)} {t('risk')}</span>{task.status === 'acik' && <span className="text-xs text-red-600 font-bold"><Clock className="w-3 h-3 inline mr-1"/>{task.deadlineHours} {t('hours_left')}</span>}</div>
                     </div>
                   );
                 })
@@ -1099,35 +1013,18 @@ export default function App() {
         );
       }
 
-      const currDate = new Date();
-      const currentMonth = currDate.getMonth();
-      const currentYear = currDate.getFullYear();
-      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-      const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+      const currDate = new Date(); const currentMonth = currDate.getMonth(); const currentYear = currDate.getFullYear(); const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate(); const firstDay = new Date(currentYear, currentMonth, 1).getDay(); const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
       const dayNames = lang === 'tr' ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       const monthNames = lang === 'tr' ? ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
       return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-          <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100">
-             <div>
-               <h3 className="font-extrabold text-gray-800 text-2xl flex items-center">
-                 <CalendarDays className="w-7 h-7 mr-3 text-blue-600"/> {monthNames[currentMonth]} {currentYear}
-               </h3>
-             </div>
-          </div>
-          <div className="grid grid-cols-7 gap-2 text-center mb-3">
-            {dayNames.map(day => <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2 bg-gray-50 rounded-lg">{day}</div>)}
-          </div>
+          <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100"><h3 className="font-extrabold text-gray-800 text-2xl flex items-center"><CalendarDays className="w-7 h-7 mr-3 text-blue-600"/> {monthNames[currentMonth]} {currentYear}</h3></div>
+          <div className="grid grid-cols-7 gap-2 text-center mb-3">{dayNames.map(day => <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2 bg-gray-50 rounded-lg">{day}</div>)}</div>
           <div className="grid grid-cols-7 gap-2">
              {Array.from({ length: startOffset }).map((_, i) => <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 border border-gray-100 opacity-50"></div>)}
              {Array.from({ length: daysInMonth }).map((_, i) => {
-               const dayNum = i + 1;
-               const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
-               const isToday = dayNum === currDate.getDate();
-               const dayTasks = tasks.filter(t => t.createdAt === formattedDateForCell);
-               
+               const dayNum = i + 1; const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`; const isToday = dayNum === currDate.getDate(); const dayTasks = tasks.filter(t => t.createdAt === formattedDateForCell);
                return (
                  <div key={dayNum} onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
                    <span className={`text-sm md:text-base font-bold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{dayNum}</span>
@@ -1155,26 +1052,20 @@ export default function App() {
             </div>
           </div>
           {adminSystemMode === 'isg' && (
-            <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100">
-              <Calendar className="w-6 h-6 text-blue-600 mr-3" />
-              <div><p className="text-xs font-bold text-blue-800 uppercase tracking-wider">{t('next_reset')}</p><p className="text-lg font-bold text-blue-900">{getLastFridayOfCurrentMonth()}</p></div>
-            </div>
+            <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100"><Calendar className="w-6 h-6 text-blue-600 mr-3" /><div><p className="text-xs font-bold text-blue-800 uppercase tracking-wider">{t('next_reset')}</p><p className="text-lg font-bold text-blue-900">{getLastFridayOfCurrentMonth()}</p></div></div>
           )}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-1 space-y-4">
-            <button onClick={() => {setAdminViewMode('users'); setSelectedAdminDept(null);}} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-2xl shadow-sm flex items-center justify-center transition-colors">
-              <Users className="w-5 h-5 mr-2" /> {t('btn_users')}
-            </button>
+            <button onClick={() => {setAdminViewMode('users'); setSelectedAdminDept(null);}} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-2xl shadow-sm flex items-center justify-center transition-colors"><Users className="w-5 h-5 mr-2" /> {t('btn_users')}</button>
             
-            {adminSystemMode === 'isg' && (
+            {adminSystemMode === 'isg' ? (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div className="p-5 border-b border-gray-100 flex items-center bg-gray-50 justify-between"><div className="flex items-center"><AlertCircle className="w-5 h-5 text-red-500 mr-2" /><h3 className="font-bold text-gray-800">{t('risk_map')}</h3></div></div>
                 <div className="divide-y divide-gray-50">
                   {sortedDeptsAdmin.map((dept, index) => {
-                    const redCount = getRedTaskCount(dept);
-                    const isSelected = selectedAdminDept === dept;
+                    const redCount = getRedTaskCount(dept); const isSelected = selectedAdminDept === dept;
                     return (
                     <div key={dept} onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); setAdminViewMode('calendar'); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
                       <div className="flex items-center"><span className="w-6 text-center text-sm font-bold mr-3 text-gray-400">{index + 1}.</span><span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}`}>{dept}</span></div>
@@ -1186,9 +1077,15 @@ export default function App() {
                   )})}
                 </div>
               </div>
+            ) : (
+              <div className="space-y-3">
+                 <button onClick={() => {setAdminViewMode('calendar'); setSelectedAdminDate(null);}} className={`w-full text-left font-bold py-4 px-5 rounded-2xl flex items-center justify-between transition-colors ${adminViewMode === 'calendar' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-white text-gray-700 border border-gray-100 hover:bg-gray-50'}`}><span className="flex items-center"><CalendarDays className="w-5 h-5 mr-3"/> Takvim</span><ChevronRight className="w-4 h-4"/></button>
+                 <button onClick={() => {setAdminViewMode('list'); setSelectedAdminDate(null);}} className={`w-full text-left font-bold py-4 px-5 rounded-2xl flex items-center justify-between transition-colors ${adminViewMode === 'list' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-white text-gray-700 border border-gray-100 hover:bg-gray-50'}`}><span className="flex items-center"><List className="w-5 h-5 mr-3"/> {t('all_reports')}</span><ChevronRight className="w-4 h-4"/></button>
+                 <button onClick={() => {setAdminViewMode('analytics'); setSelectedAdminDate(null);}} className={`w-full text-left font-bold py-4 px-5 rounded-2xl flex items-center justify-between transition-colors ${adminViewMode === 'analytics' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-white text-gray-700 border border-gray-100 hover:bg-gray-50'}`}><span className="flex items-center"><BarChart3 className="w-5 h-5 mr-3"/> {t('analytics')}</span><ChevronRight className="w-4 h-4"/></button>
+              </div>
             )}
           </div>
-          <div className="lg:col-span-2">{renderRightPanel()}</div>
+          <div className="lg:col-span-3">{renderRightPanel()}</div>
         </div>
 
         {currentUser.username === 'agiradar' && (
@@ -1196,9 +1093,7 @@ export default function App() {
             <div className="flex flex-col md:flex-row justify-between items-center gap-4">
               <div><h3 className="text-xl font-bold text-red-700 flex items-center mb-2"><AlertTriangle className="w-6 h-6 mr-2"/> {t('delete_history')}</h3><p className="text-sm text-red-600 font-medium">{t('delete_desc')}</p></div>
               <div className="flex w-full md:w-auto space-x-3 items-center">
-                <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} className="flex-1 md:w-48 border border-red-200 rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-red-500 font-bold text-gray-700 cursor-pointer">
-                  <option value="1">{t('month_1')}</option><option value="3">{t('month_3')}</option><option value="6">{t('month_6')}</option><option value="all">{t('month_all')}</option>
-                </select>
+                <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} className="flex-1 md:w-48 border border-red-200 rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-red-500 font-bold text-gray-700 cursor-pointer"><option value="1">{t('month_1')}</option><option value="3">{t('month_3')}</option><option value="6">{t('month_6')}</option><option value="all">{t('month_all')}</option></select>
                 <button onClick={() => { setShowDeleteModal(true); setDeleteCountdown(10); }} className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-md whitespace-nowrap">{t('delete_btn')}</button>
               </div>
             </div>
@@ -1206,21 +1101,13 @@ export default function App() {
         )}
 
         {showDeleteModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-4">
             <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
               <div className="p-6 bg-red-600 text-white flex justify-between items-center"><h3 className="font-bold text-xl flex items-center"><ShieldAlert className="w-6 h-6 mr-2"/> {t('are_you_sure')}</h3><button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="p-1 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button></div>
               <div className="p-8 text-center space-y-6">
                 <AlertTriangle className="w-16 h-16 text-red-500 mx-auto animate-pulse" />
-                <div>
-                  <h4 className="text-lg font-bold text-gray-800 mb-2">{t('are_you_sure')}</h4>
-                  <p className="text-gray-600 text-sm">{historyFilter === 'all' ? t('del_warn_all') : `${t('del_warn_1')} ${historyFilter} ${t('del_warn_2')}`} <b className="text-red-600">{t('del_warn_end')}</b></p>
-                </div>
-                <div className="flex space-x-3 pt-4">
-                  <button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="flex-1 py-4 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200">{t('cancel')}</button>
-                  <button onClick={executeHistoryDelete} disabled={deleteCountdown > 0} className={`flex-1 py-4 font-bold rounded-xl shadow-md ${deleteCountdown > 0 ? 'bg-red-200 text-red-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}>
-                    {deleteCountdown > 0 ? `${t('wait')} (${deleteCountdown}s)` : t('perm_delete')}
-                  </button>
-                </div>
+                <div><h4 className="text-lg font-bold text-gray-800 mb-2">{t('are_you_sure')}</h4><p className="text-gray-600 text-sm">{historyFilter === 'all' ? t('del_warn_all') : `${t('del_warn_1')} ${historyFilter} ${t('del_warn_2')}`} <b className="text-red-600">{t('del_warn_end')}</b></p></div>
+                <div className="flex space-x-3 pt-4"><button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="flex-1 py-4 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200">{t('cancel')}</button><button onClick={executeHistoryDelete} disabled={deleteCountdown > 0} className={`flex-1 py-4 font-bold rounded-xl shadow-md ${deleteCountdown > 0 ? 'bg-red-200 text-red-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}>{deleteCountdown > 0 ? `${t('wait')} (${deleteCountdown}s)` : t('perm_delete')}</button></div>
               </div>
             </div>
           </div>
@@ -1231,22 +1118,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 w-full">
-      <style>{`
-        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-      `}</style>
-
+      <style>{`@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } } .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }`}</style>
       <ImageLightboxModal />
-      
-      {!currentUser ? (
-        <LoginScreen />
-      ) : (
+      {!currentUser ? <LoginScreen /> : (
         <>
           <TopBar theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'} />
           <main className="flex-1 w-full flex">
              {currentUser.role === 'admin' && <AdminDashboard />}
-             {currentUser.role === 'mod' && <div className="p-8 text-xl font-bold flex-1 text-center mt-10">ISG Mod Paneli (Active)</div>}
-             {currentUser.role === 'sef' && <div className="p-8 text-xl font-bold flex-1 text-center mt-10">Birim Şefi Paneli (Active)</div>}
              {currentUser.role === 'yuklemeci' && <YuklemeciDashboard />}
           </main>
         </>
