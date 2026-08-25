@@ -1,81 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Globe } from 'lucide-react';
+import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2 } from 'lucide-react';
+
+// Firebase importları eklendi
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
+
+// Bana attığınız ekran görüntüsündeki SİZE ÖZEL veritabanı anahtarları
+const firebaseConfig = {
+  apiKey: "AIzaSyCkdLCPFTXl4JdGJpSD--yAIpd29BtnN-k",
+  authDomain: "isg-web-6363.firebaseapp.com",
+  projectId: "isg-web-6363",
+  storageBucket: "isg-web-6363.firebasestorage.app",
+  messagingSenderId: "821576627724",
+  appId: "1:821576627724:web:5941a738ff70940599a029"
+};
+
+// Firebase'i başlat
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const DEPARTMENTS = ["Boyahane", "Altyapı", "Dalgaduvar", "Lazer", "Güç", "Kaynaklı imalat", "Dış alan", "Bakım & Onarım"];
-
-// Dil Çevirileri Sözlüğü (Türkçe / İngilizce)
-const TRANSLATIONS = {
-  tr: {
-    welcome: "Hoş Geldiniz",
-    loginDesc: "Devam etmek için hesap bilgilerinizi girin.",
-    username: "Kullanıcı Adı",
-    password: "Şifre",
-    loginBtn: "Sisteme Giriş Yap",
-    logout: "Çıkış Yap",
-    adminPanel: "Yönetici Paneli",
-    adminDesc: "Fabrika genel durumunu, risk haritasını ve kullanıcıları takip edin.",
-    riskMap: "Risk Haritası",
-    usersBtn: "Kullanıcı Hesaplarını Yönet",
-    modTitle: "Yeni İhlal Kaydı",
-    modDesc: "Sahadaki bir problemi fotoğraflayın",
-    takePhoto: "Fotoğraf Çek / Yükle",
-    selectDept: "İlgili Birim",
-    riskLevel: "Risk Seviyesi",
-    deadlineHours: "Süre (Saat)",
-    descLabel: "Açıklama",
-    saveTask: "Kaydet & Görev Ata",
-    activeActions: "Aksiyon Bekleyenler",
-    allReports: "Tüm Raporlar",
-    approveSol: "Çözümü Onayla",
-    rejectSol: "Yetersiz (Reddet)",
-    justified: "Haklı (Çözüldü İşaretle)",
-    unjustified: "Haksız (Reddet)",
-    solvedTab: "Açık Görevler",
-    historyTab: "Geçmiş Kayıtlar",
-    solveBtn: "Çözdüm",
-    objectBtn: "İtiraz Et",
-    adminReset: "Sonraki Puan Sıfırlama",
-    problem: "Problem",
-    issueFree: "Sorunsuz",
-    waitingApproval: "Onay Bekliyor",
-    solved: "Çözüldü"
-  },
-  en: {
-    welcome: "Welcome Back",
-    loginDesc: "Enter your account credentials to continue.",
-    username: "Username",
-    password: "Password",
-    loginBtn: "Sign In",
-    logout: "Sign Out",
-    adminPanel: "Admin Dashboard",
-    adminDesc: "Monitor factory status, risk map and users.",
-    riskMap: "Risk Map",
-    usersBtn: "Manage User Accounts",
-    modTitle: "New Violation Record",
-    modDesc: "Photograph a problem on the field",
-    takePhoto: "Capture / Upload Photo",
-    selectDept: "Target Department",
-    riskLevel: "Risk Level",
-    deadlineHours: "Deadline (Hours)",
-    descLabel: "Description",
-    saveTask: "Save & Assign Task",
-    activeActions: "Pending Actions",
-    allReports: "All Reports",
-    approveSol: "Approve Solution",
-    rejectSol: "Insufficient (Reject)",
-    justified: "Justified (Mark Resolved)",
-    unjustified: "Unjustified (Reject)",
-    solvedTab: "Open Tasks",
-    historyTab: "Past Records",
-    solveBtn: "Resolved",
-    objectBtn: "Object",
-    adminReset: "Next Points Reset",
-    problem: "Issue",
-    issueFree: "Issue-Free",
-    waitingApproval: "Awaiting Approval",
-    solved: "Resolved"
-  }
-};
 
 const PRIORITIES = {
   basit: { label: 'Basit', multiplier: 1, color: 'bg-blue-100 text-blue-800' },
@@ -96,67 +40,66 @@ const formatDate = (dateObj) => {
 };
 
 export default function App() {
-  const [lang, setLang] = useState('tr');
-  const t = TRANSLATIONS[lang];
-
   const [currentUser, setCurrentUser] = useState(null);
+  const [isFirebaseLoading, setIsFirebaseLoading] = useState(true);
   
-  // Kullanıcılar (Sıfırdan temiz başlar, ilk gizli admin: admin / admin123)
-  const [users, setUsers] = useState(() => {
-    const saved = localStorage.getItem('isg_users');
-    if (saved) return JSON.parse(saved);
-    return [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', name: 'Yusuf Serhat (Yönetici)', dept: null }];
-  });
-
-  const [points, setPoints] = useState(() => {
-    const saved = localStorage.getItem('isg_points');
-    if (saved) return JSON.parse(saved);
-    return DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {});
-  });
-  
-  const [tasks, setTasks] = useState(() => {
-    const saved = localStorage.getItem('isg_tasks');
-    if (saved) return JSON.parse(saved);
-    return []; // Tamamen boş başlar
-  });
-
-  useEffect(() => { localStorage.setItem('isg_users', JSON.stringify(users)); }, [users]);
-  useEffect(() => { localStorage.setItem('isg_points', JSON.stringify(points)); }, [points]);
-  useEffect(() => { localStorage.setItem('isg_tasks', JSON.stringify(tasks)); }, [tasks]);
-
-  // Günlük Otomatik Bonus Dağıtımı (Her gün sorunsuz geçenlere +20 puan)
-  useEffect(() => {
-    const todayStr = new Date().toDateString();
-    const lastBonusDate = localStorage.getItem('isg_last_bonus_date');
-    
-    if (lastBonusDate !== todayStr && tasks.length > 0) {
-      const deptsWithIssues = new Set();
-      tasks.forEach(t => {
-        if (t.status === 'acik' || t.status === 'itiraz_edildi' || t.status === 'onay_bekliyor') {
-          deptsWithIssues.add(t.dept);
-        }
-      });
-      
-      const newPoints = { ...points };
-      DEPARTMENTS.forEach(dept => {
-        if (!deptsWithIssues.has(dept)) {
-          newPoints[dept] += 20; 
-        }
-      });
-      
-      setPoints(newPoints);
-      localStorage.setItem('isg_last_bonus_date', todayStr);
-    }
-  }, [tasks, points]);
+  // State'ler artık doğrudan Firebase'den beslenecek
+  const [users, setUsers] = useState([]);
+  const [points, setPoints] = useState({});
+  const [tasks, setTasks] = useState([]);
 
   // UI States
   const [actionModal, setActionModal] = useState({ isOpen: false, type: null, task: null });
   const [modActionModal, setModActionModal] = useState({ isOpen: false, type: null, task: null });
   const [errorMsg, setErrorMsg] = useState('');
   
+  // Yönetici Navigation States
   const [adminViewMode, setAdminViewMode] = useState('list');
   const [selectedAdminDept, setSelectedAdminDept] = useState(null);
   const [selectedAdminDate, setSelectedAdminDate] = useState(null);
+
+  // UYGULAMA AÇILDIĞINDA FIREBASE'E BAĞLAN VE CANLI DİNLE
+  useEffect(() => {
+    // Kullanıcıları Canlı Dinle
+    const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+      const usersData = snapshot.docs.map(doc => doc.data());
+      if (usersData.length === 0) {
+        // Eğer veritabanı yepyeni ise, varsayılan admini oluştur
+        const defaultAdmin = { id: "1", username: 'admin', password: 'admin123', role: 'admin', name: 'Sistem Yöneticisi', dept: null };
+        setDoc(doc(db, "users", "1"), defaultAdmin);
+        setUsers([defaultAdmin]);
+      } else {
+        setUsers(usersData);
+      }
+    });
+
+    // Puanları Canlı Dinle
+    const unsubPoints = onSnapshot(doc(db, "system", "points"), (docSnap) => {
+      if (docSnap.exists()) {
+        setPoints(docSnap.data());
+      } else {
+        const initialPoints = DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {});
+        setDoc(doc(db, "system", "points"), initialPoints);
+        setPoints(initialPoints);
+      }
+    });
+
+    // Görevleri Canlı Dinle
+    const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
+      const tasksData = snapshot.docs.map(doc => doc.data());
+      // En son eklenen en üstte görünsün diye timestamp'e göre sıralıyoruz
+      tasksData.sort((a, b) => b.timestamp - a.timestamp);
+      setTasks(tasksData);
+      setIsFirebaseLoading(false); // Veriler geldi, yükleme ekranını kaldır
+    });
+
+    // Uygulama kapandığında dinlemeyi bırak
+    return () => {
+      unsubUsers();
+      unsubPoints();
+      unsubTasks();
+    };
+  }, []);
 
   const getLastFridayOfCurrentMonth = () => {
     const d = new Date();
@@ -173,32 +116,50 @@ export default function App() {
     setAdminViewMode('list');
   };
 
-  const createTask = (dept, priority, desc, deadlineHours) => {
+  // Firebase'e Görev Ekleme
+  const createTask = async (dept, priority, desc, deadlineHours) => {
+    const taskId = Date.now().toString();
     const newTask = {
-      id: Date.now(), dept, priority, desc, status: 'acik', 
-      createdAt: formatDate(new Date()), deadlineHours, imgUrl: '📷 [Yeni Fotoğraf]', modNote: ''
+      id: taskId, dept, priority, desc, status: 'acik', 
+      createdAt: formatDate(new Date()), 
+      timestamp: Date.now(), // Sıralama için eklendi
+      deadlineHours, imgUrl: '📷 [Yeni Fotoğraf]', modNote: ''
     };
-    setTasks([newTask, ...tasks]);
+    // Doğrudan veritabanına yazıyoruz. onSnapshot tetiklenip ekranı saniyesinde güncelleyecek.
+    await setDoc(doc(db, "tasks", taskId), newTask);
   };
 
-  const updateTaskStatus = (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus, chiefNote: chiefNote || t.chiefNote, afterImgUrl: afterImgUrl || t.afterImgUrl, modNote } : t));
+  // Firebase Görev Güncelleme
+  const updateTaskStatus = async (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
+    const taskRef = doc(db, "tasks", id);
+    const updates = { status: newStatus };
+    if (chiefNote) updates.chiefNote = chiefNote;
+    if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
+    if (modNote) updates.modNote = modNote;
+    
+    await updateDoc(taskRef, updates);
   };
 
-  const approveTask = (task) => {
-    updateTaskStatus(task.id, 'cozuldu', task.chiefNote, task.afterImgUrl, '');
-    const penalty = PRIORITIES[task.priority].multiplier * 5; 
-    setPoints(prev => ({ ...prev, [task.dept]: prev[task.dept] - penalty }));
+  // Firebase Puan Güncelleme Helper
+  const updatePointsInDB = async (dept, changeAmount) => {
+    const newPoints = { ...points, [dept]: points[dept] + changeAmount };
+    await updateDoc(doc(db, "system", "points"), newPoints);
   };
 
-  const rejectTask = (task, modReason) => {
-    updateTaskStatus(task.id, 'acik', task.chiefNote, task.afterImgUrl, modReason);
-    const heavyPenalty = PRIORITIES[task.priority].multiplier * 15; 
-    setPoints(prev => ({ ...prev, [task.dept]: prev[task.dept] - heavyPenalty }));
+  const approveTask = async (task) => {
+    await updateTaskStatus(task.id, 'cozuldu');
+    const earnedPoints = PRIORITIES[task.priority].multiplier * 10;
+    await updatePointsInDB(task.dept, earnedPoints);
   };
 
-  const rejectObjection = (task, modReason) => {
-    updateTaskStatus(task.id, 'acik', task.chiefNote, task.afterImgUrl, modReason);
+  const rejectTask = async (task, modReason) => {
+    await updateTaskStatus(task.id, 'acik', '', '', modReason);
+    const lostPoints = PRIORITIES[task.priority].multiplier * 5;
+    await updatePointsInDB(task.dept, -lostPoints);
+  };
+
+  const rejectObjection = async (task, modReason) => {
+    await updateTaskStatus(task.id, 'acik', '', '', modReason);
   };
 
   const CompanyLogo = ({ className = "", scale = "scale-100" }) => (
@@ -233,19 +194,22 @@ export default function App() {
         setCurrentUser(account);
         setLoginErr('');
       } else {
-        setLoginErr(lang === 'tr' ? 'Kullanıcı adı veya şifre hatalı!' : 'Invalid username or password!');
+        setLoginErr('Kullanıcı adı veya şifre hatalı!');
       }
     };
 
-    return (
-      <div className="relative flex items-center justify-center min-h-screen bg-gray-900 p-6 overflow-hidden">
-        {/* Arka Plan Fabrika Fotoğrafı ve Overlay */}
-        <div className="absolute inset-0 z-0">
-          <img src="/ads-metal-anadolu-osb.jpg" alt="ADS Metal Fabrika" className="w-full h-full object-cover filter brightness-50 blur-[2px]" onError={(e)=>{e.target.style.display='none'}} />
-          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+    if (isFirebaseLoading) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
+           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+           <p className="text-gray-600 font-medium animate-pulse">Sunucuya bağlanılıyor...</p>
         </div>
+      );
+    }
 
-        <div className="relative z-10 w-full max-w-4xl flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden backdrop-blur-md bg-opacity-95">
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100 p-6">
+        <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden">
           <div className="hidden md:flex flex-col items-center justify-center w-1/2 bg-white text-gray-800 p-12 border-r border-gray-100">
             <CompanyLogo className="bg-transparent shadow-none mb-6" scale="scale-150" />
             <h1 className="text-3xl font-bold text-center mt-8 text-blue-900">İSG & Tertip<br/>Yönetim Sistemi</h1>
@@ -253,19 +217,13 @@ export default function App() {
           </div>
 
           <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
-            <div className="flex justify-end mb-4">
-              <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className="flex items-center space-x-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-colors">
-                <Globe className="w-3.5 h-3.5 mr-1 text-blue-600" /> {lang === 'tr' ? 'English' : 'Türkçe'}
-              </button>
-            </div>
-
             <div className="md:hidden text-center mb-8">
               <CompanyLogo className="mx-auto" scale="scale-110" />
               <h1 className="text-xl font-bold text-gray-800 mt-4">İSG & Tertip Sistemi</h1>
             </div>
 
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">{t.welcome}</h2>
-            <p className="text-gray-500 mb-8 text-sm">{t.loginDesc}</p>
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Hoş Geldiniz</h2>
+            <p className="text-gray-500 mb-8 text-sm">Sisteme devam etmek için hesap bilgilerinizi girin.</p>
             
             <form onSubmit={handleLogin} className="space-y-5">
               {loginErr && (
@@ -275,7 +233,7 @@ export default function App() {
               )}
               
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">{t.username}</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Kullanıcı Adı</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input 
@@ -289,7 +247,7 @@ export default function App() {
               </div>
               
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">{t.password}</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Şifre</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input 
@@ -303,10 +261,9 @@ export default function App() {
               </div>
               
               <button type="submit" className="w-full py-4 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold shadow-lg transition-colors mt-4">
-                {t.loginBtn}
+                Sisteme Giriş Yap
               </button>
             </form>
-            <p className="text-center text-xs text-gray-400 mt-6">Sistemi kuran ilk yönetici hesabı: admin / admin123</p>
           </div>
         </div>
       </div>
@@ -317,21 +274,27 @@ export default function App() {
     <header className="bg-white px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200">
       <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
         <div className="flex items-center space-x-4">
-          <CompanyLogo className="scale-75 origin-left shadow-none p-0" />
+          <div className="flex items-center space-x-1 scale-75 md:scale-90 origin-left">
+             <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden">
+               <div className="absolute top-0 left-0 w-full h-full border-t-4 border-l-4 border-blue-900 rounded-tl-full opacity-80"></div>
+               <div className="absolute top-1 left-1 w-[90%] h-[90%] border-t-4 border-l-4 border-blue-400 rounded-tl-full"></div>
+             </div>
+             <div className="flex flex-col">
+               <div className="flex items-baseline space-x-1">
+                 <span className="text-gray-800 font-extrabold text-2xl tracking-tighter">ADS</span>
+                 <span className="text-gray-800 font-bold text-xl hidden sm:inline">Metal A.Ş.</span>
+               </div>
+             </div>
+          </div>
           <div className="border-l pl-4 border-gray-300">
             <h2 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{currentUser.name}</h2>
             <span className="text-[10px] md:text-xs text-gray-500 capitalize leading-tight">{currentUser.role === 'sef' ? `${currentUser.dept} Birimi` : currentUser.role} Paneli</span>
           </div>
         </div>
-        <div className="flex items-center space-x-3">
-          <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className="flex items-center space-x-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-colors">
-            <Globe className="w-3.5 h-3.5 mr-1 text-blue-600" /> {lang === 'tr' ? 'EN' : 'TR'}
-          </button>
-          <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
-            <span className="hidden sm:inline">{t.logout}</span>
-            <LogOut className="w-5 h-5" />
-          </button>
-        </div>
+        <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
+          <span className="hidden sm:inline">Çıkış Yap</span>
+          <LogOut className="w-5 h-5" />
+        </button>
       </div>
     </header>
   );
@@ -339,27 +302,24 @@ export default function App() {
   const AdminDashboard = () => {
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
 
-    const handleCreateUser = (e) => {
+    // Yeni Kullanıcı Oluşturma (Firebase'e yazar)
+    const handleCreateUser = async (e) => {
       e.preventDefault();
       if(users.find(u => u.username === newUser.username)) {
-        alert(lang === 'tr' ? "Bu kullanıcı adı zaten alınmış!" : "Username already taken!"); return;
+        alert("Bu kullanıcı adı zaten alınmış!"); return;
       }
-      setUsers([...users, { ...newUser, id: Date.now(), dept: newUser.role === 'sef' ? newUser.dept : null }]);
+      const newUserId = Date.now().toString();
+      const userObj = { ...newUser, id: newUserId, dept: newUser.role === 'sef' ? newUser.dept : null };
+      
+      await setDoc(doc(db, "users", newUserId), userObj);
       setNewUser({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
     };
 
-    const handleDeleteUser = (id) => {
-      if(id === 1) return; 
-      if(window.confirm(lang === 'tr' ? "Kullanıcıyı silmek istediğinize emin misiniz?" : "Are you sure you want to delete user?")) {
-        setUsers(users.filter(u => u.id !== id));
-      }
-    };
-
-    const handleManualBonus = (dept) => {
-      const bonusStr = window.prompt(lang === 'tr' ? `${dept} birimine kaç bonus puan eklemek istersiniz?` : `How many bonus points to add to ${dept}?`, "50");
-      const bonus = parseInt(bonusStr, 10);
-      if(!isNaN(bonus) && bonus > 0) {
-        setPoints(prev => ({ ...prev, [dept]: prev[dept] + bonus }));
+    // Kullanıcı Silme (Firebase'den siler)
+    const handleDeleteUser = async (id) => {
+      if(id === "1") return; // Ana admini silmeyi engelle
+      if(window.confirm("Kullanıcıyı silmek istediğinize emin misiniz?")) {
+        await deleteDoc(doc(db, "users", id));
       }
     };
 
@@ -367,47 +327,47 @@ export default function App() {
       if (adminViewMode === 'users') {
         return (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center"><Users className="w-6 h-6 mr-2 text-blue-600"/> {t.usersBtn}</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center"><Users className="w-6 h-6 mr-2 text-blue-600"/> Kullanıcı Yönetimi</h2>
             
             <form onSubmit={handleCreateUser} className="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8 space-y-4">
-              <h3 className="font-bold text-gray-700 text-sm mb-2 border-b pb-2">{lang === 'tr' ? 'Yeni Hesap Oluştur' : 'Create New Account'}</h3>
+              <h3 className="font-bold text-gray-700 text-sm mb-2 border-b pb-2">Yeni Hesap Oluştur</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Ad Soyad' : 'Full Name'}</label>
-                  <input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: Yusuf Serhat" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Ad Soyad</label>
+                  <input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: Ahmet Yılmaz" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Kullanıcı Adı (Giriş için)' : 'Username'}</label>
-                  <input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: yusufserhat" />
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Kullanıcı Adı (Giriş için)</label>
+                  <input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: ahmetyilmaz" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Şifre' : 'Password'}</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Şifre</label>
                   <input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Sistem Rolü' : 'Role'}</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Sistem Rolü</label>
                   <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
-                    <option value="sef">{lang === 'tr' ? 'Birim Şefi' : 'Department Chief'}</option>
-                    <option value="mod">{lang === 'tr' ? 'İSG Uzmanı (Moderatör)' : 'Safety Specialist'}</option>
-                    <option value="admin">{lang === 'tr' ? 'Yönetici' : 'Administrator'}</option>
+                    <option value="sef">Birim Şefi</option>
+                    <option value="mod">İSG Uzmanı (Moderatör)</option>
+                    <option value="admin">Sistem Yöneticisi</option>
                   </select>
                 </div>
                 {newUser.role === 'sef' && (
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Sorumlu Olduğu Birim' : 'Department'}</label>
+                    <label className="block text-xs font-bold text-gray-500 mb-1">Sorumlu Olduğu Birim</label>
                     <select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
                       {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                     </select>
                   </div>
                 )}
               </div>
-              <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm w-full flex justify-center items-center mt-2">
-                <Plus className="w-4 h-4 mr-1"/> {lang === 'tr' ? 'Hesabı Oluştur' : 'Create Account'}
+              <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm w-full flex justify-center items-center">
+                <Plus className="w-4 h-4 mr-1"/> Hesabı Oluştur
               </button>
             </form>
 
             <div>
-              <h3 className="font-bold text-gray-700 text-sm mb-3">{lang === 'tr' ? `Mevcut Hesaplar (${users.length})` : `Existing Accounts (${users.length})`}</h3>
+              <h3 className="font-bold text-gray-700 text-sm mb-3">Mevcut Hesaplar ({users.length})</h3>
               <div className="space-y-2">
                 {users.map(u => (
                   <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
@@ -415,7 +375,7 @@ export default function App() {
                       <p className="font-bold text-gray-800 text-sm">{u.name} <span className="text-xs text-gray-400 font-normal ml-2">@{u.username}</span></p>
                       <p className="text-xs text-gray-500 capitalize">{u.role === 'sef' ? `${u.dept} Şefi` : u.role}</p>
                     </div>
-                    {u.id !== 1 && (
+                    {u.id !== "1" && (
                       <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"><Trash2 className="w-4 h-4"/></button>
                     )}
                   </div>
@@ -433,25 +393,20 @@ export default function App() {
             <div className="flex justify-between items-start mb-6">
               <div>
                 <button onClick={() => setSelectedAdminDept(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4 transition-colors">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> {lang === 'tr' ? 'Geri Dön' : 'Back'}
+                  <ArrowLeft className="w-4 h-4 mr-2" /> Geri Dön
                 </button>
-                <h2 className="text-2xl font-bold text-gray-800">{selectedAdminDept} {lang === 'tr' ? 'Raporu' : 'Report'}</h2>
-                <p className="text-gray-500 mt-1">{lang === 'tr' ? 'Toplam Kayıt' : 'Total Records'}: {deptTasks.length}</p>
+                <h2 className="text-2xl font-bold text-gray-800">{selectedAdminDept} Raporu</h2>
+                <p className="text-gray-500 mt-1">Toplam Kayıt: {deptTasks.length}</p>
               </div>
-              <div className="flex flex-col items-end">
-                <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center mb-2">
-                   <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">{lang === 'tr' ? 'Güncel Puan' : 'Current Points'}</p>
-                   <p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p>
-                </div>
-                <button onClick={() => handleManualBonus(selectedAdminDept)} className="text-xs bg-yellow-100 text-yellow-800 font-bold px-4 py-2 rounded-lg hover:bg-yellow-200">
-                  🎁 {lang === 'tr' ? 'Özel Bonus Ver' : 'Give Bonus'}
-                </button>
+              <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center">
+                 <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">Güncel Puan</p>
+                 <p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {deptTasks.length === 0 ? (
-                 <p className="text-sm text-gray-500 p-4 col-span-full">{lang === 'tr' ? 'Bu birime ait kayıt bulunmamaktadır.' : 'No records found for this department.'}</p>
+                 <p className="text-sm text-gray-500 p-4 col-span-full">Bu birime ait kayıt bulunmamaktadır.</p>
               ) : (
                 deptTasks.map(task => {
                   const statusDef = STATUS_INFO[task.status];
@@ -465,47 +420,6 @@ export default function App() {
                         </span>
                       </div>
                       <p className="text-gray-800 text-sm font-medium mb-3">{task.desc}</p>
-                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </div>
-        );
-      }
-
-      if (selectedAdminDate) {
-        const dateTasks = tasks.filter(t => t.createdAt === selectedAdminDate);
-        return (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-            <button onClick={() => setSelectedAdminDate(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4 transition-colors">
-              <ArrowLeft className="w-4 h-4 mr-2" /> {lang === 'tr' ? 'Takvime Dön' : 'Back to Calendar'}
-            </button>
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800">{lang === 'tr' ? 'Günlük İSG Raporu' : 'Daily Report'}</h2>
-                <p className="text-blue-600 font-medium text-lg mt-1">{selectedAdminDate}</p>
-              </div>
-              <CalendarDays className="w-12 h-12 text-blue-100" />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {dateTasks.length === 0 ? (
-                 <p className="text-sm text-gray-500 p-4 col-span-full">{lang === 'tr' ? 'Bu tarihte herhangi bir kayıt açılmamış.' : 'No records on this date.'}</p>
-              ) : (
-                dateTasks.map(task => {
-                  const statusDef = STATUS_INFO[task.status];
-                  const Icon = statusDef.icon;
-                  return (
-                    <div key={task.id} className={`p-4 rounded-xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]}`}>
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="text-sm text-gray-800 font-bold">{task.dept}</span>
-                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
-                          <Icon className="w-3 h-3 mr-1" /> {statusDef.label}
-                        </span>
-                      </div>
-                      <p className="text-gray-600 text-sm font-medium mb-3">{task.desc}</p>
                       <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
                     </div>
                   );
@@ -530,7 +444,7 @@ export default function App() {
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <div className="flex justify-between items-center mb-6">
              <h3 className="font-extrabold text-gray-800 text-2xl">{monthNames[currentMonth]} {currentYear}</h3>
-             <span className="text-sm text-blue-800 bg-blue-50 px-3 py-1 rounded-lg font-bold flex items-center"><Calendar className="w-4 h-4 mr-2"/> {lang === 'tr' ? 'Aylık Görünüm' : 'Monthly View'}</span>
+             <span className="text-sm text-blue-800 bg-blue-50 px-3 py-1 rounded-lg font-bold flex items-center"><Calendar className="w-4 h-4 mr-2"/> Aylık Görünüm</span>
           </div>
           
           <div className="grid grid-cols-7 gap-2 text-center mb-3">
@@ -557,9 +471,8 @@ export default function App() {
                return (
                  <div 
                    key={dayNum} 
-                   onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)}
                    className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all
-                     ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100' : 'bg-white border-gray-100 hover:border-blue-300 hover:shadow-md'}
+                     ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100' : 'bg-white border-gray-100'}
                      ${dayTasks.length > 0 ? 'border-gray-300 shadow-sm' : ''}
                    `}
                  >
@@ -585,14 +498,16 @@ export default function App() {
       <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
         <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-6 flex flex-col xl:flex-row justify-between items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-2">{t.adminPanel}</h1>
-            <p className="text-gray-500">{t.adminDesc}</p>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-2">Yönetici Paneli</h1>
+            <p className="text-gray-500">Fabrika genel durumunu, risk haritasını ve kullanıcıları takip edin.</p>
           </div>
-          <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100">
-            <Calendar className="w-6 h-6 text-blue-600 mr-3" />
-            <div>
-              <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">{t.adminReset}</p>
-              <p className="text-lg font-bold text-blue-900">{getLastFridayOfCurrentMonth()}</p>
+          <div className="mt-4 xl:mt-0 flex flex-col sm:flex-row items-center gap-3">
+            <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100">
+              <Calendar className="w-6 h-6 text-blue-600 mr-3" />
+              <div>
+                <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">Sonraki Puan Sıfırlama</p>
+                <p className="text-lg font-bold text-blue-900">{getLastFridayOfCurrentMonth()}</p>
+              </div>
             </div>
           </div>
         </div>
@@ -612,13 +527,13 @@ export default function App() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className={`lg:block ${adminViewMode === 'list' ? 'block' : 'hidden'} lg:col-span-1 space-y-4`}>
             <button onClick={() => {setAdminViewMode('users'); setSelectedAdminDept(null);}} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-2xl shadow-sm flex items-center justify-center transition-colors">
-              <Users className="w-5 h-5 mr-2" /> {t.usersBtn}
+              <Users className="w-5 h-5 mr-2" /> Kullanıcı Hesaplarını Yönet
             </button>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="p-5 border-b border-gray-100 flex items-center bg-gray-50 justify-between">
                 <div className="flex items-center">
                    <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                   <h3 className="font-bold text-gray-800">{t.riskMap}</h3>
+                   <h3 className="font-bold text-gray-800">Risk Haritası</h3>
                 </div>
               </div>
               
@@ -629,7 +544,7 @@ export default function App() {
                   return (
                   <div 
                     key={dept} 
-                    onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); setAdminViewMode('calendar'); }}
+                    onClick={() => { setSelectedAdminDept(dept); setAdminViewMode('calendar'); }}
                     className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}
                   >
                     <div className="flex items-center">
@@ -640,12 +555,16 @@ export default function App() {
                     <div className="flex items-center">
                        {redCount > 0 ? (
                          <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm">
-                           <span className="font-bold text-xs">{redCount} {t.problem}</span>
+                           <div className="relative flex items-center justify-center w-2.5 h-2.5 mr-2">
+                             <span className="absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75 animate-ping"></span>
+                             <span className="relative inline-flex rounded-full h-full w-full bg-red-600"></span>
+                           </div>
+                           <span className="font-bold text-xs">{redCount} Problem</span>
                          </div>
                        ) : (
                          <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90">
                            <CheckCircle className="w-3 h-3 mr-1" />
-                           <span className="font-bold text-xs">{t.issueFree}</span>
+                           <span className="font-bold text-xs">Sorunsuz</span>
                          </div>
                        )}
                        <ChevronRight className={`w-5 h-5 transition-transform ${isSelected ? 'text-blue-500 translate-x-1' : 'text-gray-300'}`} />
@@ -683,7 +602,7 @@ export default function App() {
         <div className="block lg:hidden mb-6">
           <button onClick={() => setIsMobileFormOpen(!isMobileFormOpen)} className="w-full bg-blue-700 text-white py-4 rounded-2xl font-bold shadow-lg flex justify-center items-center space-x-2">
             <Camera className="w-5 h-5" />
-            <span>{isMobileFormOpen ? 'Formu Kapat' : t.modTitle}</span>
+            <span>{isMobileFormOpen ? 'Formu Kapat' : 'Yeni İhlal Kaydı Oluştur'}</span>
           </button>
         </div>
 
@@ -692,19 +611,19 @@ export default function App() {
             <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
               <div className="flex items-center mb-6 text-gray-800">
                 <div className="p-3 bg-blue-50 rounded-xl mr-3 text-blue-600"><Camera className="w-6 h-6" /></div>
-                <div><h3 className="font-bold text-lg">{t.modTitle}</h3><p className="text-xs text-gray-500">{t.modDesc}</p></div>
+                <div><h3 className="font-bold text-lg">Yeni İhlal Kaydı</h3></div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-100 transition group">
+                <div className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-100 transition hover:border-blue-400 group">
                   <div className="bg-white p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform mb-2">
                     <Camera className="w-6 h-6 text-blue-500" />
                   </div>
-                  <span className="text-sm font-bold text-gray-600">{t.takePhoto}</span>
+                  <span className="text-sm font-bold text-gray-600">Fotoğraf Çek / Yükle</span>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1.5">{t.selectDept}</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">İlgili Birim</label>
                   <select value={dept} onChange={e=>setDept(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
                     {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
                   </select>
@@ -712,33 +631,33 @@ export default function App() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1.5">{t.riskLevel}</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">Risk Seviyesi</label>
                     <select value={priority} onChange={e=>setPriority(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
-                      <option value="basit">Basit</option>
-                      <option value="orta">Orta</option>
-                      <option value="kritik">Kritik</option>
+                      <option value="basit">Basit Risk</option>
+                      <option value="orta">Orta Risk</option>
+                      <option value="kritik">Kritik Risk</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-gray-700 mb-1.5">{t.deadlineHours}</label>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">Süre (Saat)</label>
                     <input type="number" required min="1" value={deadline} onChange={e=>setDeadline(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 mb-1.5">{t.descLabel}</label>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">Açıklama</label>
                   <textarea required value={desc} onChange={e=>setDesc(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 h-24 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
                 </div>
                 
-                <button type="submit" className="w-full bg-blue-700 text-white py-4 rounded-xl font-bold hover:bg-blue-800 shadow-md">{t.saveTask}</button>
+                <button type="submit" className="w-full bg-blue-700 text-white py-4 rounded-xl font-bold hover:bg-blue-800 shadow-md">Kaydet & Görev Ata</button>
               </form>
             </div>
           </div>
 
           <div className="lg:col-span-2 space-y-6">
             <div className="flex bg-gray-200 p-1.5 rounded-xl shadow-inner w-full max-w-md">
-               <button onClick={() => setActiveTab('aktif')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'aktif' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600'}`}>{t.activeActions}</button>
-               <button onClick={() => setActiveTab('raporlar')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'raporlar' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600'}`}>{t.allReports}</button>
+               <button onClick={() => setActiveTab('aktif')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'aktif' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600'}`}>Aksiyon Bekleyenler</button>
+               <button onClick={() => setActiveTab('raporlar')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'raporlar' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600'}`}>Tüm Raporlar</button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
@@ -766,7 +685,7 @@ export default function App() {
                          <span className={`text-xs px-3 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
                             <StatusIcon className="w-3.5 h-3.5 mr-1.5" /> {statusDef.label}
                          </span>
-                         <span className={`text-xs px-2 py-0.5 rounded-full font-bold border border-opacity-20 ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
+                         <span className={`text-xs px-2 py-0.5 rounded-full font-bold border border-opacity-20 ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label}</span>
                       </div>
                     </div>
                     
@@ -790,8 +709,8 @@ export default function App() {
                           </div>
                         </div>
                         <div className="flex space-x-3">
-                          <button onClick={() => approveTask(task)} className="flex-1 bg-green-600 text-white py-3 rounded-xl text-sm font-bold shadow-sm">{t.approveSol}</button>
-                          <button onClick={() => setModActionModal({isOpen: true, type: 'cozum_red', task})} className="flex-1 bg-red-500 text-white py-3 rounded-xl text-sm font-bold shadow-sm">{t.rejectSol}</button>
+                          <button onClick={() => approveTask(task)} className="flex-1 bg-green-600 text-white py-3 rounded-xl text-sm font-bold shadow-sm">Çözümü Onayla</button>
+                          <button onClick={() => setModActionModal({isOpen: true, type: 'cozum_red', task})} className="flex-1 bg-red-500 text-white py-3 rounded-xl text-sm font-bold shadow-sm">Yetersiz (Reddet)</button>
                         </div>
                       </div>
                     )}
@@ -805,8 +724,8 @@ export default function App() {
                           </div>
                         </div>
                         <div className="flex space-x-3">
-                          <button onClick={() => updateTaskStatus(task.id, 'cozuldu')} className="flex-1 bg-gray-700 text-white py-3 rounded-xl text-sm font-bold shadow-sm">{t.justified}</button>
-                          <button onClick={() => setModActionModal({isOpen: true, type: 'itiraz_red', task})} className="flex-1 bg-red-600 text-white py-3 rounded-xl text-sm font-bold shadow-sm">{t.unjustified}</button>
+                          <button onClick={() => approveTask(task)} className="flex-1 bg-gray-700 text-white py-3 rounded-xl text-sm font-bold shadow-sm">Haklı (Çözüldü İşaretle)</button>
+                          <button onClick={() => setModActionModal({isOpen: true, type: 'itiraz_red', task})} className="flex-1 bg-red-600 text-white py-3 rounded-xl text-sm font-bold shadow-sm">Haksız (Reddet)</button>
                         </div>
                        </div>
                     )}
@@ -820,7 +739,7 @@ export default function App() {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-60 backdrop-blur-sm p-4">
             <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
               <div className="p-6 flex justify-between items-center bg-red-600 text-white">
-                <h3 className="font-bold text-xl flex items-center"><XCircle className="w-6 h-6 mr-3"/> Reddetme İşlemi</h3>
+                <h3 className="font-bold text-xl flex items-center"><XCircle className="w-6 h-6 mr-3"/> {modActionModal.type === 'cozum_red' ? 'Çözümü Reddet' : 'İtirazı Reddet'}</h3>
                 <button onClick={() => { setModActionModal({ isOpen: false, type: null, task: null }); setErrorMsg(''); }} className="p-2 hover:bg-white hover:bg-opacity-20 rounded-full"><X className="w-6 h-6" /></button>
               </div>
               <div className="p-8 space-y-6">
@@ -867,8 +786,8 @@ export default function App() {
         </div>
 
         <div className="flex bg-gray-200 p-1.5 rounded-xl shadow-inner w-full max-w-md mb-8">
-           <button onClick={() => setActiveTab('aktif')} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'aktif' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>{t.solvedTab}</button>
-           <button onClick={() => setActiveTab('raporlar')} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'raporlar' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>{t.historyTab}</button>
+           <button onClick={() => setActiveTab('aktif')} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'aktif' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Açık Görevler</button>
+           <button onClick={() => setActiveTab('raporlar')} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'raporlar' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>Geçmiş Kayıtlar</button>
         </div>
 
         <div>
@@ -894,7 +813,7 @@ export default function App() {
                         <StatusIcon className="w-4 h-4 mr-1.5" /> {statusDef.label}
                     </span>
                     {task.status === 'acik' && (
-                       <span className="flex items-center text-xs text-red-700 font-bold bg-red-50 px-2 py-1.5 rounded-lg border border-red-100"><Clock className="w-3.5 h-3.5 mr-1.5" /> {task.deadlineHours} Saat</span>
+                       <span className="flex items-center text-xs text-red-700 font-bold bg-red-50 px-2 py-1.5 rounded-lg border border-red-100"><Clock className="w-3.5 h-3.5 mr-1.5" /> {task.deadlineHours} Saat Kaldı</span>
                     )}
                   </div>
                   
@@ -917,7 +836,7 @@ export default function App() {
                     </div>
                   )}
 
-                  {task.status === 'cozuldu' && (
+                  {task.status === 'cozuldu' && task.resolvedByObjection && (
                     <div className="bg-gray-100 text-gray-600 p-3 rounded-xl border border-gray-200 ml-3 mt-auto mb-2 flex items-center text-xs font-bold">
                       <CheckCircle className="w-4 h-4 mr-2"/> İtiraz Haklı Bulundu: Birimin sorumluluğunda değildir.
                     </div>
@@ -926,10 +845,10 @@ export default function App() {
                   {task.status === 'acik' && activeTab === 'aktif' && (
                     <div className="grid grid-cols-2 gap-3 mt-auto ml-3 pt-2">
                       <button onClick={() => setActionModal({ isOpen: true, type: 'cozum', task })} className="bg-teal-600 hover:bg-teal-700 text-white py-3.5 rounded-xl text-sm font-bold flex items-center justify-center transition-colors shadow-sm">
-                        <Camera className="w-4 h-4 mr-2"/> {t.solveBtn}
+                        <Camera className="w-4 h-4 mr-2"/> Çözdüm
                       </button>
                       <button onClick={() => setActionModal({ isOpen: true, type: 'itiraz', task })} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-xl text-sm font-bold transition-colors border border-gray-200">
-                        {t.objectBtn}
+                        İtiraz Et
                       </button>
                     </div>
                   )}
@@ -953,8 +872,8 @@ export default function App() {
                 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-3">{actionModal.type === 'cozum' ? "Sonrası Fotoğrafını Çekin *" : "Kanıt Fotoğrafı Ekle (Zorunlu Değil)"}</label>
-                  <div className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors group">
-                    <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-600" /></div>
+                  <div className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors group hover:border-teal-400">
+                    <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-600 group-hover:text-teal-600" /></div>
                     <span className="text-sm font-bold">Kamerayı Aç / Yükle</span>
                   </div>
                 </div>
