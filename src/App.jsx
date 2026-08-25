@@ -1,0 +1,1010 @@
+import React, { useState, useEffect } from 'react';
+import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Globe } from 'lucide-react';
+
+const DEPARTMENTS = ["Boyahane", "Altyapı", "Dalgaduvar", "Lazer", "Güç", "Kaynaklı imalat", "Dış alan", "Bakım & Onarım"];
+
+// Dil Çevirileri Sözlüğü (Türkçe / İngilizce)
+const TRANSLATIONS = {
+  tr: {
+    welcome: "Hoş Geldiniz",
+    loginDesc: "Devam etmek için hesap bilgilerinizi girin.",
+    username: "Kullanıcı Adı",
+    password: "Şifre",
+    loginBtn: "Sisteme Giriş Yap",
+    logout: "Çıkış Yap",
+    adminPanel: "Yönetici Paneli",
+    adminDesc: "Fabrika genel durumunu, risk haritasını ve kullanıcıları takip edin.",
+    riskMap: "Risk Haritası",
+    usersBtn: "Kullanıcı Hesaplarını Yönet",
+    modTitle: "Yeni İhlal Kaydı",
+    modDesc: "Sahadaki bir problemi fotoğraflayın",
+    takePhoto: "Fotoğraf Çek / Yükle",
+    selectDept: "İlgili Birim",
+    riskLevel: "Risk Seviyesi",
+    deadlineHours: "Süre (Saat)",
+    descLabel: "Açıklama",
+    saveTask: "Kaydet & Görev Ata",
+    activeActions: "Aksiyon Bekleyenler",
+    allReports: "Tüm Raporlar",
+    approveSol: "Çözümü Onayla",
+    rejectSol: "Yetersiz (Reddet)",
+    justified: "Haklı (Çözüldü İşaretle)",
+    unjustified: "Haksız (Reddet)",
+    solvedTab: "Açık Görevler",
+    historyTab: "Geçmiş Kayıtlar",
+    solveBtn: "Çözdüm",
+    objectBtn: "İtiraz Et",
+    adminReset: "Sonraki Puan Sıfırlama",
+    problem: "Problem",
+    issueFree: "Sorunsuz",
+    waitingApproval: "Onay Bekliyor",
+    solved: "Çözüldü"
+  },
+  en: {
+    welcome: "Welcome Back",
+    loginDesc: "Enter your account credentials to continue.",
+    username: "Username",
+    password: "Password",
+    loginBtn: "Sign In",
+    logout: "Sign Out",
+    adminPanel: "Admin Dashboard",
+    adminDesc: "Monitor factory status, risk map and users.",
+    riskMap: "Risk Map",
+    usersBtn: "Manage User Accounts",
+    modTitle: "New Violation Record",
+    modDesc: "Photograph a problem on the field",
+    takePhoto: "Capture / Upload Photo",
+    selectDept: "Target Department",
+    riskLevel: "Risk Level",
+    deadlineHours: "Deadline (Hours)",
+    descLabel: "Description",
+    saveTask: "Save & Assign Task",
+    activeActions: "Pending Actions",
+    allReports: "All Reports",
+    approveSol: "Approve Solution",
+    rejectSol: "Insufficient (Reject)",
+    justified: "Justified (Mark Resolved)",
+    unjustified: "Unjustified (Reject)",
+    solvedTab: "Open Tasks",
+    historyTab: "Past Records",
+    solveBtn: "Resolved",
+    objectBtn: "Object",
+    adminReset: "Next Points Reset",
+    problem: "Issue",
+    issueFree: "Issue-Free",
+    waitingApproval: "Awaiting Approval",
+    solved: "Resolved"
+  }
+};
+
+const PRIORITIES = {
+  basit: { label: 'Basit', multiplier: 1, color: 'bg-blue-100 text-blue-800' },
+  orta: { label: 'Orta', multiplier: 2, color: 'bg-yellow-100 text-yellow-800' },
+  kritik: { label: 'Kritik', multiplier: 5, color: 'bg-red-100 text-red-800' }
+};
+
+const STATUS_INFO = {
+  cozuldu: { label: 'Çözüldü', color: 'bg-green-100 text-green-800 border-green-500', icon: CheckCircle },
+  onay_bekliyor: { label: 'Cevap Bekleniyor', color: 'bg-yellow-100 text-yellow-800 border-yellow-500', icon: Clock },
+  acik: { label: 'Çözülmemiş', color: 'bg-red-100 text-red-800 border-red-500', icon: AlertTriangle },
+  itiraz_edildi: { label: 'İtiraz Edildi', color: 'bg-red-100 text-red-800 border-red-500', icon: AlertTriangle },
+  iptal: { label: 'İptal Edildi', color: 'bg-gray-100 text-gray-800 border-gray-400', icon: XCircle }
+};
+
+const formatDate = (dateObj) => {
+  return `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
+};
+
+export default function App() {
+  const [lang, setLang] = useState('tr');
+  const t = TRANSLATIONS[lang];
+
+  const [currentUser, setCurrentUser] = useState(null);
+  
+  // Kullanıcılar (Sıfırdan temiz başlar, ilk gizli admin: admin / admin123)
+  const [users, setUsers] = useState(() => {
+    const saved = localStorage.getItem('isg_users');
+    if (saved) return JSON.parse(saved);
+    return [{ id: 1, username: 'admin', password: 'admin123', role: 'admin', name: 'Yusuf Serhat (Yönetici)', dept: null }];
+  });
+
+  const [points, setPoints] = useState(() => {
+    const saved = localStorage.getItem('isg_points');
+    if (saved) return JSON.parse(saved);
+    return DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {});
+  });
+  
+  const [tasks, setTasks] = useState(() => {
+    const saved = localStorage.getItem('isg_tasks');
+    if (saved) return JSON.parse(saved);
+    return []; // Tamamen boş başlar
+  });
+
+  useEffect(() => { localStorage.setItem('isg_users', JSON.stringify(users)); }, [users]);
+  useEffect(() => { localStorage.setItem('isg_points', JSON.stringify(points)); }, [points]);
+  useEffect(() => { localStorage.setItem('isg_tasks', JSON.stringify(tasks)); }, [tasks]);
+
+  // Günlük Otomatik Bonus Dağıtımı (Her gün sorunsuz geçenlere +20 puan)
+  useEffect(() => {
+    const todayStr = new Date().toDateString();
+    const lastBonusDate = localStorage.getItem('isg_last_bonus_date');
+    
+    if (lastBonusDate !== todayStr && tasks.length > 0) {
+      const deptsWithIssues = new Set();
+      tasks.forEach(t => {
+        if (t.status === 'acik' || t.status === 'itiraz_edildi' || t.status === 'onay_bekliyor') {
+          deptsWithIssues.add(t.dept);
+        }
+      });
+      
+      const newPoints = { ...points };
+      DEPARTMENTS.forEach(dept => {
+        if (!deptsWithIssues.has(dept)) {
+          newPoints[dept] += 20; 
+        }
+      });
+      
+      setPoints(newPoints);
+      localStorage.setItem('isg_last_bonus_date', todayStr);
+    }
+  }, [tasks, points]);
+
+  // UI States
+  const [actionModal, setActionModal] = useState({ isOpen: false, type: null, task: null });
+  const [modActionModal, setModActionModal] = useState({ isOpen: false, type: null, task: null });
+  const [errorMsg, setErrorMsg] = useState('');
+  
+  const [adminViewMode, setAdminViewMode] = useState('list');
+  const [selectedAdminDept, setSelectedAdminDept] = useState(null);
+  const [selectedAdminDate, setSelectedAdminDate] = useState(null);
+
+  const getLastFridayOfCurrentMonth = () => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0); 
+    while (d.getDay() !== 5) { d.setDate(d.getDate() - 1); }
+    return d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const logout = () => { 
+    setCurrentUser(null); 
+    setSelectedAdminDept(null); 
+    setSelectedAdminDate(null);
+    setAdminViewMode('list');
+  };
+
+  const createTask = (dept, priority, desc, deadlineHours) => {
+    const newTask = {
+      id: Date.now(), dept, priority, desc, status: 'acik', 
+      createdAt: formatDate(new Date()), deadlineHours, imgUrl: '📷 [Yeni Fotoğraf]', modNote: ''
+    };
+    setTasks([newTask, ...tasks]);
+  };
+
+  const updateTaskStatus = (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
+    setTasks(tasks.map(t => t.id === id ? { ...t, status: newStatus, chiefNote: chiefNote || t.chiefNote, afterImgUrl: afterImgUrl || t.afterImgUrl, modNote } : t));
+  };
+
+  const approveTask = (task) => {
+    updateTaskStatus(task.id, 'cozuldu', task.chiefNote, task.afterImgUrl, '');
+    const penalty = PRIORITIES[task.priority].multiplier * 5; 
+    setPoints(prev => ({ ...prev, [task.dept]: prev[task.dept] - penalty }));
+  };
+
+  const rejectTask = (task, modReason) => {
+    updateTaskStatus(task.id, 'acik', task.chiefNote, task.afterImgUrl, modReason);
+    const heavyPenalty = PRIORITIES[task.priority].multiplier * 15; 
+    setPoints(prev => ({ ...prev, [task.dept]: prev[task.dept] - heavyPenalty }));
+  };
+
+  const rejectObjection = (task, modReason) => {
+    updateTaskStatus(task.id, 'acik', task.chiefNote, task.afterImgUrl, modReason);
+  };
+
+  const CompanyLogo = ({ className = "", scale = "scale-100" }) => (
+    <div className={`flex flex-col items-center justify-center bg-white p-2 rounded-xl shadow-sm ${className}`}>
+      <div className={`flex items-center space-x-1 ${scale} origin-center`}>
+        <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden">
+           <div className="absolute top-0 left-0 w-full h-full border-t-4 border-l-4 border-blue-900 rounded-tl-full opacity-80"></div>
+           <div className="absolute top-1 left-1 w-[90%] h-[90%] border-t-4 border-l-4 border-blue-400 rounded-tl-full"></div>
+           <div className="absolute top-3 left-2 w-[80%] h-[80%] border-t-4 border-l-4 border-gray-400 rounded-tl-full opacity-50"></div>
+        </div>
+        <div className="flex flex-col">
+          <div className="flex items-baseline space-x-1">
+            <span className="text-gray-800 font-extrabold text-2xl tracking-tighter">ADS</span>
+            <span className="text-gray-800 font-bold text-xl">Metal A.Ş.</span>
+          </div>
+          <span className="text-[6px] font-bold text-white bg-blue-900 px-1 rounded-sm tracking-widest uppercase -mt-1 w-max">Transformer Tanks & Fin Walls</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const LoginScreen = () => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [loginErr, setLoginErr] = useState('');
+
+    const handleLogin = (e) => {
+      e.preventDefault();
+      const account = users.find(u => u.username === username.toLowerCase().trim());
+      
+      if (account && account.password === password) {
+        setCurrentUser(account);
+        setLoginErr('');
+      } else {
+        setLoginErr(lang === 'tr' ? 'Kullanıcı adı veya şifre hatalı!' : 'Invalid username or password!');
+      }
+    };
+
+    return (
+      <div className="relative flex items-center justify-center min-h-screen bg-gray-900 p-6 overflow-hidden">
+        {/* Arka Plan Fabrika Fotoğrafı ve Overlay */}
+        <div className="absolute inset-0 z-0">
+          <img src="/ads-metal-anadolu-osb.jpg" alt="ADS Metal Fabrika" className="w-full h-full object-cover filter brightness-50 blur-[2px]" onError={(e)=>{e.target.style.display='none'}} />
+          <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+        </div>
+
+        <div className="relative z-10 w-full max-w-4xl flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden backdrop-blur-md bg-opacity-95">
+          <div className="hidden md:flex flex-col items-center justify-center w-1/2 bg-white text-gray-800 p-12 border-r border-gray-100">
+            <CompanyLogo className="bg-transparent shadow-none mb-6" scale="scale-150" />
+            <h1 className="text-3xl font-bold text-center mt-8 text-blue-900">İSG & Tertip<br/>Yönetim Sistemi</h1>
+            <p className="text-gray-500 text-center mt-4 text-sm max-w-xs">Fabrika içi iş sağlığı, güvenliği ve 5S standartlarını korumak için tasarlanmış merkezi kontrol paneli.</p>
+          </div>
+
+          <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
+            <div className="flex justify-end mb-4">
+              <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className="flex items-center space-x-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-colors">
+                <Globe className="w-3.5 h-3.5 mr-1 text-blue-600" /> {lang === 'tr' ? 'English' : 'Türkçe'}
+              </button>
+            </div>
+
+            <div className="md:hidden text-center mb-8">
+              <CompanyLogo className="mx-auto" scale="scale-110" />
+              <h1 className="text-xl font-bold text-gray-800 mt-4">İSG & Tertip Sistemi</h1>
+            </div>
+
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">{t.welcome}</h2>
+            <p className="text-gray-500 mb-8 text-sm">{t.loginDesc}</p>
+            
+            <form onSubmit={handleLogin} className="space-y-5">
+              {loginErr && (
+                <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl flex items-center font-medium border border-red-100">
+                  <AlertCircle className="w-5 h-5 mr-2 shrink-0" /> {loginErr}
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{t.username}</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2">{t.password}</label>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <button type="submit" className="w-full py-4 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold shadow-lg transition-colors mt-4">
+                {t.loginBtn}
+              </button>
+            </form>
+            <p className="text-center text-xs text-gray-400 mt-6">Sistemi kuran ilk yönetici hesabı: admin / admin123</p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const TopBar = () => (
+    <header className="bg-white px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200">
+      <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
+        <div className="flex items-center space-x-4">
+          <CompanyLogo className="scale-75 origin-left shadow-none p-0" />
+          <div className="border-l pl-4 border-gray-300">
+            <h2 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{currentUser.name}</h2>
+            <span className="text-[10px] md:text-xs text-gray-500 capitalize leading-tight">{currentUser.role === 'sef' ? `${currentUser.dept} Birimi` : currentUser.role} Paneli</span>
+          </div>
+        </div>
+        <div className="flex items-center space-x-3">
+          <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className="flex items-center space-x-1 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold text-gray-700 transition-colors">
+            <Globe className="w-3.5 h-3.5 mr-1 text-blue-600" /> {lang === 'tr' ? 'EN' : 'TR'}
+          </button>
+          <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
+            <span className="hidden sm:inline">{t.logout}</span>
+            <LogOut className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </header>
+  );
+
+  const AdminDashboard = () => {
+    const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
+
+    const handleCreateUser = (e) => {
+      e.preventDefault();
+      if(users.find(u => u.username === newUser.username)) {
+        alert(lang === 'tr' ? "Bu kullanıcı adı zaten alınmış!" : "Username already taken!"); return;
+      }
+      setUsers([...users, { ...newUser, id: Date.now(), dept: newUser.role === 'sef' ? newUser.dept : null }]);
+      setNewUser({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
+    };
+
+    const handleDeleteUser = (id) => {
+      if(id === 1) return; 
+      if(window.confirm(lang === 'tr' ? "Kullanıcıyı silmek istediğinize emin misiniz?" : "Are you sure you want to delete user?")) {
+        setUsers(users.filter(u => u.id !== id));
+      }
+    };
+
+    const handleManualBonus = (dept) => {
+      const bonusStr = window.prompt(lang === 'tr' ? `${dept} birimine kaç bonus puan eklemek istersiniz?` : `How many bonus points to add to ${dept}?`, "50");
+      const bonus = parseInt(bonusStr, 10);
+      if(!isNaN(bonus) && bonus > 0) {
+        setPoints(prev => ({ ...prev, [dept]: prev[dept] + bonus }));
+      }
+    };
+
+    const renderRightPanel = () => {
+      if (adminViewMode === 'users') {
+        return (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center"><Users className="w-6 h-6 mr-2 text-blue-600"/> {t.usersBtn}</h2>
+            
+            <form onSubmit={handleCreateUser} className="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8 space-y-4">
+              <h3 className="font-bold text-gray-700 text-sm mb-2 border-b pb-2">{lang === 'tr' ? 'Yeni Hesap Oluştur' : 'Create New Account'}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Ad Soyad' : 'Full Name'}</label>
+                  <input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: Yusuf Serhat" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Kullanıcı Adı (Giriş için)' : 'Username'}</label>
+                  <input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: yusufserhat" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Şifre' : 'Password'}</label>
+                  <input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Sistem Rolü' : 'Role'}</label>
+                  <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
+                    <option value="sef">{lang === 'tr' ? 'Birim Şefi' : 'Department Chief'}</option>
+                    <option value="mod">{lang === 'tr' ? 'İSG Uzmanı (Moderatör)' : 'Safety Specialist'}</option>
+                    <option value="admin">{lang === 'tr' ? 'Yönetici' : 'Administrator'}</option>
+                  </select>
+                </div>
+                {newUser.role === 'sef' && (
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-bold text-gray-500 mb-1">{lang === 'tr' ? 'Sorumlu Olduğu Birim' : 'Department'}</label>
+                    <select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+              <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-lg text-sm w-full flex justify-center items-center mt-2">
+                <Plus className="w-4 h-4 mr-1"/> {lang === 'tr' ? 'Hesabı Oluştur' : 'Create Account'}
+              </button>
+            </form>
+
+            <div>
+              <h3 className="font-bold text-gray-700 text-sm mb-3">{lang === 'tr' ? `Mevcut Hesaplar (${users.length})` : `Existing Accounts (${users.length})`}</h3>
+              <div className="space-y-2">
+                {users.map(u => (
+                  <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
+                    <div>
+                      <p className="font-bold text-gray-800 text-sm">{u.name} <span className="text-xs text-gray-400 font-normal ml-2">@{u.username}</span></p>
+                      <p className="text-xs text-gray-500 capitalize">{u.role === 'sef' ? `${u.dept} Şefi` : u.role}</p>
+                    </div>
+                    {u.id !== 1 && (
+                      <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md transition-colors"><Trash2 className="w-4 h-4"/></button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      if (selectedAdminDept) {
+        const deptTasks = tasks.filter(t => t.dept === selectedAdminDept);
+        return (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <button onClick={() => setSelectedAdminDept(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4 transition-colors">
+                  <ArrowLeft className="w-4 h-4 mr-2" /> {lang === 'tr' ? 'Geri Dön' : 'Back'}
+                </button>
+                <h2 className="text-2xl font-bold text-gray-800">{selectedAdminDept} {lang === 'tr' ? 'Raporu' : 'Report'}</h2>
+                <p className="text-gray-500 mt-1">{lang === 'tr' ? 'Toplam Kayıt' : 'Total Records'}: {deptTasks.length}</p>
+              </div>
+              <div className="flex flex-col items-end">
+                <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center mb-2">
+                   <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">{lang === 'tr' ? 'Güncel Puan' : 'Current Points'}</p>
+                   <p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p>
+                </div>
+                <button onClick={() => handleManualBonus(selectedAdminDept)} className="text-xs bg-yellow-100 text-yellow-800 font-bold px-4 py-2 rounded-lg hover:bg-yellow-200">
+                  🎁 {lang === 'tr' ? 'Özel Bonus Ver' : 'Give Bonus'}
+                </button>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {deptTasks.length === 0 ? (
+                 <p className="text-sm text-gray-500 p-4 col-span-full">{lang === 'tr' ? 'Bu birime ait kayıt bulunmamaktadır.' : 'No records found for this department.'}</p>
+              ) : (
+                deptTasks.map(task => {
+                  const statusDef = STATUS_INFO[task.status];
+                  const Icon = statusDef.icon;
+                  return (
+                    <div key={task.id} className={`p-4 rounded-xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-xs text-gray-500 font-medium">{task.createdAt}</span>
+                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
+                          <Icon className="w-3 h-3 mr-1" /> {statusDef.label}
+                        </span>
+                      </div>
+                      <p className="text-gray-800 text-sm font-medium mb-3">{task.desc}</p>
+                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      if (selectedAdminDate) {
+        const dateTasks = tasks.filter(t => t.createdAt === selectedAdminDate);
+        return (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+            <button onClick={() => setSelectedAdminDate(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4 transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-2" /> {lang === 'tr' ? 'Takvime Dön' : 'Back to Calendar'}
+            </button>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">{lang === 'tr' ? 'Günlük İSG Raporu' : 'Daily Report'}</h2>
+                <p className="text-blue-600 font-medium text-lg mt-1">{selectedAdminDate}</p>
+              </div>
+              <CalendarDays className="w-12 h-12 text-blue-100" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {dateTasks.length === 0 ? (
+                 <p className="text-sm text-gray-500 p-4 col-span-full">{lang === 'tr' ? 'Bu tarihte herhangi bir kayıt açılmamış.' : 'No records on this date.'}</p>
+              ) : (
+                dateTasks.map(task => {
+                  const statusDef = STATUS_INFO[task.status];
+                  const Icon = statusDef.icon;
+                  return (
+                    <div key={task.id} className={`p-4 rounded-xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]}`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-sm text-gray-800 font-bold">{task.dept}</span>
+                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
+                          <Icon className="w-3 h-3 mr-1" /> {statusDef.label}
+                        </span>
+                      </div>
+                      <p className="text-gray-600 text-sm font-medium mb-3">{task.desc}</p>
+                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      const currDate = new Date();
+      const currentMonth = currDate.getMonth();
+      const currentYear = currDate.getFullYear();
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+      
+      const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+      const dayNames = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+
+      return (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+          <div className="flex justify-between items-center mb-6">
+             <h3 className="font-extrabold text-gray-800 text-2xl">{monthNames[currentMonth]} {currentYear}</h3>
+             <span className="text-sm text-blue-800 bg-blue-50 px-3 py-1 rounded-lg font-bold flex items-center"><Calendar className="w-4 h-4 mr-2"/> {lang === 'tr' ? 'Aylık Görünüm' : 'Monthly View'}</span>
+          </div>
+          
+          <div className="grid grid-cols-7 gap-2 text-center mb-3">
+            {dayNames.map(day => (
+              <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2">{day}</div>
+            ))}
+          </div>
+          
+          <div className="grid grid-cols-7 gap-2">
+             {Array.from({ length: startOffset }).map((_, i) => (
+               <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-transparent"></div>
+             ))}
+             
+             {Array.from({ length: daysInMonth }).map((_, i) => {
+               const dayNum = i + 1;
+               const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
+               const isToday = dayNum === currDate.getDate();
+               
+               const dayTasks = tasks.filter(t => t.createdAt === formattedDateForCell);
+               const hasRed = dayTasks.some(t => t.status === 'acik' || t.status === 'itiraz_edildi');
+               const hasYellow = dayTasks.some(t => t.status === 'onay_bekliyor');
+               const hasGreen = dayTasks.some(t => t.status === 'cozuldu');
+
+               return (
+                 <div 
+                   key={dayNum} 
+                   onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)}
+                   className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all
+                     ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100' : 'bg-white border-gray-100 hover:border-blue-300 hover:shadow-md'}
+                     ${dayTasks.length > 0 ? 'border-gray-300 shadow-sm' : ''}
+                   `}
+                 >
+                   <span className={`text-sm font-bold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{dayNum}</span>
+                   
+                   <div className="flex space-x-1.5 mt-2">
+                      {hasRed && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-red-500 rounded-full shadow-sm animate-pulse"></span>}
+                      {hasYellow && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-400 rounded-full shadow-sm"></span>}
+                      {hasGreen && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 rounded-full shadow-sm"></span>}
+                   </div>
+                 </div>
+               );
+             })}
+          </div>
+        </div>
+      );
+    };
+
+    const getRedTaskCount = (deptName) => tasks.filter(t => t.dept === deptName && (t.status === 'acik' || t.status === 'itiraz_edildi')).length;
+    const sortedDeptsAdmin = [...DEPARTMENTS].sort((a, b) => getRedTaskCount(b) - getRedTaskCount(a));
+
+    return (
+      <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-6 flex flex-col xl:flex-row justify-between items-center gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-2">{t.adminPanel}</h1>
+            <p className="text-gray-500">{t.adminDesc}</p>
+          </div>
+          <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100">
+            <Calendar className="w-6 h-6 text-blue-600 mr-3" />
+            <div>
+              <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">{t.adminReset}</p>
+              <p className="text-lg font-bold text-blue-900">{getLastFridayOfCurrentMonth()}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex lg:hidden bg-gray-200 p-1 rounded-xl shadow-inner mb-4 overflow-x-auto">
+           <button onClick={() => setAdminViewMode('list')} className={`flex-1 py-3 px-4 text-sm font-bold rounded-lg transition-all flex justify-center items-center whitespace-nowrap ${adminViewMode === 'list' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
+             <List className="w-4 h-4 mr-2"/> Birimler
+           </button>
+           <button onClick={() => setAdminViewMode('calendar')} className={`flex-1 py-3 px-4 text-sm font-bold rounded-lg transition-all flex justify-center items-center whitespace-nowrap ${adminViewMode === 'calendar' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
+             <CalendarDays className="w-4 h-4 mr-2"/> Takvim
+           </button>
+           <button onClick={() => setAdminViewMode('users')} className={`flex-1 py-3 px-4 text-sm font-bold rounded-lg transition-all flex justify-center items-center whitespace-nowrap ${adminViewMode === 'users' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
+             <Users className="w-4 h-4 mr-2"/> Hesaplar
+           </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className={`lg:block ${adminViewMode === 'list' ? 'block' : 'hidden'} lg:col-span-1 space-y-4`}>
+            <button onClick={() => {setAdminViewMode('users'); setSelectedAdminDept(null);}} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-2xl shadow-sm flex items-center justify-center transition-colors">
+              <Users className="w-5 h-5 mr-2" /> {t.usersBtn}
+            </button>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-5 border-b border-gray-100 flex items-center bg-gray-50 justify-between">
+                <div className="flex items-center">
+                   <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+                   <h3 className="font-bold text-gray-800">{t.riskMap}</h3>
+                </div>
+              </div>
+              
+              <div className="divide-y divide-gray-50">
+                {sortedDeptsAdmin.map((dept, index) => {
+                  const redCount = getRedTaskCount(dept);
+                  const isSelected = selectedAdminDept === dept;
+                  return (
+                  <div 
+                    key={dept} 
+                    onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); setAdminViewMode('calendar'); }}
+                    className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}
+                  >
+                    <div className="flex items-center">
+                      <span className="w-6 text-center text-sm font-bold mr-3 text-gray-400">{index + 1}.</span>
+                      <span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}`}>{dept}</span>
+                    </div>
+                    
+                    <div className="flex items-center">
+                       {redCount > 0 ? (
+                         <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm">
+                           <span className="font-bold text-xs">{redCount} {t.problem}</span>
+                         </div>
+                       ) : (
+                         <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90">
+                           <CheckCircle className="w-3 h-3 mr-1" />
+                           <span className="font-bold text-xs">{t.issueFree}</span>
+                         </div>
+                       )}
+                       <ChevronRight className={`w-5 h-5 transition-transform ${isSelected ? 'text-blue-500 translate-x-1' : 'text-gray-300'}`} />
+                    </div>
+                  </div>
+                )})}
+              </div>
+            </div>
+          </div>
+
+          <div className={`lg:block ${adminViewMode === 'calendar' || adminViewMode === 'users' ? 'block' : 'hidden'} lg:col-span-2`}>
+            {renderRightPanel()}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const ModDashboard = () => {
+    const [isMobileFormOpen, setIsMobileFormOpen] = useState(false);
+    const [dept, setDept] = useState(DEPARTMENTS[0]);
+    const [priority, setPriority] = useState('orta');
+    const [desc, setDesc] = useState('');
+    const [deadline, setDeadline] = useState(2);
+    const [activeTab, setActiveTab] = useState('aktif');
+
+    const handleSubmit = (e) => {
+      e.preventDefault();
+      createTask(dept, priority, desc, deadline);
+      setIsMobileFormOpen(false); setDesc(''); setActiveTab('aktif');
+    };
+
+    return (
+      <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        <div className="block lg:hidden mb-6">
+          <button onClick={() => setIsMobileFormOpen(!isMobileFormOpen)} className="w-full bg-blue-700 text-white py-4 rounded-2xl font-bold shadow-lg flex justify-center items-center space-x-2">
+            <Camera className="w-5 h-5" />
+            <span>{isMobileFormOpen ? 'Formu Kapat' : t.modTitle}</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+          <div className={`lg:col-span-1 ${isMobileFormOpen ? 'block' : 'hidden lg:block'}`}>
+            <div className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 sticky top-24">
+              <div className="flex items-center mb-6 text-gray-800">
+                <div className="p-3 bg-blue-50 rounded-xl mr-3 text-blue-600"><Camera className="w-6 h-6" /></div>
+                <div><h3 className="font-bold text-lg">{t.modTitle}</h3><p className="text-xs text-gray-500">{t.modDesc}</p></div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-100 transition group">
+                  <div className="bg-white p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform mb-2">
+                    <Camera className="w-6 h-6 text-blue-500" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-600">{t.takePhoto}</span>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">{t.selectDept}</label>
+                  <select value={dept} onChange={e=>setDept(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
+                    {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">{t.riskLevel}</label>
+                    <select value={priority} onChange={e=>setPriority(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500">
+                      <option value="basit">Basit</option>
+                      <option value="orta">Orta</option>
+                      <option value="kritik">Kritik</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-1.5">{t.deadlineHours}</label>
+                    <input type="number" required min="1" value={deadline} onChange={e=>setDeadline(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-1.5">{t.descLabel}</label>
+                  <textarea required value={desc} onChange={e=>setDesc(e.target.value)} className="w-full border border-gray-300 rounded-xl p-3 h-24 bg-gray-50 outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                </div>
+                
+                <button type="submit" className="w-full bg-blue-700 text-white py-4 rounded-xl font-bold hover:bg-blue-800 shadow-md">{t.saveTask}</button>
+              </form>
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex bg-gray-200 p-1.5 rounded-xl shadow-inner w-full max-w-md">
+               <button onClick={() => setActiveTab('aktif')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'aktif' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600'}`}>{t.activeActions}</button>
+               <button onClick={() => setActiveTab('raporlar')} className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === 'raporlar' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-600'}`}>{t.allReports}</button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+              {tasks
+                .filter(t => activeTab === 'aktif' ? (t.status !== 'cozuldu' && t.status !== 'iptal') : true)
+                .sort((a, b) => {
+                  const weight = { kritik: 3, orta: 2, basit: 1 };
+                  return weight[b.priority] - weight[a.priority];
+                })
+                .map(task => {
+                  const statusDef = STATUS_INFO[task.status];
+                  const StatusIcon = statusDef.icon;
+                  const isCriticalAndOpen = task.priority === 'kritik' && task.status === 'acik';
+                  
+                  return (
+                  <div key={task.id} className={`bg-white p-5 rounded-2xl shadow-sm border ${isCriticalAndOpen ? 'border-red-400 glow-red' : 'border-gray-100'} relative flex flex-col`}>
+                    <div className={`absolute left-0 top-0 bottom-0 w-1.5 rounded-l-2xl ${statusDef.color.split(' ')[2]}`}></div>
+                    
+                    <div className="flex justify-between items-start mb-4 pl-2">
+                      <div>
+                         <span className="font-extrabold text-gray-800 text-lg block leading-tight">{task.dept}</span>
+                         <span className="text-xs text-gray-400 font-medium">{task.createdAt}</span>
+                      </div>
+                      <div className="flex flex-col items-end space-y-1.5">
+                         <span className={`text-xs px-3 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
+                            <StatusIcon className="w-3.5 h-3.5 mr-1.5" /> {statusDef.label}
+                         </span>
+                         <span className={`text-xs px-2 py-0.5 rounded-full font-bold border border-opacity-20 ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-gray-50 p-3 rounded-xl mb-4 border border-gray-100 flex space-x-4 items-start ml-2 flex-1">
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0">
+                        <ImageIcon className="w-6 h-6 mb-1"/>
+                        <span className="text-[9px] font-bold">ÖNCESİ</span>
+                      </div>
+                      <p className="text-gray-700 text-sm font-medium">{task.desc}</p>
+                    </div>
+                    
+                    {activeTab === 'aktif' && task.status === 'onay_bekliyor' && (
+                      <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 ml-2 mt-auto">
+                        <div className="bg-white p-3 rounded-lg border border-yellow-100 mb-4 flex space-x-4 items-start">
+                          <div className="w-16 h-16 bg-green-100 border border-green-200 rounded-lg flex flex-col items-center justify-center text-green-600 shrink-0">
+                            <Camera className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">SONRASI</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500 font-bold mb-1 uppercase tracking-wider">Şefin Notu</p>
+                            <p className="text-sm text-gray-800 font-medium italic">"{task.chiefNote}"</p>
+                          </div>
+                        </div>
+                        <div className="flex space-x-3">
+                          <button onClick={() => approveTask(task)} className="flex-1 bg-green-600 text-white py-3 rounded-xl text-sm font-bold shadow-sm">{t.approveSol}</button>
+                          <button onClick={() => setModActionModal({isOpen: true, type: 'cozum_red', task})} className="flex-1 bg-red-500 text-white py-3 rounded-xl text-sm font-bold shadow-sm">{t.rejectSol}</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'aktif' && task.status === 'itiraz_edildi' && (
+                       <div className="bg-red-50 p-4 rounded-xl border border-red-200 ml-2 mt-auto">
+                        <div className="bg-white p-3 rounded-lg border border-red-100 mb-4 flex space-x-3 items-start">
+                          <div>
+                            <p className="text-xs text-red-600 font-bold mb-1 uppercase tracking-wider flex items-center"><AlertTriangle className="w-3 h-3 mr-1"/> İtiraz Açıklaması</p>
+                            <p className="text-sm text-gray-800 font-medium italic">"{task.chiefNote}"</p>
+                          </div>
+                        </div>
+                        <div className="flex space-x-3">
+                          <button onClick={() => updateTaskStatus(task.id, 'cozuldu')} className="flex-1 bg-gray-700 text-white py-3 rounded-xl text-sm font-bold shadow-sm">{t.justified}</button>
+                          <button onClick={() => setModActionModal({isOpen: true, type: 'itiraz_red', task})} className="flex-1 bg-red-600 text-white py-3 rounded-xl text-sm font-bold shadow-sm">{t.unjustified}</button>
+                        </div>
+                       </div>
+                    )}
+                  </div>
+                )})}
+            </div>
+          </div>
+        </div>
+
+        {modActionModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-60 backdrop-blur-sm p-4">
+            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+              <div className="p-6 flex justify-between items-center bg-red-600 text-white">
+                <h3 className="font-bold text-xl flex items-center"><XCircle className="w-6 h-6 mr-3"/> Reddetme İşlemi</h3>
+                <button onClick={() => { setModActionModal({ isOpen: false, type: null, task: null }); setErrorMsg(''); }} className="p-2 hover:bg-white hover:bg-opacity-20 rounded-full"><X className="w-6 h-6" /></button>
+              </div>
+              <div className="p-8 space-y-6">
+                {errorMsg && <div className="text-red-600 text-sm font-bold bg-red-50 p-4 rounded-xl border border-red-100 flex items-center"><AlertCircle className="w-5 h-5 mr-2" />{errorMsg}</div>}
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Reddetme Gerekçesi (Şefe iletilecek) *</label>
+                  <textarea id="modReasonInput" className="w-full border border-gray-300 rounded-2xl p-4 h-32 focus:ring-4 focus:ring-red-100 focus:border-red-500 outline-none text-base resize-none"></textarea>
+                </div>
+                <div className="flex space-x-4 pt-2">
+                  <button onClick={() => { setModActionModal({ isOpen: false, type: null, task: null }); setErrorMsg(''); }} className="flex-1 py-4 font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl">Vazgeç</button>
+                  <button onClick={() => {
+                      const reason = document.getElementById('modReasonInput').value;
+                      if(!reason) { setErrorMsg("Lütfen reddetme gerekçesini giriniz."); return; }
+                      if (modActionModal.type === 'cozum_red') { rejectTask(modActionModal.task, reason); } 
+                      else { rejectObjection(modActionModal.task, reason); }
+                      setModActionModal({ isOpen: false, type: null, task: null }); setErrorMsg('');
+                    }}
+                    className="flex-1 py-4 font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl shadow-lg"
+                  >Gerekçeyi Gönder</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const SefDashboard = () => {
+    const myTasks = tasks.filter(t => t.dept === currentUser.dept);
+    const activeTasks = myTasks.filter(t => t.status !== 'cozuldu' && t.status !== 'iptal');
+    const [activeTab, setActiveTab] = useState('aktif');
+
+    const displayTasks = activeTab === 'aktif' ? activeTasks : myTasks;
+
+    return (
+      <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+        <div className="bg-gradient-to-r from-teal-700 to-emerald-800 p-8 md:p-10 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-center relative overflow-hidden mb-8">
+          <div className="z-10 text-center md:text-left">
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-2">{currentUser.dept} Birimi</h1>
+            <p className="text-teal-200 font-medium text-lg">Tertip ve Düzen Yönetim Paneli</p>
+          </div>
+          <ShieldAlert className="w-48 h-48 text-teal-300 opacity-10 absolute right-10 -bottom-10 z-0 transform -rotate-12" />
+        </div>
+
+        <div className="flex bg-gray-200 p-1.5 rounded-xl shadow-inner w-full max-w-md mb-8">
+           <button onClick={() => setActiveTab('aktif')} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'aktif' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>{t.solvedTab}</button>
+           <button onClick={() => setActiveTab('raporlar')} className={`flex-1 py-3 text-sm font-bold rounded-lg transition-all ${activeTab === 'raporlar' ? 'bg-white text-teal-700 shadow-sm' : 'text-gray-600 hover:text-gray-800'}`}>{t.historyTab}</button>
+        </div>
+
+        <div>
+          {displayTasks.length === 0 ? (
+            <div className="bg-white p-12 rounded-3xl text-center text-gray-500 border border-gray-100 shadow-sm">
+              <CheckCircle className="w-16 h-16 mx-auto text-green-400 mb-4" />
+              <p className="font-bold text-xl text-gray-800 mb-2">Harika İş Çıkarıyorsunuz!</p>
+              <p className="text-gray-500">Şu anda biriminizde bekleyen herhangi bir uygunsuzluk kaydı bulunmuyor.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {displayTasks.map(task => {
+                const statusDef = STATUS_INFO[task.status];
+                const StatusIcon = statusDef.icon;
+                const isCriticalAndOpen = task.priority === 'kritik' && task.status === 'acik';
+                
+                return (
+                <div key={task.id} className={`bg-white p-6 rounded-2xl shadow-sm border ${isCriticalAndOpen ? 'border-red-400 glow-red' : 'border-gray-100'} relative flex flex-col hover:shadow-md transition-shadow`}>
+                  <div className={`absolute left-0 top-0 bottom-0 w-2 rounded-l-2xl ${statusDef.color.split(' ')[2]}`}></div>
+                  
+                  <div className="flex justify-between items-start mb-4 pl-3">
+                    <span className={`text-xs px-3 py-1.5 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
+                        <StatusIcon className="w-4 h-4 mr-1.5" /> {statusDef.label}
+                    </span>
+                    {task.status === 'acik' && (
+                       <span className="flex items-center text-xs text-red-700 font-bold bg-red-50 px-2 py-1.5 rounded-lg border border-red-100"><Clock className="w-3.5 h-3.5 mr-1.5" /> {task.deadlineHours} Saat</span>
+                    )}
+                  </div>
+                  
+                  <div className="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-100 flex space-x-4 items-start ml-3 flex-1">
+                    <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-lg flex flex-col items-center justify-center text-red-500 shrink-0">
+                       <ImageIcon className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">ÖNCESİ</span>
+                    </div>
+                    <div>
+                       <p className="text-[10px] text-gray-400 font-bold mb-1">{task.createdAt}</p>
+                       <p className="text-gray-800 text-sm font-medium leading-relaxed">{task.desc}</p>
+                    </div>
+                  </div>
+
+                  {task.modNote && task.status === 'acik' && (
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4 ml-3 animate-pulse">
+                      <div className="flex items-center text-red-700 font-bold text-xs mb-2 uppercase tracking-wider">
+                        <ArrowDownRight className="w-4 h-4 mr-1.5" /> İSG Uzmanı Uyarı Notu
+                      </div>
+                      <p className="text-sm text-red-900 italic font-medium">"{task.modNote}"</p>
+                    </div>
+                  )}
+
+                  {task.status === 'cozuldu' && (
+                    <div className="bg-gray-100 text-gray-600 p-3 rounded-xl border border-gray-200 ml-3 mt-auto mb-2 flex items-center text-xs font-bold">
+                      <CheckCircle className="w-4 h-4 mr-2"/> İtiraz Haklı Bulundu: Birimin sorumluluğunda değildir.
+                    </div>
+                  )}
+                  
+                  {task.status === 'acik' && activeTab === 'aktif' && (
+                    <div className="grid grid-cols-2 gap-3 mt-auto ml-3 pt-2">
+                      <button onClick={() => setActionModal({ isOpen: true, type: 'cozum', task })} className="bg-teal-600 hover:bg-teal-700 text-white py-3.5 rounded-xl text-sm font-bold flex items-center justify-center transition-colors shadow-sm">
+                        <Camera className="w-4 h-4 mr-2"/> {t.solveBtn}
+                      </button>
+                      <button onClick={() => setActionModal({ isOpen: true, type: 'itiraz', task })} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-xl text-sm font-bold transition-colors border border-gray-200">
+                        {t.objectBtn}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )})}
+            </div>
+          )}
+        </div>
+
+        {actionModal.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-60 backdrop-blur-sm p-4">
+            <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+              <div className={`p-6 flex justify-between items-center text-white ${actionModal.type === 'cozum' ? 'bg-teal-700' : 'bg-gray-800'}`}>
+                <h3 className="font-bold text-xl flex items-center">
+                  {actionModal.type === 'cozum' ? <><CheckCircle className="w-6 h-6 mr-3"/> Çözüm Bildirimi</> : <><AlertTriangle className="w-6 h-6 mr-3"/> İtiraz Bildirimi</>}
+                </h3>
+                <button onClick={() => { setActionModal({ isOpen: false, type: null, task: null }); setErrorMsg(''); }} className="p-2 hover:bg-white hover:bg-opacity-20 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+              </div>
+              <div className="p-8 space-y-6">
+                {errorMsg && <div className="text-red-600 text-sm font-bold bg-red-50 p-4 rounded-xl border border-red-100 flex items-center"><AlertCircle className="w-5 h-5 mr-2" />{errorMsg}</div>}
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">{actionModal.type === 'cozum' ? "Sonrası Fotoğrafını Çekin *" : "Kanıt Fotoğrafı Ekle (Zorunlu Değil)"}</label>
+                  <div className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors group">
+                    <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-600" /></div>
+                    <span className="text-sm font-bold">Kamerayı Aç / Yükle</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-3">Açıklama / Notunuz *</label>
+                  <textarea id="actionNote" className="w-full border border-gray-300 rounded-2xl p-4 h-32 outline-none focus:ring-4 focus:ring-teal-50 focus:border-teal-500 resize-none text-base"></textarea>
+                </div>
+                
+                <div className="flex space-x-4 pt-2">
+                  <button onClick={() => { setActionModal({ isOpen: false, type: null, task: null }); setErrorMsg(''); }} className="flex-1 py-4 font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Vazgeç</button>
+                  <button onClick={() => {
+                      const note = document.getElementById('actionNote').value;
+                      if(!note) { setErrorMsg("Lütfen açıklama giriniz."); return; }
+                      if (actionModal.type === 'cozum') { updateTaskStatus(actionModal.task.id, 'onay_bekliyor', note, '📷 [Çekilen Çözüm Fotoğrafı]', ''); } 
+                      else { updateTaskStatus(actionModal.task.id, 'itiraz_edildi', note, '📷 [İtiraz Kanıt Fotoğrafı]', ''); }
+                      setActionModal({ isOpen: false, type: null, task: null }); setErrorMsg('');
+                    }}
+                    className={`flex-1 py-4 font-bold text-white rounded-xl shadow-lg transition-colors ${actionModal.type === 'cozum' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-gray-800 hover:bg-gray-900'}`}
+                  >{actionModal.type === 'cozum' ? "Çözümü Gönder" : "İtirazı İlet"}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900 w-full">
+      <style>{`
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes glowRed { 0% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); } 50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.6); } 100% { box-shadow: 0 0 5px rgba(239, 68, 68, 0.2); } }
+        .glow-red { animation: glowRed 2s infinite; }
+      `}</style>
+      
+      {!currentUser ? (
+        <LoginScreen />
+      ) : (
+        <>
+          <TopBar />
+          <main className="flex-1 w-full flex">
+             {currentUser.role === 'admin' && <AdminDashboard />}
+             {currentUser.role === 'mod' && <ModDashboard />}
+             {currentUser.role === 'sef' && <SefDashboard />}
+          </main>
+        </>
+      )}
+    </div>
+  );
+}
