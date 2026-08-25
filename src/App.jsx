@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2 } from 'lucide-react';
 
-// Firebase importları eklendi
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 
-// Bana attığınız ekran görüntüsündeki SİZE ÖZEL veritabanı anahtarları
 const firebaseConfig = {
   apiKey: "AIzaSyCkdLCPFTXl4JdGJpSD--yAIpd29BtnN-k",
   authDomain: "isg-web-6363.firebaseapp.com",
@@ -15,7 +13,6 @@ const firebaseConfig = {
   appId: "1:821576627724:web:5941a738ff70940599a029"
 };
 
-// Firebase'i başlat
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
@@ -39,41 +36,67 @@ const formatDate = (dateObj) => {
   return `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`;
 };
 
+const handleImageUpload = (file, callback) => {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+  reader.onload = (event) => {
+    const img = new Image();
+    img.src = event.target.result;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX_WIDTH = 800;
+      let width = img.width;
+      let height = img.height;
+      if (width > MAX_WIDTH) { height = Math.round((height *= MAX_WIDTH / width)); width = MAX_WIDTH; }
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/jpeg', 0.7)); 
+    };
+  };
+};
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isFirebaseLoading, setIsFirebaseLoading] = useState(true);
   
-  // State'ler artık doğrudan Firebase'den beslenecek
   const [users, setUsers] = useState([]);
   const [points, setPoints] = useState({});
   const [tasks, setTasks] = useState([]);
 
-  // UI States
-  const [actionModal, setActionModal] = useState({ isOpen: false, type: null, task: null });
+  const [actionModal, setActionModal] = useState({ isOpen: false, type: null, task: null, image: null });
   const [modActionModal, setModActionModal] = useState({ isOpen: false, type: null, task: null });
   const [errorMsg, setErrorMsg] = useState('');
   
-  // Yönetici Navigation States
   const [adminViewMode, setAdminViewMode] = useState('list');
   const [selectedAdminDept, setSelectedAdminDept] = useState(null);
   const [selectedAdminDate, setSelectedAdminDate] = useState(null);
 
-  // UYGULAMA AÇILDIĞINDA FIREBASE'E BAĞLAN VE CANLI DİNLE
   useEffect(() => {
-    // Kullanıcıları Canlı Dinle
     const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
       const usersData = snapshot.docs.map(doc => doc.data());
       if (usersData.length === 0) {
-        // Eğer veritabanı yepyeni ise, varsayılan admini oluştur
-        const defaultAdmin = { id: "1", username: 'admin', password: 'admin123', role: 'admin', name: 'Sistem Yöneticisi', dept: null };
+        // Yeni Admin Bilgileri
+        const defaultAdmin = { id: "1", username: 'agiradar', password: 'agiradar123', role: 'admin', name: 'Sistem Yöneticisi', dept: null };
         setDoc(doc(db, "users", "1"), defaultAdmin);
         setUsers([defaultAdmin]);
       } else {
+        // Eğer veritabanında eski "admin" varsa, onu otomatik olarak "agiradar" ile güncelle
+        const adminAcc = usersData.find(u => u.id === "1");
+        if (adminAcc && adminAcc.username === 'admin') {
+           updateDoc(doc(db, "users", "1"), { username: 'agiradar', password: 'agiradar123' });
+        }
         setUsers(usersData);
+        
+        const savedUserId = localStorage.getItem('isg_logged_in_user') || sessionStorage.getItem('isg_logged_in_user');
+        if (savedUserId) {
+          const autoUser = usersData.find(u => u.id === savedUserId);
+          if (autoUser) setCurrentUser(autoUser);
+        }
       }
     });
 
-    // Puanları Canlı Dinle
     const unsubPoints = onSnapshot(doc(db, "system", "points"), (docSnap) => {
       if (docSnap.exists()) {
         setPoints(docSnap.data());
@@ -84,16 +107,13 @@ export default function App() {
       }
     });
 
-    // Görevleri Canlı Dinle
     const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
       const tasksData = snapshot.docs.map(doc => doc.data());
-      // En son eklenen en üstte görünsün diye timestamp'e göre sıralıyoruz
       tasksData.sort((a, b) => b.timestamp - a.timestamp);
       setTasks(tasksData);
-      setIsFirebaseLoading(false); // Veriler geldi, yükleme ekranını kaldır
+      setIsFirebaseLoading(false);
     });
 
-    // Uygulama kapandığında dinlemeyi bırak
     return () => {
       unsubUsers();
       unsubPoints();
@@ -114,33 +134,30 @@ export default function App() {
     setSelectedAdminDept(null); 
     setSelectedAdminDate(null);
     setAdminViewMode('list');
+    localStorage.removeItem('isg_logged_in_user');
+    sessionStorage.removeItem('isg_logged_in_user');
   };
 
-  // Firebase'e Görev Ekleme
-  const createTask = async (dept, priority, desc, deadlineHours) => {
+  const createTask = async (dept, priority, desc, deadlineHours, imgUrl) => {
     const taskId = Date.now().toString();
     const newTask = {
       id: taskId, dept, priority, desc, status: 'acik', 
       createdAt: formatDate(new Date()), 
-      timestamp: Date.now(), // Sıralama için eklendi
-      deadlineHours, imgUrl: '📷 [Yeni Fotoğraf]', modNote: ''
+      timestamp: Date.now(), 
+      deadlineHours, imgUrl: imgUrl || '', modNote: ''
     };
-    // Doğrudan veritabanına yazıyoruz. onSnapshot tetiklenip ekranı saniyesinde güncelleyecek.
     await setDoc(doc(db, "tasks", taskId), newTask);
   };
 
-  // Firebase Görev Güncelleme
   const updateTaskStatus = async (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
     const taskRef = doc(db, "tasks", id);
     const updates = { status: newStatus };
     if (chiefNote) updates.chiefNote = chiefNote;
     if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
     if (modNote) updates.modNote = modNote;
-    
     await updateDoc(taskRef, updates);
   };
 
-  // Firebase Puan Güncelleme Helper
   const updatePointsInDB = async (dept, changeAmount) => {
     const newPoints = { ...points, [dept]: points[dept] + changeAmount };
     await updateDoc(doc(db, "system", "points"), newPoints);
@@ -185,12 +202,20 @@ export default function App() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loginErr, setLoginErr] = useState('');
+    const [rememberMe, setRememberMe] = useState(false);
 
     const handleLogin = (e) => {
       e.preventDefault();
       const account = users.find(u => u.username === username.toLowerCase().trim());
       
       if (account && account.password === password) {
+        if (rememberMe) {
+          localStorage.setItem('isg_logged_in_user', account.id);
+          sessionStorage.removeItem('isg_logged_in_user');
+        } else {
+          sessionStorage.setItem('isg_logged_in_user', account.id);
+          localStorage.removeItem('isg_logged_in_user');
+        }
         setCurrentUser(account);
         setLoginErr('');
       } else {
@@ -260,6 +285,17 @@ export default function App() {
                 </div>
               </div>
               
+              <div className="flex items-center mt-2 pl-1">
+                <input 
+                  type="checkbox" 
+                  id="rememberMe" 
+                  checked={rememberMe} 
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 cursor-pointer" 
+                />
+                <label htmlFor="rememberMe" className="ml-2 text-sm font-bold text-gray-600 cursor-pointer select-none">Oturumumu Açık Tut (Beni Hatırla)</label>
+              </div>
+              
               <button type="submit" className="w-full py-4 bg-blue-700 hover:bg-blue-800 text-white rounded-xl font-bold shadow-lg transition-colors mt-4">
                 Sisteme Giriş Yap
               </button>
@@ -301,8 +337,21 @@ export default function App() {
 
   const AdminDashboard = () => {
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
+    
+    // Geçmiş Silme States
+    const [historyFilter, setHistoryFilter] = useState('1');
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteCountdown, setDeleteCountdown] = useState(10);
 
-    // Yeni Kullanıcı Oluşturma (Firebase'e yazar)
+    // 10 Saniye Sayacı
+    useEffect(() => {
+      let timer;
+      if (showDeleteModal && deleteCountdown > 0) {
+        timer = setTimeout(() => setDeleteCountdown(deleteCountdown - 1), 1000);
+      }
+      return () => clearTimeout(timer);
+    }, [showDeleteModal, deleteCountdown]);
+
     const handleCreateUser = async (e) => {
       e.preventDefault();
       if(users.find(u => u.username === newUser.username)) {
@@ -315,12 +364,32 @@ export default function App() {
       setNewUser({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
     };
 
-    // Kullanıcı Silme (Firebase'den siler)
     const handleDeleteUser = async (id) => {
-      if(id === "1") return; // Ana admini silmeyi engelle
+      if(id === "1") return; 
       if(window.confirm("Kullanıcıyı silmek istediğinize emin misiniz?")) {
         await deleteDoc(doc(db, "users", id));
       }
+    };
+
+    // Geçmişi Silme İşlemi (Veritabanından)
+    const executeHistoryDelete = async () => {
+      const now = Date.now();
+      const oneMonth = 30 * 24 * 60 * 60 * 1000;
+      let cutoff = 0;
+
+      if (historyFilter === '1') cutoff = now - (1 * oneMonth);
+      else if (historyFilter === '3') cutoff = now - (3 * oneMonth);
+      else if (historyFilter === '6') cutoff = now - (6 * oneMonth);
+      else if (historyFilter === 'all') cutoff = now + 10000; // Hepsini silmek için bugünden sonrasını hedefle
+
+      const tasksToDelete = tasks.filter(t => t.timestamp <= cutoff);
+
+      for (const t of tasksToDelete) {
+        await deleteDoc(doc(db, "tasks", t.id));
+      }
+
+      setShowDeleteModal(false);
+      setDeleteCountdown(10);
     };
 
     const renderRightPanel = () => {
@@ -337,7 +406,7 @@ export default function App() {
                   <input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: Ahmet Yılmaz" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 mb-1">Kullanıcı Adı (Giriş için)</label>
+                  <label className="block text-xs font-bold text-gray-500 mb-1">Kullanıcı Adı</label>
                   <input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: ahmetyilmaz" />
                 </div>
                 <div>
@@ -579,6 +648,59 @@ export default function App() {
             {renderRightPanel()}
           </div>
         </div>
+
+        {}
+        <div className="mt-8 bg-red-50 border border-red-200 rounded-3xl p-6 md:p-8 animate-slide-up">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+              <h3 className="text-xl font-bold text-red-700 flex items-center mb-2"><AlertTriangle className="w-6 h-6 mr-2"/> Sistem Geçmişi Temizliği</h3>
+              <p className="text-sm text-red-600 font-medium">Veritabanı şişkinliğini önlemek için eski raporları kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz!</p>
+            </div>
+            <div className="flex w-full md:w-auto space-x-3 items-center">
+              <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} className="flex-1 md:w-48 border border-red-200 rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-red-500 font-bold text-gray-700 cursor-pointer">
+                <option value="1">1 Aydan Eskiler</option>
+                <option value="3">3 Aydan Eskiler</option>
+                <option value="6">6 Aydan Eskiler</option>
+                <option value="all">Tüm Geçmişi Sil</option>
+              </select>
+              <button onClick={() => { setShowDeleteModal(true); setDeleteCountdown(10); }} className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-md transition-colors whitespace-nowrap">
+                Sil
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {}
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 backdrop-blur-sm p-4">
+            <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+              <div className="p-6 bg-red-600 text-white flex justify-between items-center">
+                <h3 className="font-bold text-xl flex items-center"><ShieldAlert className="w-6 h-6 mr-2"/> Kritik İşlem Onayı</h3>
+                <button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="p-1 hover:bg-white hover:bg-opacity-20 rounded-full"><X className="w-6 h-6" /></button>
+              </div>
+              <div className="p-8 text-center space-y-6">
+                <AlertTriangle className="w-16 h-16 text-red-500 mx-auto animate-pulse" />
+                <div>
+                  <h4 className="text-lg font-bold text-gray-800 mb-2">Emin Misiniz?</h4>
+                  <p className="text-gray-600 text-sm">
+                    {historyFilter === 'all' ? 'Veritabanındaki TÜM KAYITLAR' : `Son ${historyFilter} ay öncesine ait TÜM KAYITLAR`} kalıcı olarak silinecektir. Bu veriler <b className="text-red-600">asla geri getirilemez!</b>
+                  </p>
+                </div>
+                <div className="flex space-x-3 pt-4">
+                  <button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="flex-1 py-4 bg-gray-100 text-gray-800 font-bold rounded-xl hover:bg-gray-200">İptal</button>
+                  <button 
+                    onClick={executeHistoryDelete} 
+                    disabled={deleteCountdown > 0}
+                    className={`flex-1 py-4 font-bold rounded-xl transition-all shadow-md ${deleteCountdown > 0 ? 'bg-red-200 text-red-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}
+                  >
+                    {deleteCountdown > 0 ? `Onay (${deleteCountdown}s)` : 'Kalıcı Olarak Sil'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     );
   };
@@ -590,11 +712,12 @@ export default function App() {
     const [desc, setDesc] = useState('');
     const [deadline, setDeadline] = useState(2);
     const [activeTab, setActiveTab] = useState('aktif');
+    const [imagePreview, setImagePreview] = useState(null);
 
     const handleSubmit = (e) => {
       e.preventDefault();
-      createTask(dept, priority, desc, deadline);
-      setIsMobileFormOpen(false); setDesc(''); setActiveTab('aktif');
+      createTask(dept, priority, desc, deadline, imagePreview);
+      setIsMobileFormOpen(false); setDesc(''); setActiveTab('aktif'); setImagePreview(null);
     };
 
     return (
@@ -615,11 +738,18 @@ export default function App() {
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-100 transition hover:border-blue-400 group">
-                  <div className="bg-white p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform mb-2">
-                    <Camera className="w-6 h-6 text-blue-500" />
-                  </div>
-                  <span className="text-sm font-bold text-gray-600">Fotoğraf Çek / Yükle</span>
+                <input type="file" id="modCameraInput" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImagePreview)} />
+                <div onClick={() => document.getElementById('modCameraInput').click()} className="w-full h-40 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 flex flex-col items-center justify-center text-gray-500 cursor-pointer hover:bg-gray-100 transition hover:border-blue-400 group overflow-hidden relative">
+                  {imagePreview ? (
+                    <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <div className="bg-white p-3 rounded-full shadow-sm group-hover:scale-110 transition-transform mb-2">
+                        <Camera className="w-6 h-6 text-blue-500" />
+                      </div>
+                      <span className="text-sm font-bold text-gray-600">Fotoğraf Çek / Yükle</span>
+                    </>
+                  )}
                 </div>
                 
                 <div>
@@ -690,9 +820,12 @@ export default function App() {
                     </div>
                     
                     <div className="bg-gray-50 p-3 rounded-xl mb-4 border border-gray-100 flex space-x-4 items-start ml-2 flex-1">
-                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0">
-                        <ImageIcon className="w-6 h-6 mb-1"/>
-                        <span className="text-[9px] font-bold">ÖNCESİ</span>
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0 overflow-hidden relative">
+                        {task.imgUrl && task.imgUrl.startsWith('data:image') ? (
+                          <img src={task.imgUrl} className="w-full h-full object-cover" alt="Öncesi" />
+                        ) : (
+                          <><ImageIcon className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">ÖNCESİ</span></>
+                        )}
                       </div>
                       <p className="text-gray-700 text-sm font-medium">{task.desc}</p>
                     </div>
@@ -700,8 +833,12 @@ export default function App() {
                     {activeTab === 'aktif' && task.status === 'onay_bekliyor' && (
                       <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 ml-2 mt-auto">
                         <div className="bg-white p-3 rounded-lg border border-yellow-100 mb-4 flex space-x-4 items-start">
-                          <div className="w-16 h-16 bg-green-100 border border-green-200 rounded-lg flex flex-col items-center justify-center text-green-600 shrink-0">
-                            <Camera className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">SONRASI</span>
+                          <div className="w-16 h-16 bg-green-100 border border-green-200 rounded-lg flex flex-col items-center justify-center text-green-600 shrink-0 overflow-hidden relative">
+                            {task.afterImgUrl && task.afterImgUrl.startsWith('data:image') ? (
+                              <img src={task.afterImgUrl} className="w-full h-full object-cover" alt="Sonrası" />
+                            ) : (
+                              <><Camera className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">SONRASI</span></>
+                            )}
                           </div>
                           <div>
                             <p className="text-xs text-gray-500 font-bold mb-1 uppercase tracking-wider">Şefin Notu</p>
@@ -818,8 +955,12 @@ export default function App() {
                   </div>
                   
                   <div className="bg-gray-50 p-4 rounded-xl mb-4 border border-gray-100 flex space-x-4 items-start ml-3 flex-1">
-                    <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-lg flex flex-col items-center justify-center text-red-500 shrink-0">
-                       <ImageIcon className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">ÖNCESİ</span>
+                    <div className="w-16 h-16 bg-red-50 border border-red-100 rounded-lg flex flex-col items-center justify-center text-red-500 shrink-0 overflow-hidden relative">
+                       {task.imgUrl && task.imgUrl.startsWith('data:image') ? (
+                         <img src={task.imgUrl} className="w-full h-full object-cover" alt="Öncesi" />
+                       ) : (
+                         <><ImageIcon className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">ÖNCESİ</span></>
+                       )}
                     </div>
                     <div>
                        <p className="text-[10px] text-gray-400 font-bold mb-1">{task.createdAt}</p>
@@ -844,10 +985,10 @@ export default function App() {
                   
                   {task.status === 'acik' && activeTab === 'aktif' && (
                     <div className="grid grid-cols-2 gap-3 mt-auto ml-3 pt-2">
-                      <button onClick={() => setActionModal({ isOpen: true, type: 'cozum', task })} className="bg-teal-600 hover:bg-teal-700 text-white py-3.5 rounded-xl text-sm font-bold flex items-center justify-center transition-colors shadow-sm">
+                      <button onClick={() => setActionModal({ isOpen: true, type: 'cozum', task, image: null })} className="bg-teal-600 hover:bg-teal-700 text-white py-3.5 rounded-xl text-sm font-bold flex items-center justify-center transition-colors shadow-sm">
                         <Camera className="w-4 h-4 mr-2"/> Çözdüm
                       </button>
-                      <button onClick={() => setActionModal({ isOpen: true, type: 'itiraz', task })} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-xl text-sm font-bold transition-colors border border-gray-200">
+                      <button onClick={() => setActionModal({ isOpen: true, type: 'itiraz', task, image: null })} className="bg-gray-100 hover:bg-gray-200 text-gray-700 py-3.5 rounded-xl text-sm font-bold transition-colors border border-gray-200">
                         İtiraz Et
                       </button>
                     </div>
@@ -872,9 +1013,16 @@ export default function App() {
                 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-3">{actionModal.type === 'cozum' ? "Sonrası Fotoğrafını Çekin *" : "Kanıt Fotoğrafı Ekle (Zorunlu Değil)"}</label>
-                  <div className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors group hover:border-teal-400">
-                    <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-600 group-hover:text-teal-600" /></div>
-                    <span className="text-sm font-bold">Kamerayı Aç / Yükle</span>
+                  <input type="file" id="actionCameraInput" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setActionModal({...actionModal, image: img}))} />
+                  <div onClick={() => document.getElementById('actionCameraInput').click()} className="w-full h-40 bg-gray-50 border-2 border-dashed border-gray-300 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors group hover:border-teal-400 overflow-hidden relative">
+                    {actionModal.image ? (
+                       <img src={actionModal.image} alt="Action Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-600 group-hover:text-teal-600" /></div>
+                        <span className="text-sm font-bold">Kamerayı Aç / Yükle</span>
+                      </>
+                    )}
                   </div>
                 </div>
                 
@@ -884,13 +1032,13 @@ export default function App() {
                 </div>
                 
                 <div className="flex space-x-4 pt-2">
-                  <button onClick={() => { setActionModal({ isOpen: false, type: null, task: null }); setErrorMsg(''); }} className="flex-1 py-4 font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Vazgeç</button>
+                  <button onClick={() => { setActionModal({ isOpen: false, type: null, task: null, image: null }); setErrorMsg(''); }} className="flex-1 py-4 font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors">Vazgeç</button>
                   <button onClick={() => {
                       const note = document.getElementById('actionNote').value;
                       if(!note) { setErrorMsg("Lütfen açıklama giriniz."); return; }
-                      if (actionModal.type === 'cozum') { updateTaskStatus(actionModal.task.id, 'onay_bekliyor', note, '📷 [Çekilen Çözüm Fotoğrafı]', ''); } 
-                      else { updateTaskStatus(actionModal.task.id, 'itiraz_edildi', note, '📷 [İtiraz Kanıt Fotoğrafı]', ''); }
-                      setActionModal({ isOpen: false, type: null, task: null }); setErrorMsg('');
+                      if (actionModal.type === 'cozum') { updateTaskStatus(actionModal.task.id, 'onay_bekliyor', note, actionModal.image || '', ''); } 
+                      else { updateTaskStatus(actionModal.task.id, 'itiraz_edildi', note, actionModal.image || '', ''); }
+                      setActionModal({ isOpen: false, type: null, task: null, image: null }); setErrorMsg('');
                     }}
                     className={`flex-1 py-4 font-bold text-white rounded-xl shadow-lg transition-colors ${actionModal.type === 'cozum' ? 'bg-teal-600 hover:bg-teal-700' : 'bg-gray-800 hover:bg-gray-900'}`}
                   >{actionModal.type === 'cozum' ? "Çözümü Gönder" : "İtirazı İlet"}</button>
