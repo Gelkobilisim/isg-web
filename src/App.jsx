@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe } from 'lucide-react';
+import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
@@ -43,11 +43,15 @@ const DICT = {
     
     // Yüklemeci Panel
     yuk_title: "Sevkiyat & Yükleme",
-    yuk_desc: "Araç kayıtları ve fotoğraflı kanıt yönetimi",
+    yuk_desc: "Araç kayıtları, detaylı tonaj ve fotoğraf yönetimi",
     new_load_btn: "Yeni Yükleme / Araç Girişi Başlat",
-    load_form_title: "Araç Kayıt Formu (Öncesi)",
+    load_form_title: "Araç ve Sevkiyat Giriş Formu",
     plate_no: "Araç Plakası veya İrsaliye No *",
     driver_name: "Şoför Adı Soyadı (İsteğe Bağlı)",
+    dest_location: "Gideceği Lokasyon / Şehir *",
+    dest_company: "Gideceği Firma *",
+    project_no: "Proje No / Sipariş Kodu *",
+    tonnage: "Yüklenen Tonaj (kg veya Ton) *",
     cam_pre: "Boş Kasa / Durum Fotoğrafı (İsteğe Bağlı)",
     cam_open: "Kamerayı Aç / Fotoğraf Yükle",
     optional: "(Zorunlu Değil)",
@@ -59,7 +63,7 @@ const DICT = {
     plate: "PLAKA / İRSALİYE",
     entry_time: "GİRİŞ SAATİ",
     driver: "Şoför",
-    pre_note_title: "Yükleme Öncesi Notu",
+    pre_note_title: "Yükleme Giriş Notu",
     no_note: "Not girilmedi.",
     no_photo: "FOTO YOK",
     finish_load_btn: "Yüklemeyi Tamamla",
@@ -73,7 +77,7 @@ const DICT = {
 
     // Admin Panel
     admin_panel: "Yönetici Paneli",
-    admin_desc: "Fabrika geneli yetkili izleme ve yönetim.",
+    admin_desc: "Fabrika geneli yetkili izleme, tonaj takibi ve yönetim.",
     next_reset: "Sonraki Puan Sıfırlama",
     btn_users: "Kullanıcı Hesapları",
     risk_map: "Risk Haritası",
@@ -88,6 +92,7 @@ const DICT = {
     dept: "Sorumlu Olduğu Birim",
     create_acc_btn: "Hesabı Oluştur",
     existing_accs: "Mevcut Hesaplar",
+    show_passwords: "Şifreleri Göster",
     delete_history: "Sistem Geçmişi Temizliği (agiradar özel)",
     delete_desc: "Veritabanı şişkinliğini önlemek için eski İSG ve Yükleme raporlarını kalıcı olarak silebilirsiniz.",
     month_1: "1 Aydan Eskiler", month_3: "3 Aydan Eskiler", month_6: "6 Aydan Eskiler", month_all: "Tüm Geçmişi Sil",
@@ -98,11 +103,11 @@ const DICT = {
     del_warn_end: "Bu veriler asla geri getirilemez!",
     perm_delete: "Kalıcı Olarak Sil",
     wait: "Bekle",
-    all_reports: "Tüm Yükleme Raporları",
+    all_reports: "Tüm Sevkiyat Raporları",
     records: "Kayıt",
     no_records: "Kayıt bulunmamaktadır.",
-    before: "Öncesi (Boş)",
-    after: "Sonrası (Yüklü)",
+    before: "Giriş / Kasa Durumu",
+    after: "Bitiş / Yüklü Durum",
     loading_progress: "Yükleme Sürüyor...",
     return_back: "Geri Dön",
     total_record: "Toplam Kayıt:",
@@ -110,7 +115,9 @@ const DICT = {
     solution_after: "Çözüm / Sonrası",
     risk: "Risk",
     hours_left: "Saat Kaldı",
-    solution_rate: "Çözüm Oranı"
+    solution_rate: "Çözüm Oranı",
+    tonnage_24h: "Son 24 Saatte Yüklenen Toplam Tonaj",
+    total_tonnage: "Toplam Tonaj"
   },
   en: {
     isg_tab: "OHS & Cleanliness",
@@ -136,11 +143,15 @@ const DICT = {
     
     // Yüklemeci Panel
     yuk_title: "Shipment & Loading",
-    yuk_desc: "Vehicle records and photo evidence management",
+    yuk_desc: "Vehicle records, detailed tonnage and photo management",
     new_load_btn: "Start New Loading / Vehicle Entry",
-    load_form_title: "Vehicle Entry Form (Before)",
+    load_form_title: "Vehicle & Shipment Entry Form",
     plate_no: "License Plate or Waybill No *",
     driver_name: "Driver Full Name (Optional)",
+    dest_location: "Destination Location / City *",
+    dest_company: "Destination Company *",
+    project_no: "Project No / Order Code *",
+    tonnage: "Loaded Tonnage (kg or Tons) *",
     cam_pre: "Empty Trailer / Status Photo (Optional)",
     cam_open: "Open Camera / Upload Photo",
     optional: "(Optional)",
@@ -152,7 +163,7 @@ const DICT = {
     plate: "PLATE / WAYBILL",
     entry_time: "ENTRY TIME",
     driver: "Driver",
-    pre_note_title: "Pre-Loading Note",
+    pre_note_title: "Entry Note",
     no_note: "No note provided.",
     no_photo: "NO PHOTO",
     finish_load_btn: "Finish Loading",
@@ -166,7 +177,7 @@ const DICT = {
 
     // Admin Panel
     admin_panel: "Admin Panel",
-    admin_desc: "Factory-wide monitoring and management.",
+    admin_desc: "Factory-wide monitoring, tonnage tracking and management.",
     next_reset: "Next Score Reset",
     btn_users: "User Accounts",
     risk_map: "Risk Map",
@@ -181,6 +192,7 @@ const DICT = {
     dept: "Responsible Department",
     create_acc_btn: "Create Account",
     existing_accs: "Existing Accounts",
+    show_passwords: "Show Passwords",
     delete_history: "System History Cleanup (agiradar only)",
     delete_desc: "You can permanently delete old OHS and Loading reports to prevent database bloat.",
     month_1: "Older than 1 Month", month_3: "Older than 3 Months", month_6: "Older than 6 Months", month_all: "Delete All History",
@@ -191,11 +203,11 @@ const DICT = {
     del_warn_end: "This data can never be recovered!",
     perm_delete: "Permanently Delete",
     wait: "Wait",
-    all_reports: "All Loading Reports",
+    all_reports: "All Shipment Reports",
     records: "Records",
     no_records: "No records found.",
-    before: "Before (Empty)",
-    after: "After (Loaded)",
+    before: "Entry / Trailer State",
+    after: "Completion / Loaded State",
     loading_progress: "Loading in Progress...",
     return_back: "Go Back",
     total_record: "Total Records:",
@@ -203,7 +215,9 @@ const DICT = {
     solution_after: "Solution / After",
     risk: "Risk",
     hours_left: "Hours Left",
-    solution_rate: "Resolution Rate"
+    solution_rate: "Resolution Rate",
+    tonnage_24h: "Total Tonnage Loaded in 24 Hours",
+    total_tonnage: "Total Tonnage"
   }
 };
 
@@ -238,14 +252,14 @@ const handleImageUpload = (file, callback) => {
     img.src = event.target.result;
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 800;
+      const MAX_WIDTH = 1024;
       let width = img.width;
       let height = img.height;
       if (width > MAX_WIDTH) { height = Math.round((height *= MAX_WIDTH / width)); width = MAX_WIDTH; }
       canvas.width = width; canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.7)); 
+      callback(canvas.toDataURL('image/jpeg', 0.75)); 
     };
   };
 };
@@ -264,6 +278,10 @@ export default function App() {
   const [adminViewMode, setAdminViewMode] = useState('list');
   const [selectedAdminDept, setSelectedAdminDept] = useState(null);
   const [selectedAdminDate, setSelectedAdminDate] = useState(null);
+
+  // Full-screen Image Modal Viewer
+  const [previewModalImg, setPreviewModalImg] = useState(null);
+  const [previewModalTitle, setPreviewModalTitle] = useState('');
 
   const t = (key) => DICT[lang][key] || key;
 
@@ -356,18 +374,27 @@ export default function App() {
     await updateDoc(taskRef, updates);
   };
 
-  const updatePointsInDB = async (dept, changeAmount) => {
-    const newPoints = { ...points, [dept]: points[dept] + changeAmount };
-    await updateDoc(doc(db, "system", "points"), newPoints);
-  };
-
-  const createLoading = async (plaka, sofor, not, imgUrl) => {
+  const createLoading = async (plaka, sofor, destLocation, destCompany, projectNo, tonnage, not, imgUrl) => {
     const loadId = Date.now().toString();
     const newLoad = {
-      id: loadId, plaka, sofor, preNote: not, preImgUrl: imgUrl || '', 
-      status: 'devam_ediyor', creatorId: currentUser.id, creatorName: currentUser.name,
-      createdAtDate: formatDate(new Date()), createdAtTime: formatTime(new Date()), timestamp: Date.now(),
-      postImgUrl: '', postNote: '', finishedAtTime: ''
+      id: loadId, 
+      plaka, 
+      sofor, 
+      destLocation: destLocation || '', 
+      destCompany: destCompany || '', 
+      projectNo: projectNo || '', 
+      tonnage: tonnage || '', 
+      preNote: not, 
+      preImgUrl: imgUrl || '', 
+      status: 'devam_ediyor', 
+      creatorId: currentUser.id, 
+      creatorName: currentUser.name,
+      createdAtDate: formatDate(new Date()), 
+      createdAtTime: formatTime(new Date()), 
+      timestamp: Date.now(),
+      postImgUrl: '', 
+      postNote: '', 
+      finishedAtTime: ''
     };
     await setDoc(doc(db, "loadings", loadId), newLoad);
   };
@@ -380,6 +407,17 @@ export default function App() {
       postImgUrl: postImgUrl || '',
       finishedAtTime: formatTime(new Date())
     });
+  };
+
+  // 24 Hour Tonnage Analytics Calculation
+  const get24HourTonnage = () => {
+    const past24h = Date.now() - (24 * 60 * 60 * 1000);
+    return loadings
+      .filter(l => l.timestamp >= past24h)
+      .reduce((total, load) => {
+        const val = parseFloat(load.tonnage) || 0;
+        return total + val;
+      }, 0);
   };
 
   const CompanyLogo = ({ className = "", scale = "scale-100", theme = 'blue' }) => (
@@ -401,6 +439,31 @@ export default function App() {
     </div>
   );
 
+  // Full Screen Image Modal Lightbox Component
+  const ImageLightboxModal = () => {
+    if (!previewModalImg) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-slide-up" onClick={() => setPreviewModalImg(null)}>
+        <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
+          <div className="absolute top-4 right-4 z-10 flex space-x-2">
+            <button onClick={() => setPreviewModalImg(null)} className="p-3 bg-white/20 hover:bg-white/40 text-white rounded-full transition-colors shadow-lg">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+          {previewModalTitle && (
+            <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-sm text-white px-4 py-2 rounded-xl text-sm font-bold border border-white/10">
+              {previewModalTitle}
+            </div>
+          )}
+          <img src={previewModalImg} alt="Büyütülmüş Fotoğraf" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/20" />
+          <p className="text-white/70 text-xs mt-3 flex items-center">
+            <Maximize2 className="w-3.5 h-3.5 mr-1" /> Kapatmak için görsele veya boşluğa tıklayabilirsiniz
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   const LoginScreen = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -413,7 +476,6 @@ export default function App() {
       const account = users.find(u => u.username === username.toLowerCase().trim());
       
       if (account && account.password === password) {
-        // Module Restrictions
         if (loginTheme === 'isg' && account.role === 'yuklemeci') {
             setLoginErr(t('err_isg_module')); return;
         }
@@ -444,8 +506,6 @@ export default function App() {
 
     return (
       <div className={`flex flex-col items-center justify-center min-h-screen p-6 transition-colors duration-500 ${isISG ? 'bg-gray-100' : 'bg-orange-50'}`}>
-        
-        {/* Language Toggle */}
         <div className="absolute top-6 right-6">
             <button onClick={toggleLang} className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-700 hover:bg-gray-50 border border-gray-200">
                 <Globe className="w-4 h-4 text-blue-500" />
@@ -546,20 +606,29 @@ export default function App() {
         </div>
       </header>
     );
-  }
+  };
 
   const YuklemeciDashboard = () => {
     const [isCreating, setIsCreating] = useState(false);
-    const [form, setForm] = useState({ plaka: '', sofor: '', not: '' });
+    const [form, setForm] = useState({ 
+      plaka: '', 
+      sofor: '', 
+      destLocation: '', 
+      destCompany: '', 
+      projectNo: '', 
+      tonnage: '', 
+      not: '' 
+    });
     const [imgPreview, setImgPreview] = useState(null);
     const [finishModal, setFinishModal] = useState({ isOpen: false, loadId: null, note: '', imgPreview: null });
 
     const activeLoadings = loadings.filter(l => l.status === 'devam_ediyor');
+    const tonnage24h = get24HourTonnage();
 
     const handleStartLoading = (e) => {
       e.preventDefault();
-      createLoading(form.plaka, form.sofor, form.not, imgPreview);
-      setForm({ plaka: '', sofor: '', not: '' });
+      createLoading(form.plaka, form.sofor, form.destLocation, form.destCompany, form.projectNo, form.tonnage, form.not, imgPreview);
+      setForm({ plaka: '', sofor: '', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
       setImgPreview(null);
       setIsCreating(false);
     };
@@ -571,12 +640,19 @@ export default function App() {
 
     return (
       <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 bg-orange-50/30">
-        <div className="bg-gradient-to-r from-orange-600 to-amber-700 p-8 rounded-3xl text-white shadow-xl flex justify-between items-center relative overflow-hidden mb-8">
+        <div className="bg-gradient-to-r from-orange-600 to-amber-700 p-6 md:p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden mb-8 gap-4">
           <div className="z-10">
             <h1 className="text-3xl font-extrabold mb-2 flex items-center"><Truck className="w-8 h-8 mr-3"/> {t('yuk_title')}</h1>
             <p className="text-orange-100 font-medium">{t('yuk_desc')}</p>
           </div>
-          <Package className="w-48 h-48 text-white opacity-10 absolute right-0 -bottom-10 z-0 transform -rotate-12" />
+          <div className="z-10 bg-white/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex items-center space-x-3">
+             <div className="bg-white/20 p-2 rounded-xl"><Scale className="w-6 h-6 text-white" /></div>
+             <div>
+               <p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">{t('tonnage_24h')}</p>
+               <p className="text-2xl font-extrabold text-white">{tonnage24h.toLocaleString('tr-TR')} <span className="text-sm font-medium">kg / ton</span></p>
+             </div>
+          </div>
+          <Package className="w-48 h-48 text-white opacity-10 absolute right-0 -bottom-10 z-0 transform -rotate-12 pointer-events-none" />
         </div>
 
         {!isCreating && (
@@ -590,10 +666,10 @@ export default function App() {
           <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-orange-100 mb-8 animate-slide-up">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 pb-4">
               <h3 className="font-bold text-xl text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-2 text-orange-500"/> {t('load_form_title')}</h3>
-              <button onClick={() => {setIsCreating(false); setImgPreview(null); setForm({plaka:'', sofor:'', not:''});}} className="text-gray-400 hover:text-gray-700"><X className="w-6 h-6"/></button>
+              <button onClick={() => {setIsCreating(false); setImgPreview(null); setForm({plaka:'', sofor:'', destLocation:'', destCompany:'', projectNo:'', tonnage:'', not:''});}} className="text-gray-400 hover:text-gray-700"><X className="w-6 h-6"/></button>
             </div>
             <form onSubmit={handleStartLoading} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('plate_no')}</label>
                   <input required type="text" value={form.plaka} onChange={e=>setForm({...form, plaka: e.target.value.toUpperCase()})} className="w-full border border-gray-300 rounded-xl p-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold" />
@@ -601,6 +677,34 @@ export default function App() {
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('driver_name')}</label>
                   <input type="text" value={form.sofor} onChange={e=>setForm({...form, sofor: e.target.value})} className="w-full border border-gray-300 rounded-xl p-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_location')}</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="text" value={form.destLocation} onChange={e=>setForm({...form, destLocation: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: İstanbul / Dilovası" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_company')}</label>
+                  <div className="relative">
+                    <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="text" value={form.destCompany} onChange={e=>setForm({...form, destCompany: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: ABB Trafo A.Ş." />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('project_no')}</label>
+                  <div className="relative">
+                    <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="text" value={form.projectNo} onChange={e=>setForm({...form, projectNo: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: PRJ-2026-88" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('tonnage')}</label>
+                  <div className="relative">
+                    <Scale className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input required type="number" step="any" value={form.tonnage} onChange={e=>setForm({...form, tonnage: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder="Örn: 24500 (kg) veya 24.5" />
+                  </div>
                 </div>
               </div>
               <div>
@@ -640,11 +744,24 @@ export default function App() {
                   <div><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">{t('plate')}</span><span className="text-xl font-extrabold text-gray-800">{load.plaka}</span></div>
                   <div className="text-right"><span className="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-1">{t('entry_time')}</span><span className="text-lg font-bold text-blue-600">{load.createdAtTime}</span></div>
                 </div>
-                <div className="p-5 flex-1 flex flex-col">
-                  {load.sofor && <p className="text-sm text-gray-600 font-medium mb-3"><User className="w-4 h-4 inline mr-1 text-gray-400"/> {t('driver')}: <span className="text-gray-800">{load.sofor}</span></p>}
-                  <div className="flex items-start space-x-4 mb-4 bg-gray-50 p-3 rounded-xl border border-gray-100 mt-auto">
-                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0 overflow-hidden relative">
-                       {load.preImgUrl ? <img src={load.preImgUrl} className="w-full h-full object-cover" /> : <><ImageIcon className="w-5 h-5 mb-1"/><span className="text-[8px] font-bold">{t('no_photo')}</span></>}
+                <div className="p-5 flex-1 flex flex-col space-y-3">
+                  {load.sofor && <p className="text-xs text-gray-600 font-medium"><User className="w-3.5 h-3.5 inline mr-1 text-gray-400"/> {t('driver')}: <span className="text-gray-800 font-bold">{load.sofor}</span></p>}
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-orange-50/60 p-3 rounded-xl border border-orange-100">
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800">{load.destLocation || '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800">{load.destCompany || '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-700">{load.tonnage ? `${load.tonnage} kg/Ton` : '-'}</span></div>
+                  </div>
+
+                  <div className="flex items-start space-x-4 bg-gray-50 p-3 rounded-xl border border-gray-100 mt-auto">
+                    <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0 overflow-hidden relative group cursor-pointer" onClick={() => load.preImgUrl && setPreviewModalImg(load.preImgUrl)}>
+                       {load.preImgUrl ? (
+                          <>
+                            <img src={load.preImgUrl} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
+                          </>
+                       ) : <><ImageIcon className="w-5 h-5 mb-1"/><span className="text-[8px] font-bold">{t('no_photo')}</span></>}
                     </div>
                     <div>
                       <p className="text-[10px] text-gray-400 font-bold mb-1 uppercase tracking-wider">{t('pre_note_title')}</p>
@@ -694,11 +811,12 @@ export default function App() {
 
   const AdminDashboard = () => {
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
-    const [accountTab, setAccountTab] = useState('isg'); // 'isg' | 'yukleme'
+    const [accountTab, setAccountTab] = useState('isg');
     
     const [historyFilter, setHistoryFilter] = useState('1');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteCountdown, setDeleteCountdown] = useState(10);
+    const [visiblePasswords, setVisiblePasswords] = useState({});
 
     useEffect(() => {
       let timer;
@@ -707,6 +825,10 @@ export default function App() {
       }
       return () => clearTimeout(timer);
     }, [showDeleteModal, deleteCountdown]);
+
+    const togglePasswordVisibility = (userId) => {
+      setVisiblePasswords(prev => ({ ...prev, [userId]: !prev[userId] }));
+    };
 
     const handleCreateUser = async (e) => {
       e.preventDefault();
@@ -752,7 +874,6 @@ export default function App() {
                 <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Users className="w-6 h-6 mr-2 text-blue-600"/> {t('user_management')}</h2>
             </div>
 
-            {/* Split Account Management Tabs */}
             <div className="flex bg-gray-100 p-1.5 rounded-xl shadow-inner mb-6">
                <button onClick={() => setAccountTab('isg')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'isg' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500'}`}>
                  <ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_accounts')}
@@ -806,15 +927,32 @@ export default function App() {
             <div>
               <h3 className="font-bold text-gray-700 text-sm mb-3">{t('existing_accs')} ({filteredUsers.length})</h3>
               <div className="space-y-2">
-                {filteredUsers.map(u => (
-                  <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
-                    <div>
-                      <p className="font-bold text-gray-800 text-sm">{u.name} <span className="text-xs text-gray-400 font-normal ml-2">@{u.username}</span></p>
-                      <p className="text-xs text-gray-500 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p>
+                {filteredUsers.map(u => {
+                  const isVisible = visiblePasswords[u.id];
+                  return (
+                    <div key={u.id} className="flex justify-between items-center p-3.5 border rounded-xl hover:bg-gray-50 transition-colors">
+                      <div>
+                        <p className="font-bold text-gray-800 text-sm">{u.name} <span className="text-xs text-gray-400 font-normal ml-2">@{u.username}</span></p>
+                        <p className="text-xs text-gray-500 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        {/* Admin şifre görebilme özelliği */}
+                        {currentUser?.username === 'agiradar' && (
+                          <div className="flex items-center bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200">
+                            <span className="text-xs font-mono font-bold text-gray-700 mr-2">
+                              {isVisible ? u.password : '••••••••'}
+                            </span>
+                            <button onClick={() => togglePasswordVisibility(u.id)} className="text-gray-500 hover:text-gray-800 focus:outline-none">
+                              {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+                        )}
+                        {u.id !== "1" && <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md"><Trash2 className="w-4 h-4"/></button>}
+                      </div>
                     </div>
-                    {u.id !== "1" && <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md"><Trash2 className="w-4 h-4"/></button>}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -822,10 +960,15 @@ export default function App() {
       }
 
       if (adminSystemMode === 'yukleme') {
+         const totalTonnageAll = loadings.reduce((acc, l) => acc + (parseFloat(l.tonnage) || 0), 0);
+
          return (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-3 text-orange-500"/> {t('all_reports')}</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-gray-100 pb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-3 text-orange-500"/> {t('all_reports')}</h2>
+                <p className="text-xs text-gray-500 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} kg/Ton</b></p>
+              </div>
               <span className="bg-orange-100 text-orange-800 font-bold px-3 py-1 rounded-lg text-sm">{loadings.length} {t('records')}</span>
             </div>
             <div className="space-y-4">
@@ -844,16 +987,34 @@ export default function App() {
                       </div>
                       <div className="bg-white px-3 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600"><User className="w-4 h-4 inline text-gray-400 mr-1"/> {load.sofor || '-'}</div>
                     </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs bg-white p-3 rounded-xl border border-gray-100 mb-4">
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800">{load.destLocation || '-'}</span></div>
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800">{load.destCompany || '-'}</span></div>
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-600">{load.tonnage ? `${load.tonnage} kg/Ton` : '-'}</span></div>
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col">
                         <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">{t('before')}</span>
-                        {load.preImgUrl ? <img src={load.preImgUrl} className="w-full h-32 object-cover rounded-lg mb-2" onClick={()=>window.open(load.preImgUrl)} /> : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
+                        {load.preImgUrl ? (
+                          <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.preImgUrl)}>
+                             <img src={load.preImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
+                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                          </div>
+                        ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
                         <p className="text-sm text-gray-700 italic">"{load.preNote || "-"}"</p>
                       </div>
                       <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col">
                         <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">{t('after')}</span>
-                        {load.status === 'devam_ediyor' ? <div className="w-full h-32 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-orange-400 text-sm font-medium mb-2">{t('loading_progress')}</div> : (
-                          <>{load.postImgUrl ? <img src={load.postImgUrl} className="w-full h-32 object-cover rounded-lg mb-2" onClick={()=>window.open(load.postImgUrl)} /> : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
+                        {load.status === 'devam_ediyor' ? <div className="w-full h-44 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-orange-400 text-sm font-medium mb-2">{t('loading_progress')}</div> : (
+                          <>{load.postImgUrl ? (
+                            <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.postImgUrl)}>
+                               <img src={load.postImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
+                               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                            </div>
+                          ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
                           <p className="text-sm text-gray-700 italic">"{load.postNote || "-"}"</p></>
                         )}
                       </div>
@@ -904,13 +1065,23 @@ export default function App() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                          <div className="bg-white p-3 rounded-xl border border-gray-200 flex flex-col items-center">
                            <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 w-full text-left">{t('before')}</span>
-                           {task.imgUrl ? <img src={task.imgUrl} className="w-full h-32 object-cover rounded-lg mb-2" onClick={()=>window.open(task.imgUrl)} /> : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
+                           {task.imgUrl ? (
+                              <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full" onClick={() => setPreviewModalImg(task.imgUrl)}>
+                                <img src={task.imgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                              </div>
+                           ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
                            <p className="text-sm text-gray-800 w-full text-left">{task.desc}</p>
                          </div>
                          <div className="bg-white p-3 rounded-xl border border-gray-200 flex flex-col items-center opacity-90">
                            <span className="text-[10px] font-bold text-gray-400 uppercase mb-2 w-full text-left">{t('solution_after')}</span>
                            {task.status === 'cozuldu' || task.status === 'onay_bekliyor' ? (
-                             <>{task.afterImgUrl ? <img src={task.afterImgUrl} className="w-full h-32 object-cover rounded-lg mb-2" onClick={()=>window.open(task.afterImgUrl)} /> : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
+                             <>{task.afterImgUrl ? (
+                                <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full" onClick={() => setPreviewModalImg(task.afterImgUrl)}>
+                                  <img src={task.afterImgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
+                                </div>
+                             ) : <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 text-xs mb-2">{t('no_photo')}</div>}
                              <p className="text-sm text-gray-700 italic w-full text-left">"{task.chiefNote}"</p></>
                            ) : <div className="w-full h-full min-h-[8rem] bg-gray-50 rounded-lg flex items-center justify-center text-gray-400 text-xs">{t('stat_acik')}</div>}
                          </div>
@@ -1064,6 +1235,8 @@ export default function App() {
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
       `}</style>
+
+      <ImageLightboxModal />
       
       {!currentUser ? (
         <LoginScreen />
