@@ -68,7 +68,7 @@ export default function App() {
   const t = (key) => DICTIONARY[lang][key] || key;
   
   const [currentUser, setCurrentUser] = useState(null);
-  const [loginTheme, setLoginTheme] = useState('isg'); // 'isg' | 'yukleme'
+  const [loginTheme, setLoginTheme] = useState('isg');
   
   const [users, setUsers] = useState(() => {
     const saved = localStorage.getItem('isg_users');
@@ -246,30 +246,32 @@ export default function App() {
   );
 
   const AdminDashboard = () => {
-    const [adminViewMode, setAdminViewMode] = useState('isg'); // 'isg' | 'yukleme'
+    const [adminViewMode, setAdminViewMode] = useState('isg');
     
     // ISG Sub-states
-    const [isgTab, setIsgTab] = useState('list'); // 'list' | 'calendar' | 'users'
+    const [isgTab, setIsgTab] = useState('list');
     const [selectedAdminDept, setSelectedAdminDept] = useState(null);
     const [selectedAdminDate, setSelectedAdminDate] = useState(null);
     
     // Yükleme Sub-states
-    const [yuklemeTab, setYuklemeTab] = useState('calendar'); // 'calendar' | 'analiz'
+    const [yuklemeTab, setYuklemeTab] = useState('calendar');
     
     // Users state
-    const [userTab, setUserTab] = useState('isg'); // 'isg' | 'yukleme'
+    const [userTab, setUserTab] = useState('isg');
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
 
     // Calendar logic
     const [currentMonthOffset, setCurrentMonthOffset] = useState(0);
+    
+    // Yükleme Filtre ve Durumları
+    const [shipFilter, setShipFilter] = useState('today');
+    const [expandedId, setExpandedId] = useState(null); // HOOK HATASI BURADA ÇÖZÜLDÜ (Yukarı Taşındı)
+
     const getCalendarDate = () => {
       const d = new Date();
       d.setMonth(d.getMonth() + currentMonthOffset);
       return d;
     };
-    
-    // Calendar filter for shipping
-    const [shipFilter, setShipFilter] = useState('today'); // 'today' | 'month' | 'year' | 'all'
 
     const handleCreateUser = (e) => {
       e.preventDefault();
@@ -417,8 +419,6 @@ export default function App() {
 
       const filteredLoadings = getFilteredLoadings();
       const totalFilteredTonnage = filteredLoadings.reduce((sum, l) => sum + (parseFloat(l.tonnage)||0), 0);
-
-      const [expandedId, setExpandedId] = useState(null);
 
       return (
         <div className="animate-slide-up space-y-6">
@@ -639,7 +639,7 @@ export default function App() {
               </div>
             </div>
             <div className="lg:col-span-2">
-              {isgTab === 'users' ? renderUsers() : (selectedAdminDept ? <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">Birim Raporları Burada Gösterilecek (Detaylar önceki sürümlerde mevcuttur)</div> : renderISGCalendar())}
+              {isgTab === 'users' ? renderUsers() : (selectedAdminDept ? <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">Birim Raporları Burada Gösterilecek</div> : renderISGCalendar())}
             </div>
           </div>
         )}
@@ -689,7 +689,6 @@ export default function App() {
     };
 
     const updateStatus = (id, newStatus, imgType) => {
-      // Simulate photo selection
       const mockImg = "https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?auto=format&fit=crop&q=80&w=800";
       setLoadings(loadings.map(l => l.id === id ? { ...l, status: newStatus, [imgType]: mockImg } : l));
     };
@@ -717,7 +716,6 @@ export default function App() {
                   <div><label className="block text-xs font-bold text-gray-500 mb-1">Araç Plakası *</label><input type="text" required value={plate} onChange={e=>setPlate(e.target.value.toUpperCase())} className="w-full border rounded-xl p-3 bg-gray-50 uppercase font-bold" /></div>
                   <div><label className="block text-xs font-bold text-gray-500 mb-1">Şoför Adı</label><input type="text" value={driver} onChange={e=>setDriver(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50" /></div>
                 </div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-500 mb-1">Ülke *</label>
@@ -727,20 +725,16 @@ export default function App() {
                   </div>
                   <div><label className="block text-xs font-bold text-gray-500 mb-1">Şehir *</label><input type="text" required value={city} onChange={e=>setCity(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50" /></div>
                 </div>
-
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Gideceği Firma *</label><input type="text" required value={company} onChange={e=>setCompany(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50" /></div>
-                
                 <div className="grid grid-cols-2 gap-4">
                   <div><label className="block text-xs font-bold text-gray-500 mb-1">Proje No</label><input type="text" value={projectNo} onChange={e=>setProjectNo(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50 font-mono" /></div>
                   <div><label className="block text-xs font-bold text-gray-500 mb-1">Tonaj (Ton) *</label><input type="number" step="0.1" required value={tonnage} onChange={e=>setTonnage(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50" /></div>
                 </div>
-
                 <div><label className="block text-xs font-bold text-gray-500 mb-1">Ek Notlar</label><textarea value={desc} onChange={e=>setDesc(e.target.value)} className="w-full border rounded-xl p-3 bg-gray-50 h-20 resize-none"></textarea></div>
                 <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white py-4 rounded-xl font-bold shadow-md transition-colors">Araç Kaydını Aç</button>
               </form>
             </div>
           </div>
-
           <div className="lg:col-span-2 space-y-6">
             <h3 className="font-bold text-xl text-gray-800 border-b pb-4">Aktif Yüklemeler ({activeLoadings.length})</h3>
             {activeLoadings.length === 0 ? (
@@ -765,7 +759,6 @@ export default function App() {
                          </div>
                        </div>
                     </div>
-                    
                     <div className="w-full md:w-64 shrink-0 flex flex-col space-y-3 border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6">
                       {load.status === 'beklemede' && (
                         <>
@@ -808,7 +801,7 @@ export default function App() {
              {currentUser.role === 'yuklemeci' && <YuklemeciDashboard />}
           </main>
           
-          <footer className="w-full text-center py-4 mt-auto">
+          <footer className="w-full text-center py-4 mt-auto border-t border-gray-200 bg-white shadow-inner">
              <span className="text-xs text-gray-400 italic font-medium tracking-wider">by agiradar</span>
           </footer>
         </>
