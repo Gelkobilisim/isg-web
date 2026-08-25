@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, PieChart, BarChart3, Map } from 'lucide-react';
+import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ChevronLeft, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, PieChart, BarChart3, Map } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
@@ -481,20 +481,30 @@ export default function App() {
     }
     const isISG = loginTheme === 'isg';
     return (
-      <div className={`flex flex-col items-center justify-center min-h-screen p-6 transition-colors duration-500 ${isISG ? 'bg-gray-100' : 'bg-orange-50'}`}>
-        <div className="absolute top-6 right-6">
+      <div 
+        className="flex flex-col items-center justify-center min-h-screen p-6 relative"
+        style={{
+          backgroundImage: "url('/ads-metal-anadolu-osb.jpg')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      >
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-[3px] z-0 transition-colors duration-500"></div>
+        
+        <div className="absolute top-6 right-6 z-10">
             <button onClick={toggleLang} className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-700 hover:bg-gray-50 border border-gray-200">
                 <Globe className="w-4 h-4 text-blue-500" /><span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
             </button>
         </div>
 
-        <div className="bg-white p-1.5 rounded-full shadow-md mb-8 flex space-x-1 border border-gray-200">
-          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
-          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
+        <div className="bg-white/10 backdrop-blur-md p-1.5 rounded-full shadow-lg mb-8 flex space-x-1 border border-white/20 z-10">
+          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-300 hover:bg-white/20'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
+          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-300 hover:bg-white/20'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
         </div>
 
-        <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
-          <div className={`hidden md:flex flex-col items-center justify-center w-1/2 p-12 border-r border-gray-100 transition-colors duration-500 ${isISG ? 'bg-blue-50' : 'bg-orange-100/50'}`}>
+        <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden animate-slide-up z-10 border border-white/40">
+          <div className={`hidden md:flex flex-col items-center justify-center w-1/2 p-12 border-r border-gray-100 transition-colors duration-500 ${isISG ? 'bg-blue-50/50' : 'bg-orange-100/30'}`}>
             <CompanyLogo className="bg-transparent shadow-none mb-6" scale="scale-150" theme={isISG ? 'blue' : 'orange'} />
             <h1 className={`text-3xl font-bold text-center mt-8 ${isISG ? 'text-blue-900' : 'text-orange-900'}`}>{isISG ? t('sys_isg_title') : t('sys_yukleme_title')}<br/>{t('sys_management')}</h1>
           </div>
@@ -716,6 +726,11 @@ export default function App() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteCountdown, setDeleteCountdown] = useState(10);
     const [visiblePasswords, setVisiblePasswords] = useState({});
+    const [calendarDate, setCalendarDate] = useState(new Date());
+
+    const changeMonth = (offset) => {
+      setCalendarDate(new Date(calendarDate.getFullYear(), calendarDate.getMonth() + offset, 1));
+    };
 
     useEffect(() => {
       let timer;
@@ -837,8 +852,8 @@ export default function App() {
          }
 
          const currDate = new Date();
-         const currentMonth = currDate.getMonth();
-         const currentYear = currDate.getFullYear();
+         const currentMonth = calendarDate.getMonth();
+         const currentYear = calendarDate.getFullYear();
          const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
          const firstDay = new Date(currentYear, currentMonth, 1).getDay();
          const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
@@ -849,14 +864,20 @@ export default function App() {
          if (adminViewMode === 'calendar' && !selectedAdminDate) {
             return (
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-                <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100"><h3 className="font-extrabold text-gray-800 text-2xl flex items-center"><CalendarDays className="w-7 h-7 mr-3 text-orange-600"/> {monthNames[currentMonth]} {currentYear}</h3></div>
+                <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100">
+                  <h3 className="font-extrabold text-gray-800 text-2xl flex items-center"><CalendarDays className="w-7 h-7 mr-3 text-orange-600"/> {monthNames[currentMonth]} {currentYear}</h3>
+                  <div className="flex space-x-2">
+                    <button onClick={() => changeMonth(-1)} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-600 transition-colors"><ChevronLeft className="w-5 h-5"/></button>
+                    <button onClick={() => changeMonth(1)} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-600 transition-colors"><ChevronRight className="w-5 h-5"/></button>
+                  </div>
+                </div>
                 <div className="grid grid-cols-7 gap-2 text-center mb-3">{dayNames.map(day => <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2 bg-gray-50 rounded-lg">{day}</div>)}</div>
                 <div className="grid grid-cols-7 gap-2">
                    {Array.from({ length: startOffset }).map((_, i) => <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 border border-gray-100 opacity-50"></div>)}
                    {Array.from({ length: daysInMonth }).map((_, i) => {
                      const dayNum = i + 1;
                      const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
-                     const isToday = dayNum === currDate.getDate();
+                     const isToday = dayNum === currDate.getDate() && currentMonth === currDate.getMonth() && currentYear === currDate.getFullYear();
                      const dayLoads = loadings.filter(l => l.createdAtDate === formattedDateForCell);
                      
                      return (
@@ -1013,18 +1034,24 @@ export default function App() {
         );
       }
 
-      const currDate = new Date(); const currentMonth = currDate.getMonth(); const currentYear = currDate.getFullYear(); const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate(); const firstDay = new Date(currentYear, currentMonth, 1).getDay(); const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+      const currDate = new Date(); const currentMonth = calendarDate.getMonth(); const currentYear = calendarDate.getFullYear(); const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate(); const firstDay = new Date(currentYear, currentMonth, 1).getDay(); const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
       const dayNames = lang === 'tr' ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
       const monthNames = lang === 'tr' ? ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
       return (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-          <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100"><h3 className="font-extrabold text-gray-800 text-2xl flex items-center"><CalendarDays className="w-7 h-7 mr-3 text-blue-600"/> {monthNames[currentMonth]} {currentYear}</h3></div>
+          <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100">
+            <h3 className="font-extrabold text-gray-800 text-2xl flex items-center"><CalendarDays className="w-7 h-7 mr-3 text-blue-600"/> {monthNames[currentMonth]} {currentYear}</h3>
+            <div className="flex space-x-2">
+              <button onClick={() => changeMonth(-1)} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-600 transition-colors"><ChevronLeft className="w-5 h-5"/></button>
+              <button onClick={() => changeMonth(1)} className="p-2 bg-gray-50 hover:bg-gray-100 rounded-lg border border-gray-200 text-gray-600 transition-colors"><ChevronRight className="w-5 h-5"/></button>
+            </div>
+          </div>
           <div className="grid grid-cols-7 gap-2 text-center mb-3">{dayNames.map(day => <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2 bg-gray-50 rounded-lg">{day}</div>)}</div>
           <div className="grid grid-cols-7 gap-2">
              {Array.from({ length: startOffset }).map((_, i) => <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 border border-gray-100 opacity-50"></div>)}
              {Array.from({ length: daysInMonth }).map((_, i) => {
-               const dayNum = i + 1; const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`; const isToday = dayNum === currDate.getDate(); const dayTasks = tasks.filter(t => t.createdAt === formattedDateForCell);
+               const dayNum = i + 1; const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`; const isToday = dayNum === currDate.getDate() && currentMonth === currDate.getMonth() && currentYear === currDate.getFullYear(); const dayTasks = tasks.filter(t => t.createdAt === formattedDateForCell);
                return (
                  <div key={dayNum} onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
                    <span className={`text-sm md:text-base font-bold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{dayNum}</span>
@@ -1079,8 +1106,8 @@ export default function App() {
               </div>
             ) : (
               <div className="space-y-3">
-                 <button onClick={() => {setAdminViewMode('calendar'); setSelectedAdminDate(null);}} className={`w-full text-left font-bold py-4 px-5 rounded-2xl flex items-center justify-between transition-colors ${adminViewMode === 'calendar' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-white text-gray-700 border border-gray-100 hover:bg-gray-50'}`}><span className="flex items-center"><CalendarDays className="w-5 h-5 mr-3"/> Takvim</span><ChevronRight className="w-4 h-4"/></button>
                  <button onClick={() => {setAdminViewMode('list'); setSelectedAdminDate(null);}} className={`w-full text-left font-bold py-4 px-5 rounded-2xl flex items-center justify-between transition-colors ${adminViewMode === 'list' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-white text-gray-700 border border-gray-100 hover:bg-gray-50'}`}><span className="flex items-center"><List className="w-5 h-5 mr-3"/> {t('all_reports')}</span><ChevronRight className="w-4 h-4"/></button>
+                 <button onClick={() => {setAdminViewMode('calendar'); setSelectedAdminDate(null);}} className={`w-full text-left font-bold py-4 px-5 rounded-2xl flex items-center justify-between transition-colors ${adminViewMode === 'calendar' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-white text-gray-700 border border-gray-100 hover:bg-gray-50'}`}><span className="flex items-center"><CalendarDays className="w-5 h-5 mr-3"/> Takvim</span><ChevronRight className="w-4 h-4"/></button>
                  <button onClick={() => {setAdminViewMode('analytics'); setSelectedAdminDate(null);}} className={`w-full text-left font-bold py-4 px-5 rounded-2xl flex items-center justify-between transition-colors ${adminViewMode === 'analytics' ? 'bg-orange-100 text-orange-700 border border-orange-200' : 'bg-white text-gray-700 border border-gray-100 hover:bg-gray-50'}`}><span className="flex items-center"><BarChart3 className="w-5 h-5 mr-3"/> {t('analytics')}</span><ChevronRight className="w-4 h-4"/></button>
               </div>
             )}
