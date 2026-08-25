@@ -29,17 +29,8 @@ const DICTIONARY = {
     sys_isg_title: "İSG & Tertip",
     sys_yukleme_title: "Yükleme Takip",
     sys_management: "Yönetim Sistemi",
-    isg_tab: "İSG Modülü",
-    yukleme_tab: "Yükleme Modülü",
-    login_desc_isg: "Fabrika içi iş sağlığı, güvenliği ve 5S standartlarını korumak için tasarlanmış merkezi kontrol paneli.",
-    login_desc_yukleme: "Fabrika sevkiyat, tır yüklemeleri ve uluslararası operasyonları canlı takip paneli.",
     welcome: "Hoş Geldiniz",
     login_prompt: "Sisteme devam etmek için hesap bilgilerinizi girin.",
-    username: "Kullanıcı Adı",
-    password: "Şifre",
-    remember_me: "Beni Hatırla",
-    login_btn: "Sisteme Giriş Yap",
-    logout: "Çıkış Yap",
     err_login: "Kullanıcı adı veya şifre hatalı veya bu modüle yetkiniz yok!",
     no_auth: "Bu modüle giriş yetkiniz bulunmamaktadır."
   },
@@ -47,17 +38,8 @@ const DICTIONARY = {
     sys_isg_title: "OHS & 5S",
     sys_yukleme_title: "Shipping Tracking",
     sys_management: "Management System",
-    isg_tab: "OHS Module",
-    yukleme_tab: "Shipping Module",
-    login_desc_isg: "Central control panel designed to maintain factory health, safety, and 5S standards.",
-    login_desc_yukleme: "Live tracking panel for factory shipments, truck loadings, and international operations.",
     welcome: "Welcome",
     login_prompt: "Enter your credentials to continue to the system.",
-    username: "Username",
-    password: "Password",
-    remember_me: "Remember Me",
-    login_btn: "Login to System",
-    logout: "Logout",
     err_login: "Invalid username or password, or unauthorized for this module!",
     no_auth: "You do not have authorization to access this module."
   }
@@ -141,11 +123,28 @@ export default function App() {
     );
   };
 
+  const TopBar = ({ theme = 'blue' }) => (
+    <header className="bg-white px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200">
+      <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
+        <div className="flex items-center space-x-4">
+          <CompanyLogo scale="scale-75 md:scale-90" theme={theme} showBox={false} />
+          <div className="border-l pl-4 border-gray-300">
+            <h2 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{currentUser.name}</h2>
+            <span className="text-[10px] md:text-xs text-gray-500 capitalize leading-tight">{currentUser.role === 'sef' ? `${currentUser.dept} Birimi` : currentUser.role} Paneli</span>
+          </div>
+        </div>
+        <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
+          <span className="hidden sm:inline">Çıkış Yap</span>
+          <LogOut className="w-5 h-5" />
+        </button>
+      </div>
+    </header>
+  );
+
   const LoginScreen = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [loginErr, setLoginErr] = useState('');
-    const [rememberMe, setRememberMe] = useState(false);
     
     const isISG = loginTheme === 'isg';
 
@@ -203,69 +202,63 @@ export default function App() {
                   <AlertCircle className="w-5 h-5 mr-2 shrink-0" /> {loginErr}
                 </div>
               )}
+              
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">{t('username')}</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Kullanıcı Adı</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white" required />
+                  <input 
+                    type="text" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors"
+                    required
+                  />
                 </div>
               </div>
+              
               <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">{t('password')}</label>
+                <label className="block text-sm font-bold text-gray-700 mb-2">Şifre</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white" required />
+                  <input 
+                    type="password" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full border border-gray-300 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 focus:bg-white transition-colors"
+                    required
+                  />
                 </div>
               </div>
-              <div className="flex items-center mt-2 pl-1"><input type="checkbox" id="rememberMe" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="w-4 h-4 bg-gray-100 border-gray-300 rounded cursor-pointer" /><label htmlFor="rememberMe" className="ml-2 text-sm font-bold text-gray-600 cursor-pointer">{t('remember_me')}</label></div>
-              <button type="submit" className={`w-full py-4 text-white rounded-xl font-bold shadow-lg mt-4 ${isISG ? 'bg-blue-700 hover:bg-blue-800' : 'bg-orange-600 hover:bg-orange-700'}`}>{t('login_btn')}</button>
+              
+              <button type="submit" className={`w-full py-4 text-white rounded-xl font-bold shadow-lg transition-colors mt-4 ${isISG ? 'bg-blue-700 hover:bg-blue-800' : 'bg-orange-600 hover:bg-orange-700'}`}>
+                Giriş Yap
+              </button>
             </form>
           </div>
-        </div>
-        
-        <div className="absolute bottom-4 w-full text-center z-10 pointer-events-none">
-          <span className="text-xs text-white/50 italic font-medium tracking-wider">by agiradar</span>
         </div>
       </div>
     );
   };
 
-  const TopBar = ({ theme = 'blue' }) => (
-    <header className="bg-white px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200">
-      <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-1 scale-75 md:scale-90 origin-left"><CompanyLogo className="!p-0" theme={theme} showBox={false} /></div>
-          <div className="border-l pl-4 border-gray-300"><h2 className="font-bold text-gray-800 text-sm md:text-base leading-tight">{currentUser.name}</h2><span className="text-[10px] md:text-xs text-gray-500 capitalize leading-tight">{currentUser.role === 'sef' ? `${currentUser.dept} Birimi` : (currentUser.role === 'yuklemeci' ? 'Yükleme Sorumlusu' : currentUser.role)}</span></div>
-        </div>
-        <div className="flex items-center space-x-4">
-          <button onClick={() => setLang(lang === 'tr' ? 'en' : 'tr')} className="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs transition-colors">TR / EN</button>
-          <button onClick={logout} className="flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm"><span className="hidden sm:inline">{t('logout')}</span><LogOut className="w-5 h-5" /></button>
-        </div>
-      </div>
-    </header>
-  );
-
   const AdminDashboard = () => {
-    const [adminViewMode, setAdminViewMode] = useState('isg');
+    const [adminViewMode, setAdminViewMode] = useState('isg'); 
+    const [isgTab, setIsgTab] = useState('users'); 
+    const [yuklemeTab, setYuklemeTab] = useState('calendar');
     
-    // ISG Sub-states
-    const [isgTab, setIsgTab] = useState('list');
     const [selectedAdminDept, setSelectedAdminDept] = useState(null);
     const [selectedAdminDate, setSelectedAdminDate] = useState(null);
     
-    // Yükleme Sub-states
-    const [yuklemeTab, setYuklemeTab] = useState('calendar');
-    
-    // Users state
     const [userTab, setUserTab] = useState('isg');
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
 
-    // Calendar logic
     const [currentMonthOffset, setCurrentMonthOffset] = useState(0);
-    
-    // Yükleme Filtre ve Durumları
     const [shipFilter, setShipFilter] = useState('today');
-    const [expandedId, setExpandedId] = useState(null); // HOOK HATASI BURADA ÇÖZÜLDÜ (Yukarı Taşındı)
+    const [expandedId, setExpandedId] = useState(null);
+    
+    // Admin Wipe Feature States
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteCountdown, setDeleteCountdown] = useState(0);
 
     const getCalendarDate = () => {
       const d = new Date();
@@ -273,40 +266,67 @@ export default function App() {
       return d;
     };
 
+    const isAdminAgiradar = currentUser?.username === 'agiradar';
+
     const handleCreateUser = (e) => {
       e.preventDefault();
-      if(users.find(u => u.username === newUser.username)) { alert("Bu kullanıcı adı zaten alınmış!"); return; }
+      if(users.find(u => u.username === newUser.username)) { alert("Bu kullanıcı adı alınmış!"); return; }
       setUsers([...users, { ...newUser, id: Date.now(), dept: newUser.role === 'sef' ? newUser.dept : null }]);
       setNewUser({ username: '', password: '', name: '', role: userTab === 'isg' ? 'sef' : 'yuklemeci', dept: DEPARTMENTS[0] });
     };
 
     const handleDeleteUser = (id) => {
-      if(id === 1) return;
-      if(window.confirm("Silmek istediğinize emin misiniz?")) { setUsers(users.filter(u => u.id !== id)); }
+      if(id === 1) return; 
+      if(window.confirm("Kullanıcı silinsin mi?")) setUsers(users.filter(u => u.id !== id));
     };
 
-    const isAdminAgiradar = currentUser.username === 'agiradar';
+    const handleWipeData = () => {
+      if(window.confirm("TÜM GEÇMİŞ RAPORLARI SİLMEK ÜZERESİNİZ! Bu işlem geri alınamaz. Emin misiniz?")) {
+        setTasks([]);
+        setLoadings([]);
+        setPoints(DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {}));
+        setIsDeleting(false);
+        alert("Tüm geçmiş kayıtlar başarıyla temizlendi.");
+      }
+    };
+
+    const startDeleteCountdown = () => {
+      setIsDeleting(true);
+      setDeleteCountdown(10);
+      let count = 10;
+      const interval = setInterval(() => {
+        count -= 1;
+        setDeleteCountdown(count);
+        if (count <= 0) {
+          clearInterval(interval);
+        }
+      }, 1000);
+    };
 
     const renderUsers = () => (
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
         <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center"><Users className="w-6 h-6 mr-2 text-blue-600"/> Kullanıcı Yönetimi</h2>
         
-        <div className="flex space-x-2 mb-6 border-b pb-2">
-          <button onClick={() => {setUserTab('isg'); setNewUser({...newUser, role: 'sef'});}} className={`px-4 py-2 font-bold text-sm rounded-t-lg ${userTab === 'isg' ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-500'}`}>İSG Hesapları</button>
-          <button onClick={() => {setUserTab('yukleme'); setNewUser({...newUser, role: 'yuklemeci'});}} className={`px-4 py-2 font-bold text-sm rounded-t-lg ${userTab === 'yukleme' ? 'bg-orange-50 text-orange-700 border-b-2 border-orange-600' : 'text-gray-500'}`}>Yükleme Hesapları</button>
+        <div className="flex space-x-2 bg-gray-100 p-1 rounded-xl mb-6">
+          <button onClick={() => {setUserTab('isg'); setNewUser({...newUser, role:'sef'});}} className={`flex-1 py-2 text-sm font-bold rounded-lg ${userTab==='isg'?'bg-white text-blue-600 shadow-sm':'text-gray-500'}`}>İSG Hesapları</button>
+          <button onClick={() => {setUserTab('yukleme'); setNewUser({...newUser, role:'yuklemeci'});}} className={`flex-1 py-2 text-sm font-bold rounded-lg ${userTab==='yukleme'?'bg-white text-orange-600 shadow-sm':'text-gray-500'}`}>Yükleme Hesapları</button>
         </div>
 
         <form onSubmit={handleCreateUser} className="bg-gray-50 p-5 rounded-xl border border-gray-200 mb-8 space-y-4">
-          <h3 className="font-bold text-gray-700 text-sm mb-2">Yeni Hesap Oluştur ({userTab === 'isg' ? 'İSG' : 'Yükleme'})</h3>
+          <h3 className="font-bold text-gray-700 text-sm mb-2 border-b pb-2">Yeni Hesap Oluştur</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div><label className="block text-xs font-bold text-gray-500 mb-1">Ad Soyad</label><input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" /></div>
-            <div><label className="block text-xs font-bold text-gray-500 mb-1">Kullanıcı Adı</label><input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" /></div>
+            <div><label className="block text-xs font-bold text-gray-500 mb-1">Ad Soyad</label><input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" placeholder="Örn: Ahmet Y." /></div>
+            <div><label className="block text-xs font-bold text-gray-500 mb-1">Kullanıcı Adı (Giriş için)</label><input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" /></div>
             <div><label className="block text-xs font-bold text-gray-500 mb-1">Şifre</label><input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border rounded-lg p-2 text-sm" /></div>
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">Rol</label>
               <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
                 {userTab === 'isg' ? (
-                  <><option value="sef">Birim Şefi</option><option value="mod">İSG Uzmanı</option></>
+                  <>
+                    <option value="sef">Birim Şefi</option>
+                    <option value="mod">İSG Uzmanı</option>
+                    <option value="admin">Sistem Yöneticisi (Admin)</option>
+                  </>
                 ) : (
                   <option value="yuklemeci">Yükleme Sorumlusu</option>
                 )}
@@ -324,7 +344,7 @@ export default function App() {
 
         <div>
           <h3 className="font-bold text-gray-700 text-sm mb-3">Mevcut Hesaplar</h3>
-          <div className="space-y-2">
+          <div className="space-y-2 mb-8">
             {users.filter(u => u.id === 1 || (userTab === 'isg' ? u.role !== 'yuklemeci' : u.role === 'yuklemeci')).map(u => (
               <div key={u.id} className="flex justify-between items-center p-3 border rounded-lg hover:bg-gray-50">
                 <div>
@@ -336,65 +356,27 @@ export default function App() {
               </div>
             ))}
           </div>
+          
+          {isAdminAgiradar && (
+            <div className="mt-12 p-6 bg-red-50 border border-red-200 rounded-2xl flex flex-col items-center justify-center text-center">
+               <AlertTriangle className="w-12 h-12 text-red-500 mb-3" />
+               <h3 className="font-bold text-red-700 text-lg mb-2">Tehlikeli Bölge</h3>
+               <p className="text-sm text-red-600 mb-6 max-w-md">Sistemin veri tabanını temizlemek istiyorsanız bu butonu kullanabilirsiniz. İSG ve Nakliye dahil tüm kayıtlı raporlar kalıcı olarak silinir.</p>
+               
+               {!isDeleting ? (
+                 <button onClick={startDeleteCountdown} className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl shadow-lg transition-all flex items-center">
+                   <Trash2 className="w-5 h-5 mr-2" /> Tüm Geçmiş Raporları Sil
+                 </button>
+               ) : (
+                 <button disabled={deleteCountdown > 0} onClick={handleWipeData} className={`px-6 py-3 font-bold rounded-xl shadow-lg transition-all flex items-center ${deleteCountdown > 0 ? 'bg-gray-400 cursor-not-allowed text-white' : 'bg-red-600 hover:bg-red-700 text-white animate-pulse'}`}>
+                   {deleteCountdown > 0 ? `Onay Bekleniyor (${deleteCountdown}s)` : 'Eminim, Her Şeyi Sil!'}
+                 </button>
+               )}
+            </div>
+          )}
         </div>
       </div>
     );
-
-    const renderISGCalendar = () => {
-      const currDate = getCalendarDate();
-      const currentMonth = currDate.getMonth();
-      const currentYear = currDate.getFullYear();
-      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-      const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
-      
-      const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
-      
-      return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-          <div className="flex justify-between items-center mb-6">
-             <div className="flex items-center space-x-3">
-               <button onClick={() => setCurrentMonthOffset(prev => prev - 1)} className="p-2 rounded-full hover:bg-gray-100"><ChevronLeft className="w-5 h-5 text-gray-600"/></button>
-               <h3 className="font-extrabold text-gray-800 text-2xl w-40 text-center">{monthNames[currentMonth]} {currentYear}</h3>
-               <button onClick={() => setCurrentMonthOffset(prev => prev + 1)} className="p-2 rounded-full hover:bg-gray-100"><ChevronRight className="w-5 h-5 text-gray-600"/></button>
-             </div>
-             <span className="text-sm text-blue-800 bg-blue-50 px-3 py-1 rounded-lg font-bold flex items-center hidden sm:flex"><Calendar className="w-4 h-4 mr-2"/> Aylık İSG Görünümü</span>
-          </div>
-          <div className="grid grid-cols-7 gap-2 text-center mb-3 text-xs font-bold text-gray-400 uppercase py-2">
-            <div>Pzt</div><div>Sal</div><div>Çar</div><div>Per</div><div>Cum</div><div>Cmt</div><div>Paz</div>
-          </div>
-          <div className="grid grid-cols-7 gap-2">
-             {Array.from({ length: startOffset }).map((_, i) => <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-transparent"></div>)}
-             {Array.from({ length: daysInMonth }).map((_, i) => {
-               const dayNum = i + 1;
-               const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
-               const realToday = new Date();
-               const isToday = dayNum === realToday.getDate() && currentMonth === realToday.getMonth() && currentYear === realToday.getFullYear();
-               const dayTasks = tasks.filter(t => t.createdAt === formattedDateForCell);
-               const hasRed = dayTasks.some(t => t.status === 'acik' || t.status === 'itiraz_edildi');
-               const hasYellow = dayTasks.some(t => t.status === 'onay_bekliyor');
-               const hasGreen = dayTasks.some(t => t.status === 'cozuldu');
-
-               return (
-                 <div key={dayNum} onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)}
-                   className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all
-                     ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100' : 'bg-white border-gray-100 hover:border-blue-300'}
-                     ${dayTasks.length > 0 ? 'border-gray-300 shadow-sm' : ''}
-                   `}
-                 >
-                   <span className={`text-sm font-bold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{dayNum}</span>
-                   <div className="flex space-x-1.5 mt-2">
-                      {hasRed && <span className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-sm animate-pulse"></span>}
-                      {hasYellow && <span className="w-2.5 h-2.5 bg-yellow-400 rounded-full shadow-sm"></span>}
-                      {hasGreen && <span className="w-2.5 h-2.5 bg-green-500 rounded-full shadow-sm"></span>}
-                   </div>
-                 </div>
-               );
-             })}
-          </div>
-        </div>
-      );
-    };
 
     const renderShippingCalendar = () => {
       const currDate = getCalendarDate();
@@ -639,7 +621,7 @@ export default function App() {
               </div>
             </div>
             <div className="lg:col-span-2">
-              {isgTab === 'users' ? renderUsers() : (selectedAdminDept ? <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">Birim Raporları Burada Gösterilecek</div> : renderISGCalendar())}
+              {isgTab === 'users' ? renderUsers() : <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">ISG Raporları Özeti</div>}
             </div>
           </div>
         )}
@@ -797,7 +779,7 @@ export default function App() {
           <TopBar theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'} />
           <main className="flex-1 w-full flex">
              {currentUser.role === 'admin' && <AdminDashboard />}
-             {(currentUser.role === 'mod' || currentUser.role === 'sef') && <div className="p-8 text-center w-full">İSG Panel İçerikleri (Şef/Mod) önceki versiyonlardadır.</div>}
+             {(currentUser.role === 'mod' || currentUser.role === 'sef') && <div className="p-8 text-center w-full mt-12 text-gray-500 font-medium">Bu panel (Şef/Uzman) sadece İSG yetkilileri içindir. Lütfen Admin hesabınızı kullanın.</div>}
              {currentUser.role === 'yuklemeci' && <YuklemeciDashboard />}
           </main>
           
