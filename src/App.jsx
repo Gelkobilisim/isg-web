@@ -342,6 +342,7 @@ export default function App() {
     const [historyFilter, setHistoryFilter] = useState('1');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteCountdown, setDeleteCountdown] = useState(10);
+    const [activeTab, setActiveTab] = useState('list');
 
     // 10 Saniye Sayacı
     useEffect(() => {
@@ -481,15 +482,107 @@ export default function App() {
                   const statusDef = STATUS_INFO[task.status];
                   const Icon = statusDef.icon;
                   return (
-                    <div key={task.id} className={`p-4 rounded-xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]}`}>
+                    <div key={task.id} className={`p-4 rounded-xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]} flex flex-col`}>
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-xs text-gray-500 font-medium">{task.createdAt}</span>
                         <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
                           <Icon className="w-3 h-3 mr-1" /> {statusDef.label}
                         </span>
                       </div>
-                      <p className="text-gray-800 text-sm font-medium mb-3">{task.desc}</p>
-                      <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
+                      <div className="flex flex-row gap-3 mb-3">
+                         <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0 overflow-hidden relative">
+                           {task.imgUrl && task.imgUrl.startsWith('data:image') ? (
+                             <img src={task.imgUrl} className="w-full h-full object-cover" alt="Öncesi" />
+                           ) : (
+                             <><ImageIcon className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">ÖNCESİ</span></>
+                           )}
+                         </div>
+                         <p className="text-gray-800 text-sm font-medium flex-1">{task.desc}</p>
+                      </div>
+                      
+                      {task.status === 'cozuldu' && (
+                         <div className="bg-green-50 p-2 rounded-lg border border-green-100 flex items-center space-x-2 mt-2">
+                           <div className="w-10 h-10 bg-green-200 rounded-md flex items-center justify-center overflow-hidden shrink-0">
+                               {task.afterImgUrl && task.afterImgUrl.startsWith('data:image') ? (
+                                  <img src={task.afterImgUrl} className="w-full h-full object-cover" alt="Sonrası" />
+                               ) : (
+                                  <CheckCircle className="w-5 h-5 text-green-700"/>
+                               )}
+                           </div>
+                           <p className="text-xs text-green-800 italic flex-1">"{task.chiefNote}"</p>
+                         </div>
+                      )}
+                      <div className="mt-auto flex justify-between items-center pt-2">
+                         <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
+                         {task.status === 'acik' && <span className="text-xs text-red-600 font-bold"><Clock className="w-3 h-3 inline mr-1"/>{task.deadlineHours} Saat Kaldı</span>}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      if (selectedAdminDate) {
+        const dateTasks = tasks.filter(t => t.createdAt === selectedAdminDate);
+        return (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+            <button onClick={() => setSelectedAdminDate(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4 transition-colors">
+              <ArrowLeft className="w-4 h-4 mr-2" /> Takvime Dön
+            </button>
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">Günlük İSG Raporu</h2>
+                <p className="text-blue-600 font-medium text-lg mt-1">{selectedAdminDate}</p>
+              </div>
+              <CalendarDays className="w-12 h-12 text-blue-100" />
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {dateTasks.length === 0 ? (
+                 <p className="text-sm text-gray-500 p-4 col-span-full">Bu tarihte herhangi bir kayıt açılmamış.</p>
+              ) : (
+                dateTasks.map(task => {
+                  const statusDef = STATUS_INFO[task.status];
+                  const Icon = statusDef.icon;
+                  return (
+                    <div key={task.id} className={`p-4 rounded-xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]} flex flex-col`}>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-sm text-gray-800 font-bold">{task.dept}</span>
+                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
+                          <Icon className="w-3 h-3 mr-1" /> {statusDef.label}
+                        </span>
+                      </div>
+                      
+                      <div className="flex flex-row gap-3 mb-3">
+                         <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 shrink-0 overflow-hidden relative">
+                           {task.imgUrl && task.imgUrl.startsWith('data:image') ? (
+                             <img src={task.imgUrl} className="w-full h-full object-cover" alt="Öncesi" />
+                           ) : (
+                             <><ImageIcon className="w-6 h-6 mb-1"/><span className="text-[9px] font-bold">ÖNCESİ</span></>
+                           )}
+                         </div>
+                         <p className="text-gray-600 text-sm font-medium flex-1">{task.desc}</p>
+                      </div>
+                      
+                      {task.status === 'cozuldu' && (
+                         <div className="bg-green-50 p-2 rounded-lg border border-green-100 flex items-center space-x-2 mt-2">
+                           <div className="w-10 h-10 bg-green-200 rounded-md flex items-center justify-center overflow-hidden shrink-0">
+                               {task.afterImgUrl && task.afterImgUrl.startsWith('data:image') ? (
+                                  <img src={task.afterImgUrl} className="w-full h-full object-cover" alt="Sonrası" />
+                               ) : (
+                                  <CheckCircle className="w-5 h-5 text-green-700"/>
+                               )}
+                           </div>
+                           <p className="text-xs text-green-800 italic flex-1">"{task.chiefNote}"</p>
+                         </div>
+                      )}
+                      
+                      <div className="mt-auto pt-2">
+                        <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{PRIORITIES[task.priority].label} Risk</span>
+                      </div>
                     </div>
                   );
                 })
@@ -508,23 +601,43 @@ export default function App() {
       
       const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
       const dayNames = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
+      
+      const totalTasksThisMonth = tasks.filter(t => {
+         const taskMonth = parseInt(t.createdAt.split('.')[1], 10) - 1;
+         const taskYear = parseInt(t.createdAt.split('.')[2], 10);
+         return taskMonth === currentMonth && taskYear === currentYear;
+      });
+
+      const resolvedThisMonth = totalTasksThisMonth.filter(t => t.status === 'cozuldu').length;
 
       return (
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <div className="flex justify-between items-center mb-6">
-             <h3 className="font-extrabold text-gray-800 text-2xl">{monthNames[currentMonth]} {currentYear}</h3>
-             <span className="text-sm text-blue-800 bg-blue-50 px-3 py-1 rounded-lg font-bold flex items-center"><Calendar className="w-4 h-4 mr-2"/> Aylık Görünüm</span>
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+          <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100">
+             <div>
+               <h3 className="font-extrabold text-gray-800 text-2xl flex items-center">
+                 <CalendarDays className="w-7 h-7 mr-3 text-blue-600"/>
+                 {monthNames[currentMonth]} {currentYear}
+               </h3>
+               <p className="text-gray-500 text-sm mt-1">Bu ay toplam {totalTasksThisMonth.length} kayıt açıldı.</p>
+             </div>
+             
+             <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 text-center">
+                <span className="block text-xs font-bold text-blue-800 uppercase mb-1">Çözüm Oranı</span>
+                <span className="text-xl font-extrabold text-blue-600">
+                   {totalTasksThisMonth.length > 0 ? Math.round((resolvedThisMonth / totalTasksThisMonth.length) * 100) : 0}%
+                </span>
+             </div>
           </div>
           
           <div className="grid grid-cols-7 gap-2 text-center mb-3">
             {dayNames.map(day => (
-              <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2">{day}</div>
+              <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2 bg-gray-50 rounded-lg">{day}</div>
             ))}
           </div>
           
           <div className="grid grid-cols-7 gap-2">
              {Array.from({ length: startOffset }).map((_, i) => (
-               <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-transparent"></div>
+               <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 border border-gray-100 opacity-50"></div>
              ))}
              
              {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -540,21 +653,34 @@ export default function App() {
                return (
                  <div 
                    key={dayNum} 
-                   className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all
-                     ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100' : 'bg-white border-gray-100'}
+                   onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)}
+                   className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:shadow-md hover:-translate-y-1
+                     ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100 shadow-sm' : 'bg-white border-gray-200'}
                      ${dayTasks.length > 0 ? 'border-gray-300 shadow-sm' : ''}
                    `}
                  >
-                   <span className={`text-sm font-bold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{dayNum}</span>
+                   <span className={`text-sm md:text-base font-bold ${isToday ? 'text-blue-700' : 'text-gray-700'}`}>{dayNum}</span>
                    
-                   <div className="flex space-x-1.5 mt-2">
-                      {hasRed && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-red-500 rounded-full shadow-sm animate-pulse"></span>}
-                      {hasYellow && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-400 rounded-full shadow-sm"></span>}
-                      {hasGreen && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 rounded-full shadow-sm"></span>}
+                   {dayTasks.length > 0 && (
+                      <span className="text-[9px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full mt-1">
+                        {dayTasks.length} Kayıt
+                      </span>
+                   )}
+
+                   <div className="flex space-x-1.5 mt-auto mb-2">
+                      {hasRed && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-red-500 rounded-full shadow-sm animate-pulse" title="Çözülmemiş Sorun"></span>}
+                      {hasYellow && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-yellow-400 rounded-full shadow-sm" title="Onay Bekleyen"></span>}
+                      {hasGreen && <span className="w-2.5 h-2.5 md:w-3 md:h-3 bg-green-500 rounded-full shadow-sm" title="Çözüldü"></span>}
                    </div>
                  </div>
                );
              })}
+          </div>
+          
+          <div className="flex justify-center space-x-6 mt-8 border-t border-gray-100 pt-6">
+             <div className="flex items-center text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg"><span className="w-3 h-3 bg-red-500 rounded-full mr-2 shadow-sm animate-pulse"></span> Problem / İtiraz</div>
+             <div className="flex items-center text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg"><span className="w-3 h-3 bg-yellow-400 rounded-full mr-2 shadow-sm"></span> Onay Bekliyor</div>
+             <div className="flex items-center text-xs font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg"><span className="w-3 h-3 bg-green-500 rounded-full mr-2 shadow-sm"></span> Çözüldü</div>
           </div>
         </div>
       );
@@ -649,28 +775,30 @@ export default function App() {
           </div>
         </div>
 
-        {}
-        <div className="mt-8 bg-red-50 border border-red-200 rounded-3xl p-6 md:p-8 animate-slide-up">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div>
-              <h3 className="text-xl font-bold text-red-700 flex items-center mb-2"><AlertTriangle className="w-6 h-6 mr-2"/> Sistem Geçmişi Temizliği</h3>
-              <p className="text-sm text-red-600 font-medium">Veritabanı şişkinliğini önlemek için eski raporları kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz!</p>
-            </div>
-            <div className="flex w-full md:w-auto space-x-3 items-center">
-              <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} className="flex-1 md:w-48 border border-red-200 rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-red-500 font-bold text-gray-700 cursor-pointer">
-                <option value="1">1 Aydan Eskiler</option>
-                <option value="3">3 Aydan Eskiler</option>
-                <option value="6">6 Aydan Eskiler</option>
-                <option value="all">Tüm Geçmişi Sil</option>
-              </select>
-              <button onClick={() => { setShowDeleteModal(true); setDeleteCountdown(10); }} className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-md transition-colors whitespace-nowrap">
-                Sil
-              </button>
+        {/* SADECE ANA ADMİN (agiradar) İÇİN SİLME BÖLÜMÜ */}
+        {currentUser.username === 'agiradar' && (
+          <div className="mt-8 bg-red-50 border border-red-200 rounded-3xl p-6 md:p-8 animate-slide-up">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+              <div>
+                <h3 className="text-xl font-bold text-red-700 flex items-center mb-2"><AlertTriangle className="w-6 h-6 mr-2"/> Sistem Geçmişi Temizliği</h3>
+                <p className="text-sm text-red-600 font-medium">Veritabanı şişkinliğini önlemek için eski raporları kalıcı olarak silebilirsiniz. Bu işlem geri alınamaz!</p>
+              </div>
+              <div className="flex w-full md:w-auto space-x-3 items-center">
+                <select value={historyFilter} onChange={e=>setHistoryFilter(e.target.value)} className="flex-1 md:w-48 border border-red-200 rounded-xl p-3 bg-white outline-none focus:ring-2 focus:ring-red-500 font-bold text-gray-700 cursor-pointer">
+                  <option value="1">1 Aydan Eskiler</option>
+                  <option value="3">3 Aydan Eskiler</option>
+                  <option value="6">6 Aydan Eskiler</option>
+                  <option value="all">Tüm Geçmişi Sil</option>
+                </select>
+                <button onClick={() => { setShowDeleteModal(true); setDeleteCountdown(10); }} className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-xl font-bold shadow-md transition-colors whitespace-nowrap">
+                  Sil
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {}
+        {/* SİLME ONAY MODALI */}
         {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 bg-opacity-75 backdrop-blur-sm p-4">
             <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
