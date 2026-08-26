@@ -5,7 +5,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCkdLCPFTXl4JdGJpSD--yAIpd29BtnN-k",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "isg-web-6363.firebaseapp.com",
   projectId: "isg-web-6363",
   storageBucket: "isg-web-6363.firebasestorage.app",
@@ -17,6 +17,12 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const DEPARTMENTS = ["Boyahane", "Altyapı", "Dalgaduvar", "Lazer", "Güç", "Kaynaklı imalat", "Dış alan", "Bakım & Onarım"];
+
+const COUNTRIES = [
+  "Türkiye", "Almanya", "İngiltere", "Fransa", "İtalya", "İspanya", "Hollanda", "Belçika", 
+  "İsveç", "Polonya", "Romanya", "Bulgaristan", "Yunanistan", "Rusya", "ABD", "Kanada", 
+  "BAE", "Suudi Arabistan", "Katar", "Irak", "İran", "Azerbaycan", "Özbekistan", "Diğer"
+];
 
 const DICT = {
   tr: {
@@ -74,6 +80,12 @@ const DICT = {
     close_job: "İşi Kapat",
     status_done: "Tamamlandı",
     status_progress: "Devam Ediyor",
+    dest_country: "Gideceği Ülke *",
+    status_beklemede: "Yükleme İçin Beklemede",
+    status_yukleniyor: "Yükleniyor",
+    status_tamamlandi: "Yüklenip Gönderildi",
+    start_loading: "Yüklemeyi Başlat",
+    details: "Detaylar",
 
     // Admin Panel
     admin_panel: "Yönetici Paneli",
@@ -174,6 +186,12 @@ const DICT = {
     close_job: "Close Job",
     status_done: "Completed",
     status_progress: "In Progress",
+    dest_country: "Destination Country *",
+    status_beklemede: "Waiting for Loading",
+    status_yukleniyor: "Loading",
+    status_tamamlandi: "Loaded & Shipped",
+    start_loading: "Start Loading",
+    details: "Details",
 
     // Admin Panel
     admin_panel: "Admin Panel",
@@ -278,6 +296,7 @@ export default function App() {
   const [adminViewMode, setAdminViewMode] = useState('list');
   const [selectedAdminDept, setSelectedAdminDept] = useState(null);
   const [selectedAdminDate, setSelectedAdminDate] = useState(null);
+  const [selectedYuklemeDate, setSelectedYuklemeDate] = useState(null);
 
   // Full-screen Image Modal Viewer
   const [previewModalImg, setPreviewModalImg] = useState(null);
@@ -374,19 +393,20 @@ export default function App() {
     await updateDoc(taskRef, updates);
   };
 
-  const createLoading = async (plaka, sofor, destLocation, destCompany, projectNo, tonnage, not, imgUrl) => {
+  const createLoading = async (plaka, sofor, destCountry, destLocation, destCompany, projectNo, tonnage, not, imgUrl) => {
     const loadId = Date.now().toString();
     const newLoad = {
       id: loadId, 
       plaka, 
       sofor, 
+      destCountry: destCountry || '',
       destLocation: destLocation || '', 
       destCompany: destCompany || '', 
       projectNo: projectNo || '', 
       tonnage: tonnage || '', 
       preNote: not, 
       preImgUrl: imgUrl || '', 
-      status: 'devam_ediyor', 
+      status: 'beklemede', 
       creatorId: currentUser.id, 
       creatorName: currentUser.name,
       createdAtDate: formatDate(new Date()), 
@@ -397,6 +417,13 @@ export default function App() {
       finishedAtTime: ''
     };
     await setDoc(doc(db, "loadings", loadId), newLoad);
+  };
+
+  const startLoadingProcess = async (loadId) => {
+    const loadRef = doc(db, "loadings", loadId);
+    await updateDoc(loadRef, {
+      status: 'yukleniyor'
+    });
   };
 
   const finishLoading = async (loadId, postNot, postImgUrl) => {
@@ -505,25 +532,34 @@ export default function App() {
     const isISG = loginTheme === 'isg';
 
     return (
-      <div className={`flex flex-col items-center justify-center min-h-screen p-6 transition-colors duration-500 ${isISG ? 'bg-gray-100' : 'bg-orange-50'}`}>
-        <div className="absolute top-6 right-6">
-            <button onClick={toggleLang} className="flex items-center space-x-2 bg-white px-4 py-2 rounded-full shadow-sm text-sm font-bold text-gray-700 hover:bg-gray-50 border border-gray-200">
-                <Globe className="w-4 h-4 text-blue-500" />
+      <div 
+        className="flex flex-col items-center justify-center min-h-screen p-6 relative"
+        style={{ 
+          backgroundImage: "url('/ads-metal-anadolu-osb.jpg')", 
+          backgroundSize: 'cover', 
+          backgroundPosition: 'center'
+        }}
+      >
+        <div className="absolute inset-0 bg-black/60 z-0"></div>
+
+        <div className="absolute top-6 right-6 z-10">
+            <button onClick={toggleLang} className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg text-sm font-bold text-gray-800 hover:bg-white transition-colors border border-gray-200">
+                <Globe className="w-4 h-4 text-blue-600" />
                 <span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
             </button>
         </div>
 
-        <div className="bg-white p-1.5 rounded-full shadow-md mb-8 flex space-x-1 border border-gray-200">
-          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
+        <div className="bg-white/90 backdrop-blur-md p-1.5 rounded-full shadow-2xl mb-8 flex space-x-1 border border-white/40 z-10">
+          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-white'}`}>
             <ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}
           </button>
-          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
+          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-600 hover:bg-white'}`}>
             <Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}
           </button>
         </div>
 
-        <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
-          <div className={`hidden md:flex flex-col items-center justify-center w-1/2 p-12 border-r border-gray-100 transition-colors duration-500 ${isISG ? 'bg-blue-50' : 'bg-orange-100/50'}`}>
+        <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden animate-slide-up z-10 border border-white/20">
+          <div className={`hidden md:flex flex-col items-center justify-center w-1/2 p-12 border-r border-gray-100 transition-colors duration-500 ${isISG ? 'bg-blue-50/50' : 'bg-orange-50/50'}`}>
             <CompanyLogo className="bg-transparent shadow-none mb-6" scale="scale-150" theme={isISG ? 'blue' : 'orange'} />
             <h1 className={`text-3xl font-bold text-center mt-8 ${isISG ? 'text-blue-900' : 'text-orange-900'}`}>
               {isISG ? t('sys_isg_title') : t('sys_yukleme_title')}<br/>{t('sys_management')}
@@ -613,6 +649,7 @@ export default function App() {
     const [form, setForm] = useState({ 
       plaka: '', 
       sofor: '', 
+      destCountry: 'Türkiye',
       destLocation: '', 
       destCompany: '', 
       projectNo: '', 
@@ -622,13 +659,13 @@ export default function App() {
     const [imgPreview, setImgPreview] = useState(null);
     const [finishModal, setFinishModal] = useState({ isOpen: false, loadId: null, note: '', imgPreview: null });
 
-    const activeLoadings = loadings.filter(l => l.status === 'devam_ediyor');
+    const activeLoadings = loadings.filter(l => l.status === 'beklemede' || l.status === 'yukleniyor');
     const tonnage24h = get24HourTonnage();
 
     const handleStartLoading = (e) => {
       e.preventDefault();
-      createLoading(form.plaka, form.sofor, form.destLocation, form.destCompany, form.projectNo, form.tonnage, form.not, imgPreview);
-      setForm({ plaka: '', sofor: '', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
+      createLoading(form.plaka, form.sofor, form.destCountry, form.destLocation, form.destCompany, form.projectNo, form.tonnage, form.not, imgPreview);
+      setForm({ plaka: '', sofor: '', destCountry: 'Türkiye', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
       setImgPreview(null);
       setIsCreating(false);
     };
@@ -649,7 +686,7 @@ export default function App() {
              <div className="bg-white/20 p-2 rounded-xl"><Scale className="w-6 h-6 text-white" /></div>
              <div>
                <p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">{t('tonnage_24h')}</p>
-               <p className="text-2xl font-extrabold text-white">{tonnage24h.toLocaleString('tr-TR')} <span className="text-sm font-medium">kg / ton</span></p>
+               <p className="text-2xl font-extrabold text-white">{tonnage24h.toLocaleString('tr-TR')} <span className="text-sm font-medium">Ton</span></p>
              </div>
           </div>
           <Package className="w-48 h-48 text-white opacity-10 absolute right-0 -bottom-10 z-0 transform -rotate-12 pointer-events-none" />
@@ -679,6 +716,15 @@ export default function App() {
                   <input type="text" value={form.sofor} onChange={e=>setForm({...form, sofor: e.target.value})} className="w-full border border-gray-300 rounded-xl p-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500" />
                 </div>
                 <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_country')}</label>
+                  <div className="relative">
+                    <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <select required value={form.destCountry} onChange={e=>setForm({...form, destCountry: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500">
+                      {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                </div>
+                <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('dest_location')}</label>
                   <div className="relative">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -703,7 +749,7 @@ export default function App() {
                   <label className="block text-sm font-bold text-gray-700 mb-2">{t('tonnage')}</label>
                   <div className="relative">
                     <Scale className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <input required type="number" step="any" value={form.tonnage} onChange={e=>setForm({...form, tonnage: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder="Örn: 24500 (kg) veya 24.5" />
+                    <input required type="number" step="any" value={form.tonnage} onChange={e=>setForm({...form, tonnage: e.target.value})} className="w-full border border-gray-300 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder="Örn: 24.5 (Ton)" />
                   </div>
                 </div>
               </div>
@@ -748,10 +794,10 @@ export default function App() {
                   {load.sofor && <p className="text-xs text-gray-600 font-medium"><User className="w-3.5 h-3.5 inline mr-1 text-gray-400"/> {t('driver')}: <span className="text-gray-800 font-bold">{load.sofor}</span></p>}
                   
                   <div className="grid grid-cols-2 gap-2 text-xs bg-orange-50/60 p-3 rounded-xl border border-orange-100">
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_country')}</span><span className="font-bold text-gray-800">{load.destCountry || '-'}</span></div>
                     <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800">{load.destLocation || '-'}</span></div>
                     <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800">{load.destCompany || '-'}</span></div>
-                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
-                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-700">{load.tonnage ? `${load.tonnage} kg/Ton` : '-'}</span></div>
+                    <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-700">{load.tonnage ? `${load.tonnage} Ton` : '-'}</span></div>
                   </div>
 
                   <div className="flex items-start space-x-4 bg-gray-50 p-3 rounded-xl border border-gray-100 mt-auto">
@@ -768,7 +814,15 @@ export default function App() {
                       <p className="text-sm text-gray-800 font-medium">{load.preNote || t('no_note')}</p>
                     </div>
                   </div>
-                  <button onClick={() => setFinishModal({isOpen: true, loadId: load.id, note: '', imgPreview: null})} className="w-full bg-green-600 text-white font-bold py-3.5 rounded-xl flex items-center justify-center mt-2"><CheckSquare className="w-5 h-5 mr-2" /> {t('finish_load_btn')}</button>
+                  {load.status === 'beklemede' ? (
+                    <button onClick={() => startLoadingProcess(load.id)} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center mt-2 transition-colors">
+                      <Truck className="w-5 h-5 mr-2" /> {t('start_loading')}
+                    </button>
+                  ) : (
+                    <button onClick={() => setFinishModal({isOpen: true, loadId: load.id, note: '', imgPreview: null})} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl flex items-center justify-center mt-2 transition-colors">
+                      <CheckSquare className="w-5 h-5 mr-2" /> {t('finish_load_btn')}
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -817,6 +871,9 @@ export default function App() {
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteCountdown, setDeleteCountdown] = useState(10);
     const [visiblePasswords, setVisiblePasswords] = useState({});
+    
+    const [expandedLoadId, setExpandedLoadId] = useState(null);
+    const [yuklemeAnaTab, setYuklemeAnaTab] = useState('list');
 
     useEffect(() => {
       let timer;
@@ -959,29 +1016,41 @@ export default function App() {
         );
       }
 
-      if (adminSystemMode === 'yukleme') {
-         const totalTonnageAll = loadings.reduce((acc, l) => acc + (parseFloat(l.tonnage) || 0), 0);
+    const renderLoadingList = (listToRender) => {
+      return (
+        <div className="space-y-4">
+          {listToRender.length === 0 ? <p className="text-gray-500 text-center py-10">{t('no_records')}</p> : (
+            listToRender.map(load => {
+              const isExpanded = expandedLoadId === load.id;
+              const statusColor = load.status === 'tamamlandi' ? 'bg-green-100 text-green-700' : load.status === 'yukleniyor' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700';
+              return (
+              <div key={load.id} className="flex flex-col gap-2">
+                <div onClick={() => setExpandedLoadId(isExpanded ? null : load.id)} className="cursor-pointer border border-gray-200 rounded-2xl p-4 hover:shadow-md transition-shadow bg-white flex flex-col md:flex-row justify-between md:items-center gap-3">
+                  <div className="flex items-center space-x-4">
+                    <div className="flex flex-col min-w-[100px]">
+                      <span className="text-xs text-gray-400 font-bold uppercase">{t('dest_country')}</span>
+                      <span className="font-bold text-gray-800">{load.destCountry || '-'}</span>
+                    </div>
+                    <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
+                    <div className="flex flex-col min-w-[150px]">
+                      <span className="text-xs text-gray-400 font-bold uppercase">{t('dest_company')}</span>
+                      <span className="font-bold text-gray-800 truncate max-w-[200px]" title={load.destCompany}>{load.destCompany || '-'}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between md:justify-end w-full md:w-auto space-x-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${statusColor}`}>
+                       {t(`status_${load.status}`)}
+                    </span>
+                    <ChevronRight className={`w-5 h-5 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                  </div>
+                </div>
 
-         return (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-gray-100 pb-4">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-3 text-orange-500"/> {t('all_reports')}</h2>
-                <p className="text-xs text-gray-500 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} kg/Ton</b></p>
-              </div>
-              <span className="bg-orange-100 text-orange-800 font-bold px-3 py-1 rounded-lg text-sm">{loadings.length} {t('records')}</span>
-            </div>
-            <div className="space-y-4">
-              {loadings.length === 0 ? <p className="text-gray-500 text-center py-10">{t('no_records')}</p> : (
-                loadings.map(load => (
-                  <div key={load.id} className="border border-gray-200 rounded-2xl p-5 hover:shadow-md transition-shadow bg-gray-50/50">
+                {isExpanded && (
+                  <div className="border border-gray-200 rounded-2xl p-5 bg-gray-50/50 animate-slide-up">
                     <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-3 border-b border-gray-100 gap-3">
                       <div>
                         <div className="flex items-center space-x-3 mb-1">
                           <span className="text-xl font-extrabold text-gray-800">{load.plaka}</span>
-                          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${load.status === 'tamamlandi' ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {load.status === 'tamamlandi' ? t('status_done') : t('status_progress')}
-                          </span>
                         </div>
                         <p className="text-xs text-gray-500 font-medium"><Calendar className="w-3 h-3 inline mr-1"/> {load.createdAtDate} - {load.createdAtTime} {load.finishedAtTime && `| Çıkış: ${load.finishedAtTime}`}</p>
                       </div>
@@ -989,10 +1058,10 @@ export default function App() {
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs bg-white p-3 rounded-xl border border-gray-100 mb-4">
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_country')}</span><span className="font-bold text-gray-800">{load.destCountry || '-'}</span></div>
                       <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800">{load.destLocation || '-'}</span></div>
-                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800">{load.destCompany || '-'}</span></div>
                       <div><span className="text-gray-400 font-bold block text-[10px]">{t('project_no')}</span><span className="font-bold text-gray-800">{load.projectNo || '-'}</span></div>
-                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-600">{load.tonnage ? `${load.tonnage} kg/Ton` : '-'}</span></div>
+                      <div><span className="text-gray-400 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-600">{load.tonnage ? `${load.tonnage} Ton` : '-'}</span></div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1008,7 +1077,8 @@ export default function App() {
                       </div>
                       <div className="bg-white p-3 rounded-xl border border-gray-100 flex flex-col">
                         <span className="text-[10px] font-bold text-gray-400 uppercase mb-2">{t('after')}</span>
-                        {load.status === 'devam_ediyor' ? <div className="w-full h-44 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-orange-400 text-sm font-medium mb-2">{t('loading_progress')}</div> : (
+                        {load.status === 'beklemede' ? <div className="w-full h-44 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center text-blue-400 text-sm font-medium mb-2">{t('status_beklemede')}</div> : 
+                         load.status === 'yukleniyor' ? <div className="w-full h-44 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-orange-400 text-sm font-medium mb-2">{t('status_yukleniyor')}</div> : (
                           <>{load.postImgUrl ? (
                             <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.postImgUrl)}>
                                <img src={load.postImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
@@ -1020,12 +1090,151 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                ))
-              )}
+                )}
+              </div>
+            )})
+          )}
+        </div>
+      );
+    };
+
+    if (adminSystemMode === 'yukleme') {
+       if (selectedYuklemeDate) {
+         const dateLoadings = loadings.filter(l => l.createdAtDate === selectedYuklemeDate);
+         return (
+           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+             <div className="flex justify-between items-start mb-6 border-b pb-4 border-gray-100">
+               <div>
+                 <button onClick={() => setSelectedYuklemeDate(null)} className="flex items-center text-gray-500 hover:text-gray-800 font-medium text-sm mb-4">
+                   <ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}
+                 </button>
+                 <h2 className="text-2xl font-bold text-gray-800">{selectedYuklemeDate} Sevkiyat Raporu</h2>
+                 <p className="text-gray-500 mt-1">{t('total_record')} {dateLoadings.length}</p>
+               </div>
+             </div>
+             {renderLoadingList(dateLoadings)}
+           </div>
+         );
+       }
+
+       const totalTonnageAll = loadings.reduce((acc, l) => acc + (parseFloat(l.tonnage) || 0), 0);
+
+       // Analysis calculations
+       const countryStats = {};
+       const companyStats = {};
+       
+       loadings.forEach(load => {
+          const tVal = parseFloat(load.tonnage) || 0;
+          const cName = load.destCountry || 'Belirsiz';
+          const compName = load.destCompany || 'Belirsiz';
+          
+          if(!countryStats[cName]) countryStats[cName] = { count: 0, ton: 0 };
+          countryStats[cName].count += 1;
+          countryStats[cName].ton += tVal;
+
+          if(!companyStats[compName]) companyStats[compName] = { count: 0, ton: 0 };
+          companyStats[compName].count += 1;
+          companyStats[compName].ton += tVal;
+       });
+
+       const sortedCountries = Object.keys(countryStats).sort((a,b) => countryStats[b].ton - countryStats[a].ton);
+       const sortedCompanies = Object.keys(companyStats).sort((a,b) => companyStats[b].ton - companyStats[a].ton);
+
+       const currDate = new Date();
+       const currentMonth = currDate.getMonth();
+       const currentYear = currDate.getFullYear();
+       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+       const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+       const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+       const dayNames = lang === 'tr' ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+       const monthNames = lang === 'tr' ? ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+       return (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 animate-slide-up">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-gray-100 pb-4">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 flex items-center"><Truck className="w-6 h-6 mr-3 text-orange-500"/> {t('all_reports')}</h2>
+              <p className="text-xs text-gray-500 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} Ton</b></p>
+            </div>
+            <div className="flex bg-gray-100 p-1.5 rounded-xl shadow-inner">
+              <button onClick={() => setYuklemeAnaTab('list')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'list' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}>
+                Liste
+              </button>
+              <button onClick={() => setYuklemeAnaTab('analysis')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'analysis' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}>
+                Analiz
+              </button>
+              <button onClick={() => setYuklemeAnaTab('calendar')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'calendar' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500'}`}>
+                Takvim
+              </button>
             </div>
           </div>
-         );
-      }
+
+          {yuklemeAnaTab === 'analysis' ? (
+            <div className="space-y-8">
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><Globe className="w-5 h-5 mr-2 text-blue-500"/> Ülkelere Göre Sevkiyatlar</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sortedCountries.map(c => (
+                    <div key={c} className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex justify-between items-center">
+                      <span className="font-bold text-gray-700">{c}</span>
+                      <div className="text-right">
+                        <span className="block text-lg font-extrabold text-orange-600">{countryStats[c].ton.toLocaleString('tr-TR')} Ton</span>
+                        <span className="text-xs text-gray-500 font-medium">{countryStats[c].count} Sevkiyat</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center"><Building2 className="w-5 h-5 mr-2 text-blue-500"/> Firmalere Göre Sevkiyatlar</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sortedCompanies.map(c => (
+                    <div key={c} className="bg-gray-50 p-4 rounded-xl border border-gray-200 flex justify-between items-center">
+                      <span className="font-bold text-gray-700 truncate w-32" title={c}>{c}</span>
+                      <div className="text-right shrink-0">
+                        <span className="block text-lg font-extrabold text-orange-600">{companyStats[c].ton.toLocaleString('tr-TR')} Ton</span>
+                        <span className="text-xs text-gray-500 font-medium">{companyStats[c].count} Sevkiyat</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : yuklemeAnaTab === 'calendar' ? (
+            <div>
+              <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100">
+                 <div>
+                   <h3 className="font-extrabold text-gray-800 text-xl flex items-center">
+                     <CalendarDays className="w-6 h-6 mr-3 text-orange-500"/> {monthNames[currentMonth]} {currentYear}
+                   </h3>
+                 </div>
+              </div>
+              <div className="grid grid-cols-7 gap-2 text-center mb-3">
+                {dayNames.map(day => <div key={day} className="text-xs font-bold text-gray-400 uppercase py-2 bg-gray-50 rounded-lg">{day}</div>)}
+              </div>
+              <div className="grid grid-cols-7 gap-2">
+                 {Array.from({ length: startOffset }).map((_, i) => <div key={`empty-${i}`} className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 border border-gray-100 opacity-50"></div>)}
+                 {Array.from({ length: daysInMonth }).map((_, i) => {
+                   const dayNum = i + 1;
+                   const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
+                   const isToday = dayNum === currDate.getDate();
+                   const dayLoadings = loadings.filter(l => l.createdAtDate === formattedDateForCell);
+                   
+                   return (
+                     <div key={dayNum} onClick={() => dayLoadings.length > 0 && setSelectedYuklemeDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-100 shadow-sm' : 'bg-white border-gray-200 hover:border-gray-300'}`}>
+                       <span className={`text-sm md:text-base font-bold ${isToday ? 'text-orange-700' : 'text-gray-700'}`}>{dayNum}</span>
+                       {dayLoadings.length > 0 && <span className="text-[9px] font-bold text-white bg-orange-500 px-2 py-0.5 rounded-full mt-1 shadow-sm">{dayLoadings.length} Sevkiyat</span>}
+                     </div>
+                   );
+                 })}
+              </div>
+            </div>
+          ) : (
+            renderLoadingList(loadings)
+          )}
+        </div>
+       );
+    }
 
       if (selectedAdminDept || selectedAdminDate) {
         const filterTasks = selectedAdminDept ? tasks.filter(t => t.dept === selectedAdminDept) : tasks.filter(t => t.createdAt === selectedAdminDate);
