@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp } from 'lucide-react';
+import { Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot } from "firebase/firestore";
@@ -283,9 +283,15 @@ const handleImageUpload = (file, callback) => {
 };
 
 export default function App() {
+  const [now, setNow] = useState(Date.now());
   const [currentUser, setCurrentUser] = useState(null);
   const [isFirebaseLoading, setIsFirebaseLoading] = useState(true);
   const [lang, setLang] = useState(localStorage.getItem('isg_lang') || 'tr');
+  
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000); // 1 minute
+    return () => clearInterval(timer);
+  }, []);
   
   const [users, setUsers] = useState([]);
   const [points, setPoints] = useState({});
@@ -533,7 +539,7 @@ export default function App() {
 
     return (
       <div 
-        className="flex flex-col items-center justify-center min-h-screen p-6 relative"
+        className="flex flex-col items-center justify-center min-h-screen p-4 md:p-6 relative"
         style={{ 
           backgroundImage: "url('/ads-metal-anadolu-osb.jpg')", 
           backgroundSize: 'cover', 
@@ -542,7 +548,7 @@ export default function App() {
       >
         <div className="absolute inset-0 bg-black/60 z-0"></div>
 
-        <div className="absolute top-6 right-6 z-10">
+        <div className="w-full max-w-4xl flex justify-end z-10 mb-4 md:absolute md:top-6 md:right-6 md:mb-0">
             <button onClick={toggleLang} className="flex items-center space-x-2 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg text-sm font-bold text-gray-800 hover:bg-white transition-colors border border-gray-200">
                 <Globe className="w-4 h-4 text-blue-600" />
                 <span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
@@ -874,6 +880,7 @@ export default function App() {
     
     const [expandedLoadId, setExpandedLoadId] = useState(null);
     const [yuklemeAnaTab, setYuklemeAnaTab] = useState('list');
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
       let timer;
@@ -1260,8 +1267,52 @@ export default function App() {
                 filterTasks.map(task => {
                   const statusDef = STATUS_INFO[task.status];
                   const Icon = statusDef.icon;
+                  
+                  let timeDisplay = null;
+                  let isGlowing = false;
+                  
+                  if (task.status === 'acik') {
+                    const deadlineMs = task.timestamp + (task.deadlineHours * 60 * 60 * 1000);
+                    const diff = deadlineMs - now;
+                    
+                    if (diff <= 0) {
+                      const lateMs = Math.abs(diff);
+                      const lateHours = Math.floor(lateMs / (1000 * 60 * 60));
+                      const lateMins = Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60));
+                      
+                      timeDisplay = (
+                        <span className="text-xs text-red-700 font-extrabold px-2 py-1 bg-red-100 rounded-md">
+                          <AlertTriangle className="w-3 h-3 inline mr-1 mb-0.5" />
+                          {lateHours > 0 ? `${lateHours} saat ` : ''}{lateMins} dk geç kalındı!
+                        </span>
+                      );
+                      isGlowing = true;
+                    } else {
+                      const leftHours = Math.floor(diff / (1000 * 60 * 60));
+                      const leftMins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                      const isCritical = diff < (30 * 60 * 1000);
+                      
+                      if (isCritical) {
+                        isGlowing = true;
+                        timeDisplay = (
+                          <span className="text-xs text-red-700 font-bold px-2 py-1 bg-red-100 rounded-md animate-pulse">
+                            <Clock className="w-3 h-3 inline mr-1 mb-0.5" />
+                            {leftMins} dk kaldı
+                          </span>
+                        );
+                      } else {
+                        timeDisplay = (
+                          <span className="text-xs text-orange-600 font-bold">
+                            <Clock className="w-3 h-3 inline mr-1 mb-0.5" />
+                            {leftHours > 0 ? `${leftHours} saat ` : ''}{leftMins} dk kaldı
+                          </span>
+                        );
+                      }
+                    }
+                  }
+
                   return (
-                    <div key={task.id} className={`p-5 rounded-2xl shadow-sm border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]}`}>
+                    <div key={task.id} className={`p-5 rounded-2xl border-l-4 bg-gray-50 ${statusDef.color.split(' ')[2]} ${isGlowing ? 'shadow-[0_0_15px_rgba(239,68,68,0.5)] ring-1 ring-red-400 animate-[pulse_2s_ease-in-out_infinite]' : 'shadow-sm'}`}>
                       <div className="flex justify-between items-start mb-3">
                         <div>
                            <span className="font-bold text-gray-800 block">{task.dept}</span>
@@ -1297,7 +1348,7 @@ export default function App() {
                       </div>
                       <div className="mt-4 flex justify-between items-center">
                          <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{t(PRIORITIES[task.priority].label_key)} {t('risk')}</span>
-                         {task.status === 'acik' && <span className="text-xs text-red-600 font-bold"><Clock className="w-3 h-3 inline mr-1"/>{task.deadlineHours} {t('hours_left')}</span>}
+                         {timeDisplay}
                       </div>
                     </div>
                   );
@@ -1354,17 +1405,23 @@ export default function App() {
 
     return (
       <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-6 flex flex-col xl:flex-row justify-between items-center gap-6">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div><h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-1">{t('admin_panel')}</h1><p className="text-gray-500 text-sm">{t('admin_desc')}</p></div>
+        <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+          <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full xl:w-auto">
+            <div className="flex justify-between items-center w-full md:w-auto">
+              <div><h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 mb-1">{t('admin_panel')}</h1><p className="text-gray-500 text-sm">{t('admin_desc')}</p></div>
+              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                <Menu className="w-6 h-6 text-gray-700" />
+              </button>
+            </div>
             <div className="h-10 w-px bg-gray-200 hidden md:block"></div>
-            <div className="flex bg-gray-100 p-1.5 rounded-xl shadow-inner">
-               <button onClick={() => { setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); }} className={`py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center ${adminSystemMode === 'isg' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
-               <button onClick={() => { setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); }} className={`py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center ${adminSystemMode === 'yukleme' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
+            <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col sm:flex-row w-full md:w-auto bg-gray-100 p-1.5 rounded-xl shadow-inner gap-1`}>
+               <button onClick={() => { setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'isg' ? 'bg-white text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
+               <button onClick={() => { setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'yukleme' ? 'bg-white text-orange-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
+               <button onClick={() => { setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'users' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}><Users className="w-4 h-4 mr-2" /> {t('btn_users') || 'Kullanıcı Hesapları'}</button>
             </div>
           </div>
           {adminSystemMode === 'isg' && (
-            <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100">
+            <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100 mt-4 md:mt-0">
               <Calendar className="w-6 h-6 text-blue-600 mr-3" />
               <div><p className="text-xs font-bold text-blue-800 uppercase tracking-wider">{t('next_reset')}</p><p className="text-lg font-bold text-blue-900">{getLastFridayOfCurrentMonth()}</p></div>
             </div>
@@ -1372,32 +1429,28 @@ export default function App() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {adminSystemMode === 'isg' && (
           <div className="lg:col-span-1 space-y-4">
-            <button onClick={() => {setAdminViewMode('users'); setSelectedAdminDept(null);}} className="w-full bg-gray-800 hover:bg-gray-900 text-white font-bold py-4 rounded-2xl shadow-sm flex items-center justify-center transition-colors">
-              <Users className="w-5 h-5 mr-2" /> {t('btn_users')}
-            </button>
-            
-            {adminSystemMode === 'isg' && (
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-                <div className="p-5 border-b border-gray-100 flex items-center bg-gray-50 justify-between"><div className="flex items-center"><AlertCircle className="w-5 h-5 text-red-500 mr-2" /><h3 className="font-bold text-gray-800">{t('risk_map')}</h3></div></div>
-                <div className="divide-y divide-gray-50">
-                  {sortedDeptsAdmin.map((dept, index) => {
-                    const redCount = getRedTaskCount(dept);
-                    const isSelected = selectedAdminDept === dept;
-                    return (
-                    <div key={dept} onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); setAdminViewMode('calendar'); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
-                      <div className="flex items-center"><span className="w-6 text-center text-sm font-bold mr-3 text-gray-400">{index + 1}.</span><span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}`}>{dept}</span></div>
-                      <div className="flex items-center">
-                         {redCount > 0 ? <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm"><span className="font-bold text-xs">{redCount} {t('problem')}</span></div> : <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90"><span className="font-bold text-xs">{t('no_problem')}</span></div>}
-                         <ChevronRight className={`w-5 h-5 transition-transform ${isSelected ? 'text-blue-500 translate-x-1' : 'text-gray-300'}`} />
-                      </div>
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+              <div className="p-5 border-b border-gray-100 flex items-center bg-gray-50 justify-between"><div className="flex items-center"><AlertCircle className="w-5 h-5 text-red-500 mr-2" /><h3 className="font-bold text-gray-800">{t('risk_map')}</h3></div></div>
+              <div className="divide-y divide-gray-50">
+                {sortedDeptsAdmin.map((dept, index) => {
+                  const redCount = getRedTaskCount(dept);
+                  const isSelected = selectedAdminDept === dept;
+                  return (
+                  <div key={dept} onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); setAdminViewMode('calendar'); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
+                    <div className="flex items-center"><span className="w-6 text-center text-sm font-bold mr-3 text-gray-400">{index + 1}.</span><span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}`}>{dept}</span></div>
+                    <div className="flex items-center">
+                       {redCount > 0 ? <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm"><span className="font-bold text-xs">{redCount} {t('problem')}</span></div> : <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90"><span className="font-bold text-xs">{t('no_problem')}</span></div>}
+                       <ChevronRight className={`w-5 h-5 transition-transform ${isSelected ? 'text-blue-500 translate-x-1' : 'text-gray-300'}`} />
                     </div>
-                  )})}
-                </div>
+                  </div>
+                )})}
               </div>
-            )}
+            </div>
           </div>
-          <div className="lg:col-span-2">{renderRightPanel()}</div>
+          )}
+          <div className={adminSystemMode === 'isg' ? "lg:col-span-2" : "lg:col-span-3"}>{renderRightPanel()}</div>
         </div>
 
         {currentUser.username === 'agiradar' && (
