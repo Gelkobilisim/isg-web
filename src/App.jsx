@@ -353,7 +353,7 @@ const useAppContext = () => React.useContext(AppContext);
     } = ctx;
     
     const [isCreating, setIsCreating] = useState(false);
-    const [form, setForm] = useState({ 
+    const formRef = useRef({ 
       plaka: '', 
       sofor: '', 
       destCountry: 'Türkiye',
