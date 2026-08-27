@@ -176,7 +176,21 @@ export const DICT = {
     dept_guc: "Güç",
     dept_kaynakli: "Kaynaklı imalat",
     dept_dis: "Dış alan",
-    dept_bakim: "Bakım & Onarım"
+    dept_bakim: "Bakım & Onarım",
+    analysis_tab: "Analiz Raporları",
+
+    export_pdf: "PDF Olarak Kaydet",
+
+    err_photo_required: "Lütfen ihlali kanıtlayacak bir fotoğraf ekleyin.",
+    photo_required: "Zorunlu",
+    back_to_analysis: "Analizlere Dön",
+    violation_details: "İhlal Detayları",
+    filter_yearly: "Bu Yıl",
+    dept_most_issues: "En Çok Sorun Çıkan Birim",
+    dept_least_issues: "En Az Sorun Çıkan Birim",
+    total_issues: "Toplam Sorun (İhlal)",
+    issues: "İhlal",
+    analysis_desc: "Günlük, haftalık, aylık ve yıllık bazda departmanların sorun/ihlal sayılarını detaylı olarak inceleyebilirsiniz."
   },
   en: {
     isg_tab: "OHS & Cleanliness",
@@ -355,6 +369,20 @@ export const DICT = {
     dept_guc: "Power",
     dept_kaynakli: "Welded Mfg.",
     dept_dis: "Outdoor",
-    dept_bakim: "Maintenance"
+    dept_bakim: "Maintenance",
+    analysis_tab: "Analysis Reports",
+
+    export_pdf: "Export as PDF",
+
+    err_photo_required: "Please add a photo to prove the violation.",
+    photo_required: "Required",
+    back_to_analysis: "Back to Analysis",
+    violation_details: "Violation Details",
+    filter_yearly: "This Year",
+    dept_most_issues: "Department with Most Issues",
+    dept_least_issues: "Department with Least Issues",
+    total_issues: "Total Issues (Violations)",
+    issues: "Violations",
+    analysis_desc: "You can examine the number of issues/violations of departments in detail on a daily, weekly, monthly and yearly basis."
   }
 };
