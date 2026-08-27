@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer } from 'lucide-react';
 
-import html2pdf from 'html2pdf.js';
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
@@ -313,7 +312,7 @@ const useAppContext = () => React.useContext(AppContext);
     if (currentUser.role === 'yuklemeci') roleText = `Yükleme Sorumlusu`;
     
     return (
-      <header className="bg-white dark:bg-gray-800 px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700">
+      <header className="print:hidden bg-white dark:bg-gray-800 px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-1 scale-75 md:scale-90 origin-left">
@@ -1022,31 +1021,10 @@ const useAppContext = () => React.useContext(AppContext);
 
     const renderRightPanel = () => {
     const handleExportPDF = () => {
-        const element = document.getElementById('analysis-report-container');
-        if (!element) return;
-        
-        const buttonsToHide = element.querySelectorAll('.print\\:hidden');
-        buttonsToHide.forEach(btn => btn.style.display = 'none');
-        
-        // Remove styling that causes scrollbars/fixed heights in pdf
-        const originalHeight = element.style.height;
-        const originalOverflow = element.style.overflow;
-        element.style.height = 'auto';
-        element.style.overflow = 'visible';
-
-        const opt = {
-          margin:       10,
-          filename:     'Analiz_Raporu.pdf',
-          image:        { type: 'jpeg', quality: 0.98 },
-          html2canvas:  { scale: 2, useCORS: true, logging: false },
-          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        html2pdf().set(opt).from(element).save().then(() => {
-            buttonsToHide.forEach(btn => btn.style.display = '');
-            element.style.height = originalHeight;
-            element.style.overflow = originalOverflow;
-        });
+        // html2canvas (used by html2pdf) crashes with Tailwind v4 'oklch' colors.
+        // The most robust solution is using the native browser print,
+        // which natively supports all CSS and provides vector text in PDF.
+        window.print();
     };
 
 
@@ -1909,7 +1887,7 @@ const useAppContext = () => React.useContext(AppContext);
 
     return (
       <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
-        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+        <div className="print:hidden bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full xl:w-auto">
             <div className="flex justify-between items-center w-full md:w-auto">
               <div><h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-1">{t('admin_panel')}</h1><p className="text-gray-500 dark:text-gray-400 text-sm">{t('admin_desc')}</p></div>
