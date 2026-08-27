@@ -5,6 +5,7 @@ import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, C
 
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
+import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
 const firebaseConfig = {
@@ -17,7 +18,8 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const db = initializeFirestore(app, { experimentalForceLongPolling: true });
+const db = initializeFirestore(app, {});
+const storage = getStorage(app);
 
 
 const getDeptKey = (deptStr) => {
@@ -69,13 +71,20 @@ const handleImageUpload = (file, callback) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_WIDTH = 800;
+      const MAX_DIM = 1200;
       let width = img.width;
       let height = img.height;
-      if (width > MAX_WIDTH) { 
-        height = Math.round(height * (MAX_WIDTH / width)); 
-        width = MAX_WIDTH; 
+      
+      if (width > MAX_DIM || height > MAX_DIM) {
+        if (width > height) {
+          height = Math.round(height * (MAX_DIM / width));
+          width = MAX_DIM;
+        } else {
+          width = Math.round(width * (MAX_DIM / height));
+          height = MAX_DIM;
+        }
       }
+      
       canvas.width = width; 
       canvas.height = height;
       const ctx = canvas.getContext('2d');
@@ -498,7 +507,7 @@ const useAppContext = () => React.useContext(AppContext);
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('cam_pre')}</label>
-                <input type="file" id="preLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImgPreview)} />
+                <input type="file" id="preLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setImgPreview); e.target.value = null; }} />
                 <label htmlFor="preLoadCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                   {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
                     <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-orange-500" /></div>
@@ -582,7 +591,7 @@ const useAppContext = () => React.useContext(AppContext);
               <div className="p-6 md:p-8 space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('cam_post')}</label>
-                  <input type="file" id="postLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setFinishModal({...finishModal, imgPreview: img}))} />
+                  <input type="file" id="postLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], (img) => setFinishModal({...finishModal, imgPreview: img})); e.target.value = null; }} />
                   <label htmlFor="postLoadCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                     {finishModal.imgPreview ? ( <img src={finishModal.imgPreview} className="w-full h-full object-cover" /> ) : (
                       <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-green-500" /></div>
@@ -677,7 +686,7 @@ const useAppContext = () => React.useContext(AppContext);
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} <span className="text-red-500">({t('photo_required') || 'Zorunlu'})</span></label>
-                        <input type="file" id="modCamera" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImgPreview)} />
+                        <input type="file" id="modCamera" accept="image/*" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setImgPreview); e.target.value = null; }} />
                         <label htmlFor="modCamera" className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                             {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
                                 <><div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-8 h-8 text-gray-500 group-hover:text-blue-500" /></div>
@@ -823,7 +832,7 @@ const useAppContext = () => React.useContext(AppContext);
                             {actionModal.type === 'fix' && (
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('fix_photo') || 'Çözüm Fotoğrafı (Zorunlu)'}</label>
-                                    <input type="file" id="sefCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setAfterImgPreview)} />
+                                    <input type="file" id="sefCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setAfterImgPreview); e.target.value = null; }} />
                                     <label htmlFor="sefCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
                                         {afterImgPreview ? ( <img src={afterImgPreview} className="w-full h-full object-cover" /> ) : (
                                             <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-500 group-hover:text-green-500" /></div><span className="text-sm font-bold">{t('open_camera') || 'Kamerayı Aç'}</span></>
@@ -2319,16 +2328,28 @@ export default function App() {
 
   const createTask = useCallback(async (dept, priority, desc, deadlineHours, imgUrl) => {
     const taskId = Date.now().toString();
+    let finalImgUrl = imgUrl || '';
+    if (imgUrl && imgUrl.startsWith('data:image')) {
+      const storageRef = ref(storage, `tasks/${taskId}.jpg`);
+      await uploadString(storageRef, imgUrl, 'data_url');
+      finalImgUrl = await getDownloadURL(storageRef);
+    }
     const newTask = {
       id: taskId, dept, priority, desc, status: 'acik', 
       createdAt: formatDate(new Date()), timestamp: Date.now(), 
-      deadlineHours, imgUrl: imgUrl || '', modNote: ''
+      deadlineHours, imgUrl: finalImgUrl, modNote: ''
     };
     await setDoc(doc(db, "tasks", taskId), newTask);
   }, []);
 
   const updateTaskStatus = useCallback(async (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
     const taskRef = doc(db, "tasks", id);
+    let finalAfterImgUrl = afterImgUrl || '';
+    if (afterImgUrl && afterImgUrl.startsWith('data:image')) {
+      const storageRef = ref(storage, `tasks/${id}_after.jpg`);
+      await uploadString(storageRef, afterImgUrl, 'data_url');
+      finalAfterImgUrl = await getDownloadURL(storageRef);
+    }
     
     // Puan sistemi mantığı: Sadece "acik" durumdan "cozuldu" durumuna geçerken
     if (newStatus === 'cozuldu') {
@@ -2362,7 +2383,7 @@ export default function App() {
     
     const updates = { status: newStatus };
     if (chiefNote) updates.chiefNote = chiefNote;
-    if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
+    if (finalAfterImgUrl) updates.afterImgUrl = finalAfterImgUrl;
     if (modNote) updates.modNote = modNote;
     if (newStatus === 'onay_bekliyor' || newStatus === 'itiraz_edildi') {
       updates.resolvedTimestamp = Date.now();

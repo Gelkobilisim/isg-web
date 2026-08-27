@@ -1,14 +1,13 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/App.jsx', 'utf8');
 
-code = code.replace(
-  'import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";',
-  'import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";'
-);
+// The error shows Firestore is struggling with experimentalForceLongPolling or network issues in this environment.
+// We should remove experimentalForceLongPolling if it's causing issues, or add better offline persistence handling.
+// Given it's a web environment, experimentalForceLongPolling is sometimes problematic. Let's revert it to standard init.
 
 code = code.replace(
-  'const db = getFirestore(app);',
-  'const db = initializeFirestore(app, { experimentalForceLongPolling: true });'
+  'const db = initializeFirestore(app, { experimentalForceLongPolling: true });',
+  'const db = initializeFirestore(app, {});'
 );
 
 fs.writeFileSync('src/App.jsx', code);
