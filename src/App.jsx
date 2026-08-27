@@ -883,6 +883,8 @@ const useAppContext = () => React.useContext(AppContext);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [yuklemeCalendarMonth, setYuklemeCalendarMonth] = useState(new Date().getMonth());
     const [yuklemeCalendarYear, setYuklemeCalendarYear] = useState(new Date().getFullYear());
+    const [selectedYuklemeCountry, setSelectedYuklemeCountry] = useState(null);
+    const [selectedYuklemeCompany, setSelectedYuklemeCompany] = useState(null);
 
     useEffect(() => {
       let timer;
@@ -1597,25 +1599,40 @@ const useAppContext = () => React.useContext(AppContext);
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} Ton</b></p>
             </div>
             <div className="flex bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner">
-              <button onClick={() => setYuklemeAnaTab('list')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'list' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
+              <button onClick={() => { setYuklemeAnaTab('list'); setSelectedYuklemeCountry(null); setSelectedYuklemeCompany(null); }} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'list' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
                 Liste
               </button>
-              <button onClick={() => setYuklemeAnaTab('analysis')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'analysis' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
+              <button onClick={() => { setYuklemeAnaTab('analysis'); setSelectedYuklemeCountry(null); setSelectedYuklemeCompany(null); }} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'analysis' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
                 Analiz
               </button>
-              <button onClick={() => setYuklemeAnaTab('calendar')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'calendar' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
+              <button onClick={() => { setYuklemeAnaTab('calendar'); setSelectedYuklemeCountry(null); setSelectedYuklemeCompany(null); }} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'calendar' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
                 Takvim
               </button>
             </div>
           </div>
 
           {yuklemeAnaTab === 'analysis' ? (
+            selectedYuklemeCountry || selectedYuklemeCompany ? (
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 dark:border-gray-700 pb-4">
+                  <div>
+                    <button onClick={() => { setSelectedYuklemeCountry(null); setSelectedYuklemeCompany(null); }} className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4">
+                      <ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}
+                    </button>
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                      {selectedYuklemeCountry ? `${selectedYuklemeCountry} ${t('shipments_title') || 'Sevkiyatları'}` : `${selectedYuklemeCompany} ${t('shipments_title') || 'Sevkiyatları'}`}
+                    </h3>
+                  </div>
+                </div>
+                {renderLoadingList(loadings.filter(l => selectedYuklemeCountry ? l.destCountry === selectedYuklemeCountry : l.destCompany === selectedYuklemeCompany))}
+              </div>
+            ) : (
             <div className="space-y-8">
               <div>
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Globe className="w-5 h-5 mr-2 text-blue-500"/> {t('shipments_by_country') || 'Ülkelere Göre Sevkiyatlar'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {sortedCountries.map(c => (
-                    <div key={c} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <div key={c} onClick={() => setSelectedYuklemeCountry(c)} className="cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center transition-colors">
                       <span className="font-bold text-gray-700 dark:text-gray-200">{c}</span>
                       <div className="text-right">
                         <span className="block text-lg font-extrabold text-orange-600">{countryStats[c].ton.toLocaleString('tr-TR')} Ton</span>
@@ -1629,7 +1646,7 @@ const useAppContext = () => React.useContext(AppContext);
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Building2 className="w-5 h-5 mr-2 text-blue-500"/> {t('shipments_by_company') || 'Firmalara Göre Sevkiyatlar'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {sortedCompanies.map(c => (
-                    <div key={c} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <div key={c} onClick={() => setSelectedYuklemeCompany(c)} className="cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center transition-colors">
                       <span className="font-bold text-gray-700 dark:text-gray-200 truncate w-32" title={c}>{c}</span>
                       <div className="text-right shrink-0">
                         <span className="block text-lg font-extrabold text-orange-600">{companyStats[c].ton.toLocaleString('tr-TR')} Ton</span>
@@ -1640,6 +1657,7 @@ const useAppContext = () => React.useContext(AppContext);
                 </div>
               </div>
             </div>
+            )
           ) : yuklemeAnaTab === 'calendar' ? (
             <div>
               <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
