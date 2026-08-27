@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Moon, Sun, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp } from 'lucide-react';
+import { DICT } from "./i18n";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
@@ -16,6 +17,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
+
+const getDeptKey = (deptStr) => {
+  const map = {
+    "Boyahane": "dept_boyahane",
+    "Altyapı": "dept_altyapi",
+    "Dalgaduvar": "dept_dalgaduvar",
+    "Lazer": "dept_lazer",
+    "Güç": "dept_guc",
+    "Kaynaklı imalat": "dept_kaynakli",
+    "Dış alan": "dept_dis",
+    "Bakım & Onarım": "dept_bakim"
+  };
+  return map[deptStr] || deptStr;
+};
 const DEPARTMENTS = ["Boyahane", "Altyapı", "Dalgaduvar", "Lazer", "Güç", "Kaynaklı imalat", "Dış alan", "Bakım & Onarım"];
 
 const COUNTRIES = [
@@ -23,222 +38,6 @@ const COUNTRIES = [
   "İsveç", "Polonya", "Romanya", "Bulgaristan", "Yunanistan", "Rusya", "ABD", "Kanada", 
   "BAE", "Suudi Arabistan", "Katar", "Irak", "İran", "Azerbaycan", "Özbekistan", "Diğer"
 ];
-
-const DICT = {
-  tr: {
-    isg_tab: "İSG & Tertip",
-    yukleme_tab: "Yükleme Takip",
-    sys_isg_title: "İSG & Tertip",
-    sys_yukleme_title: "Yükleme & Sevkiyat",
-    sys_management: "Yönetim Sistemi",
-    welcome: "Hoş Geldiniz",
-    login_desc: "Sisteme devam etmek için hesap bilgilerinizi girin.",
-    username: "Kullanıcı Adı",
-    password: "Şifre",
-    remember_me: "Oturumumu Açık Tut (Beni Hatırla)",
-    login_btn: "Sisteme Giriş Yap",
-    err_wrong_cred: "Kullanıcı adı veya şifre hatalı!",
-    err_isg_module: "Yükleme personeli İSG modülünden giriş yapamaz!",
-    err_yukleme_module: "İSG personeli Yükleme modülünden giriş yapamaz!",
-    loading_server: "Sunucuya bağlanılıyor...",
-    logout: "Çıkış Yap",
-    
-    // Priorities & Statuses
-    pri_basit: "Basit", pri_orta: "Orta", pri_kritik: "Kritik",
-    stat_cozuldu: "Çözüldü", stat_onay: "Cevap Bekleniyor", stat_acik: "Çözülmemiş", stat_itiraz: "İtiraz Edildi", stat_iptal: "İptal",
-    
-    // Yüklemeci Panel
-    yuk_title: "Sevkiyat & Yükleme",
-    yuk_desc: "Araç kayıtları, detaylı tonaj ve fotoğraf yönetimi",
-    new_load_btn: "Yeni Yükleme / Araç Girişi Başlat",
-    load_form_title: "Araç ve Sevkiyat Giriş Formu",
-    plate_no: "Araç Plakası veya İrsaliye No *",
-    driver_name: "Şoför Adı Soyadı (İsteğe Bağlı)",
-    dest_location: "Gideceği Lokasyon / Şehir *",
-    dest_company: "Gideceği Firma *",
-    project_no: "Proje No / Sipariş Kodu *",
-    tonnage: "Yüklenen Tonaj (kg veya Ton) *",
-    cam_pre: "Boş Kasa / Durum Fotoğrafı (İsteğe Bağlı)",
-    cam_open: "Kamerayı Aç / Fotoğraf Yükle",
-    optional: "(Zorunlu Değil)",
-    note_pre: "Kısa Not (İsteğe Bağlı)",
-    start_load_btn: "Kaydı Başlat",
-    active_loads: "Devam Eden Yüklemeler",
-    no_active_loads: "Şu an aktif bir yükleme yok.",
-    no_active_desc: "Gelen araçları yukarıdaki butondan sisteme girebilirsiniz.",
-    plate: "PLAKA / İRSALİYE",
-    entry_time: "GİRİŞ SAATİ",
-    driver: "Şoför",
-    pre_note_title: "Yükleme Giriş Notu",
-    no_note: "Not girilmedi.",
-    no_photo: "FOTO YOK",
-    finish_load_btn: "Yüklemeyi Tamamla",
-    finish_form_title: "Yükleme Bitiş Kaydı",
-    cam_post: "Güvenlik / Bağlama Fotoğrafı (İsteğe Bağlı)",
-    note_post: "Bitiş Notu / Teslim Alan (İsteğe Bağlı)",
-    cancel: "Vazgeç",
-    close_job: "İşi Kapat",
-    status_done: "Tamamlandı",
-    status_progress: "Devam Ediyor",
-    dest_country: "Gideceği Ülke *",
-    status_beklemede: "Yükleme İçin Beklemede",
-    status_yukleniyor: "Yükleniyor",
-    status_tamamlandi: "Yüklenip Gönderildi",
-    start_loading: "Yüklemeyi Başlat",
-    details: "Detaylar",
-
-    // Admin Panel
-    admin_panel: "Yönetici Paneli",
-    admin_desc: "Fabrika geneli yetkili izleme, tonaj takibi ve yönetim.",
-    next_reset: "Sonraki Puan Sıfırlama",
-    btn_users: "Kullanıcı Hesapları",
-    risk_map: "Risk Haritası",
-    problem: "Problem",
-    no_problem: "Sorunsuz",
-    user_management: "Kullanıcı Yönetimi",
-    isg_accounts: "İSG Hesapları",
-    yukleme_accounts: "Yükleme Hesapları",
-    new_account: "Yeni Hesap Oluştur",
-    fullname: "Ad Soyad",
-    sys_role: "Sistem Rolü",
-    dept: "Sorumlu Olduğu Birim",
-    create_acc_btn: "Hesabı Oluştur",
-    existing_accs: "Mevcut Hesaplar",
-    show_passwords: "Şifreleri Göster",
-    delete_history: "Sistem Geçmişi Temizliği (agiradar özel)",
-    delete_desc: "Veritabanı şişkinliğini önlemek için eski İSG ve Yükleme raporlarını kalıcı olarak silebilirsiniz.",
-    month_1: "1 Aydan Eskiler", month_3: "3 Aydan Eskiler", month_6: "6 Aydan Eskiler", month_all: "Tüm Geçmişi Sil",
-    delete_btn: "Sil",
-    are_you_sure: "Emin Misiniz?",
-    del_warn_1: "Son ", del_warn_2: " ay öncesine ait TÜM KAYITLAR kalıcı olarak silinecektir.",
-    del_warn_all: "Veritabanındaki TÜM İSG VE YÜKLEME KAYITLARI kalıcı olarak silinecektir.",
-    del_warn_end: "Bu veriler asla geri getirilemez!",
-    perm_delete: "Kalıcı Olarak Sil",
-    wait: "Bekle",
-    all_reports: "Tüm Sevkiyat Raporları", filter_day: "Bugün", filter_week: "Bu Hafta", filter_month: "Bu Ay", filter_all: "Tümü",
-    records: "Kayıt",
-    no_records: "Kayıt bulunmamaktadır.",
-    before: "Giriş / Kasa Durumu",
-    after: "Bitiş / Yüklü Durum",
-    loading_progress: "Yükleme Sürüyor...",
-    return_back: "Geri Dön",
-    total_record: "Toplam Kayıt:",
-    current_score: "Güncel Puan",
-    solution_after: "Çözüm / Sonrası",
-    risk: "Risk",
-    hours_left: "Saat Kaldı",
-    solution_rate: "Çözüm Oranı",
-    tonnage_24h: "Son 24 Saatte Yüklenen Toplam Tonaj",
-    total_tonnage: "Toplam Tonaj"
-  },
-  en: {
-    isg_tab: "OHS & Cleanliness",
-    yukleme_tab: "Loading Tracking",
-    sys_isg_title: "OHS & Cleanliness",
-    sys_yukleme_title: "Loading & Shipment",
-    sys_management: "Management System",
-    welcome: "Welcome",
-    login_desc: "Enter your account details to continue.",
-    username: "Username",
-    password: "Password",
-    remember_me: "Keep me logged in (Remember Me)",
-    login_btn: "Login to System",
-    err_wrong_cred: "Invalid username or password!",
-    err_isg_module: "Loading personnel cannot login from OHS module!",
-    err_yukleme_module: "OHS personnel cannot login from Loading module!",
-    loading_server: "Connecting to server...",
-    logout: "Logout",
-    
-    // Priorities & Statuses
-    pri_basit: "Low", pri_orta: "Medium", pri_kritik: "Critical",
-    stat_cozuldu: "Resolved", stat_onay: "Pending Approval", stat_acik: "Unresolved", stat_itiraz: "Objected", stat_iptal: "Cancelled",
-    
-    // Yüklemeci Panel
-    yuk_title: "Shipment & Loading",
-    yuk_desc: "Vehicle records, detailed tonnage and photo management",
-    new_load_btn: "Start New Loading / Vehicle Entry",
-    load_form_title: "Vehicle & Shipment Entry Form",
-    plate_no: "License Plate or Waybill No *",
-    driver_name: "Driver Full Name (Optional)",
-    dest_location: "Destination Location / City *",
-    dest_company: "Destination Company *",
-    project_no: "Project No / Order Code *",
-    tonnage: "Loaded Tonnage (kg or Tons) *",
-    cam_pre: "Empty Trailer / Status Photo (Optional)",
-    cam_open: "Open Camera / Upload Photo",
-    optional: "(Optional)",
-    note_pre: "Short Note (Optional)",
-    start_load_btn: "Start Record",
-    active_loads: "Ongoing Loadings",
-    no_active_loads: "There are no active loadings at the moment.",
-    no_active_desc: "You can enter incoming vehicles using the button above.",
-    plate: "PLATE / WAYBILL",
-    entry_time: "ENTRY TIME",
-    driver: "Driver",
-    pre_note_title: "Entry Note",
-    no_note: "No note provided.",
-    no_photo: "NO PHOTO",
-    finish_load_btn: "Finish Loading",
-    finish_form_title: "Loading Completion Record",
-    cam_post: "Security / Fastening Photo (Optional)",
-    note_post: "Completion Note / Received By (Optional)",
-    cancel: "Cancel",
-    close_job: "Close Job",
-    status_done: "Completed",
-    status_progress: "In Progress",
-    dest_country: "Destination Country *",
-    status_beklemede: "Waiting for Loading",
-    status_yukleniyor: "Loading",
-    status_tamamlandi: "Loaded & Shipped",
-    start_loading: "Start Loading",
-    details: "Details",
-
-    // Admin Panel
-    admin_panel: "Admin Panel",
-    admin_desc: "Factory-wide monitoring, tonnage tracking and management.",
-    next_reset: "Next Score Reset",
-    btn_users: "User Accounts",
-    risk_map: "Risk Map",
-    problem: "Problem",
-    no_problem: "No Issues",
-    user_management: "User Management",
-    isg_accounts: "OHS Accounts",
-    yukleme_accounts: "Loading Accounts",
-    new_account: "Create New Account",
-    fullname: "Full Name",
-    sys_role: "System Role",
-    dept: "Responsible Department",
-    create_acc_btn: "Create Account",
-    existing_accs: "Existing Accounts",
-    show_passwords: "Show Passwords",
-    delete_history: "System History Cleanup (agiradar only)",
-    delete_desc: "You can permanently delete old OHS and Loading reports to prevent database bloat.",
-    month_1: "Older than 1 Month", month_3: "Older than 3 Months", month_6: "Older than 6 Months", month_all: "Delete All History",
-    delete_btn: "Delete",
-    are_you_sure: "Are You Sure?",
-    del_warn_1: "ALL RECORDS older than ", del_warn_2: " months will be permanently deleted.",
-    del_warn_all: "ALL OHS AND LOADING RECORDS in the database will be permanently deleted.",
-    del_warn_end: "This data can never be recovered!",
-    perm_delete: "Permanently Delete",
-    wait: "Wait",
-    all_reports: "All Shipment Reports", filter_day: "Today", filter_week: "This Week", filter_month: "This Month", filter_all: "All",
-    records: "Records",
-    no_records: "No records found.",
-    before: "Entry / Trailer State",
-    after: "Completion / Loaded State",
-    loading_progress: "Loading in Progress...",
-    return_back: "Go Back",
-    total_record: "Total Records:",
-    current_score: "Current Score",
-    solution_after: "Solution / After",
-    risk: "Risk",
-    hours_left: "Hours Left",
-    solution_rate: "Resolution Rate",
-    tonnage_24h: "Total Tonnage Loaded in 24 Hours",
-    total_tonnage: "Total Tonnage"
-  }
-};
-
 const PRIORITIES = {
   basit: { label_key: 'pri_basit', multiplier: 1, color: 'bg-blue-100 text-blue-800' },
   orta: { label_key: 'pri_orta', multiplier: 2, color: 'bg-yellow-100 text-yellow-800' },
@@ -299,7 +98,7 @@ const useAppContext = () => React.useContext(AppContext);
 
     const {
       currentUser, setCurrentUser, isFirebaseLoading, setIsFirebaseLoading,
-      lang, setLang, darkMode, setDarkMode, users, setUsers, points, setPoints, pointsHistory, setPointsHistory, tasks, setTasks,
+      lang, setLang, darkMode, setDarkMode, users, setUsers, points, setPoints, pointsHistory, setPointsHistory, tasks, setTasks, pointLogs, setPointLogs,
       loadings, setLoadings, adminSystemMode, setAdminSystemMode,
       adminViewMode, setAdminViewMode, selectedAdminDept, setSelectedAdminDept,
       selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
@@ -485,7 +284,7 @@ const useAppContext = () => React.useContext(AppContext);
     } = ctx;
     
     let roleText = currentUser.role;
-    if (currentUser.role === 'sef') roleText = `${currentUser.dept} Birimi`;
+    if (currentUser.role === 'sef') roleText = `${t(getDeptKey(currentUser.dept))} Birimi`;
     if (currentUser.role === 'yuklemeci') roleText = `Yükleme Sorumlusu`;
     
     return (
@@ -567,13 +366,15 @@ const useAppContext = () => React.useContext(AppContext);
     const [imgPreview, setImgPreview] = useState(null);
     const [finishModal, setFinishModal] = useState({ isOpen: false, loadId: null, note: '', imgPreview: null });
 
-    const activeLoadings = loadings.filter(l => l.status === 'beklemede' || l.status === 'yukleniyor');
+    const activeLoadings = useMemo(() => loadings.filter(l => l.status === 'beklemede' || l.status === 'yukleniyor'), [loadings]);
     const tonnage24h = get24HourTonnage();
 
     const handleStartLoading = (e) => {
       e.preventDefault();
-      createLoading(form.plaka, form.sofor, form.destCountry, form.destLocation, form.destCompany, form.projectNo, form.tonnage, form.not, imgPreview);
-      setForm({ plaka: '', sofor: '', destCountry: 'Türkiye', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
+      const current = formRef.current;
+      createLoading(current.plaka, current.sofor, current.destCountry, current.destLocation, current.destCompany, current.projectNo, current.tonnage, current.not, imgPreview);
+      formRef.current = { plaka: '', sofor: '', destCountry: 'Türkiye', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' };
+      e.target.reset();
       setImgPreview(null);
       setIsCreating(false);
     };
@@ -594,7 +395,7 @@ const useAppContext = () => React.useContext(AppContext);
              <div className="bg-white dark:bg-gray-800/20 p-2 rounded-xl"><Scale className="w-6 h-6 text-white" /></div>
              <div>
                <p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">{t('tonnage_24h')}</p>
-               <p className="text-2xl font-extrabold text-white">{tonnage24h.toLocaleString('tr-TR')} <span className="text-sm font-medium">Ton</span></p>
+               <p className="text-2xl font-extrabold text-white">{tonnage24h.toLocaleString('tr-TR')} <span className="text-sm font-medium">{t('unit_ton') || 'Ton'}</span></p>
              </div>
           </div>
           <Package className="w-48 h-48 text-white opacity-10 absolute right-0 -bottom-10 z-0 transform -rotate-12 pointer-events-none" />
@@ -611,23 +412,23 @@ const useAppContext = () => React.useContext(AppContext);
           <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-orange-100 mb-8 animate-slide-up">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
               <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 flex items-center"><Truck className="w-6 h-6 mr-2 text-orange-500"/> {t('load_form_title')}</h3>
-              <button onClick={() => {setIsCreating(false); setImgPreview(null); setForm({plaka:'', sofor:'', destLocation:'', destCompany:'', projectNo:'', tonnage:'', not:''});}} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200"><X className="w-6 h-6"/></button>
+              <button onClick={() => {setIsCreating(false); setImgPreview(null); formRef.current = {plaka:'', sofor:'', destCountry:'Türkiye', destLocation:'', destCompany:'', projectNo:'', tonnage:'', not:''};}} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200"><X className="w-6 h-6"/></button>
             </div>
             <form onSubmit={handleStartLoading} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('plate_no')}</label>
-                  <input required type="text" value={form.plaka} onChange={e=>setForm({...form, plaka: e.target.value.toUpperCase()})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 font-bold" />
+                  <input required type="text" defaultValue={formRef.current.plaka} onChange={e=>formRef.current.plaka = e.target.value.toUpperCase()} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 font-bold" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('driver_name')}</label>
-                  <input type="text" value={form.sofor} onChange={e=>setForm({...form, sofor: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" />
+                  <input type="text" defaultValue={formRef.current.sofor} onChange={e=>formRef.current.sofor = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('dest_country')}</label>
                   <div className="relative">
                     <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <select required value={form.destCountry} onChange={e=>setForm({...form, destCountry: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500">
+                    <select required defaultValue={formRef.current.destCountry} onChange={e=>formRef.current.destCountry = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500">
                       {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
@@ -636,28 +437,28 @@ const useAppContext = () => React.useContext(AppContext);
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('dest_location')}</label>
                   <div className="relative">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <input required type="text" value={form.destLocation} onChange={e=>setForm({...form, destLocation: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: İstanbul / Dilovası" />
+                    <input required type="text" defaultValue={formRef.current.destLocation} onChange={e=>formRef.current.destLocation = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder={t('ph_dest_loc') || 'Örn: İstanbul / Dilovası'} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('dest_company')}</label>
                   <div className="relative">
                     <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <input required type="text" value={form.destCompany} onChange={e=>setForm({...form, destCompany: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: ABB Trafo A.Ş." />
+                    <input required type="text" defaultValue={formRef.current.destCompany} onChange={e=>formRef.current.destCompany = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder={t('ph_dest_comp') || 'Örn: ABB Trafo A.Ş.'} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('project_no')}</label>
                   <div className="relative">
                     <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <input required type="text" value={form.projectNo} onChange={e=>setForm({...form, projectNo: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder="Örn: PRJ-2026-88" />
+                    <input required type="text" defaultValue={formRef.current.projectNo} onChange={e=>formRef.current.projectNo = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder={t('ph_proj_no') || 'Örn: PRJ-2026-88'} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('tonnage')}</label>
                   <div className="relative">
                     <Scale className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <input required type="number" step="any" value={form.tonnage} onChange={e=>setForm({...form, tonnage: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder="Örn: 24.5 (Ton)" />
+                    <input required type="number" step="any" defaultValue={formRef.current.tonnage} onChange={e=>formRef.current.tonnage = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder={t('ph_tonnage') || 'Örn: 24.5 (Ton)'} />
                   </div>
                 </div>
               </div>
@@ -673,7 +474,7 @@ const useAppContext = () => React.useContext(AppContext);
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('note_pre')}</label>
-                <input type="text" value={form.not} onChange={e=>setForm({...form, not: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" />
+                <input type="text" defaultValue={formRef.current.not} onChange={e=>formRef.current.not = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" />
               </div>
               <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg">{t('start_load_btn')}</button>
             </form>
@@ -771,13 +572,251 @@ const useAppContext = () => React.useContext(AppContext);
     );
   };
 
+
+  const ModDashboard = () => {
+    const ctx = useAppContext();
+    const { t, tasks, createTask, updateTaskStatus, handleImageUpload, DEPARTMENTS } = ctx;
+    
+    const [actionModal, setActionModal] = React.useState({ isOpen: false, taskId: null, action: null });
+    const [modNote, setModNote] = React.useState('');
+    
+    const reviewTasks = React.useMemo(() => {
+        return tasks.filter(task => task.status === 'onay_bekliyor' || task.status === 'itiraz_edildi').sort((a,b) => b.timestamp - a.timestamp);
+    }, [tasks]);
+
+    const handleActionSubmit = (e) => {
+        e.preventDefault();
+        if (actionModal.action === 'approve') {
+             updateTaskStatus(actionModal.taskId, 'cozuldu', '', '', modNote);
+        } else if (actionModal.action === 'reject') {
+             updateTaskStatus(actionModal.taskId, 'acik', '', '', modNote);
+        }
+        setActionModal({ isOpen: false, taskId: null, action: null });
+        setModNote('');
+    };
+    const [imgPreview, setImgPreview] = React.useState(null);
+    const formRef = React.useRef({ dept: "Boyahane", priority: 'yuksek', desc: '' });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const current = formRef.current;
+        createTask(current.dept, current.priority, current.desc, 24, imgPreview);
+        formRef.current = { dept: "Boyahane", priority: 'yuksek', desc: '' };
+        e.target.reset();
+        setImgPreview(null);
+        alert(t('success_created') || "İhlal kaydı oluşturuldu.");
+    };
+
+    return (
+        <div className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 lg:p-8 animate-slide-up">
+             <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
+                <h2 className="text-2xl font-extrabold mb-8 flex items-center text-gray-800 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700 pb-4"><ShieldAlert className="w-8 h-8 mr-3 text-red-500"/> {t('create_violation') || 'İhlal Kaydı Oluştur'}</h2>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('department') || 'İlgili Birim'}</label>
+                            <select required defaultValue={formRef.current.dept} onChange={e=>formRef.current.dept = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                                <option value="Boyahane">{t('dept_boyahane') || 'Boyahane'}</option>
+                                <option value="Altyapı">{t('dept_altyapi') || 'Altyapı'}</option>
+                                <option value="Dalgaduvar">{t('dept_dalgaduvar') || 'Dalgaduvar'}</option>
+                                <option value="Lazer">{t('dept_lazer') || 'Lazer'}</option>
+                                <option value="Güç">{t('dept_guc') || 'Güç'}</option>
+                                <option value="Kaynaklı imalat">{t('dept_kaynakli') || 'Kaynaklı imalat'}</option>
+                                <option value="Dış alan">{t('dept_dis') || 'Dış alan'}</option>
+                                <option value="Bakım & Onarım">{t('dept_bakim') || 'Bakım & Onarım'}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('priority') || 'Öncelik Seviyesi'}</label>
+                            <select required defaultValue={formRef.current.priority} onChange={e=>formRef.current.priority = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                                <option value="yuksek">{t('high') || 'Yüksek'}</option>
+                                <option value="orta">{t('medium') || 'Orta'}</option>
+                                <option value="dusuk">{t('low') || 'Düşük'}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('description') || 'Açıklama / İhlal Detayı'}</label>
+                        <textarea required rows="4" defaultValue={formRef.current.desc} onChange={e=>formRef.current.desc = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_desc') || 'İhlal detayı...'}></textarea>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} ({t('optional') || 'Opsiyonel'})</label>
+                        <input type="file" id="modCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImgPreview)} />
+                        <div onClick={() => document.getElementById('modCamera').click()} className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
+                            {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
+                                <><div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-8 h-8 text-gray-500 group-hover:text-blue-500" /></div>
+                                <span className="text-sm font-bold">{t('cam_open') || 'Kamerayı Aç / Fotoğraf Yükle'}</span></>
+                            )}
+                        </div>
+                    </div>
+                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center transition-colors"><Send className="w-5 h-5 mr-2"/> {t('send') || 'Kaydı Gönder'}</button>
+                </form>
+             </div>
+             
+             {reviewTasks.length > 0 && (
+             <div className="mt-8 bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 animate-slide-up">
+                <h2 className="text-2xl font-extrabold mb-6 flex items-center text-gray-800 dark:text-gray-100"><CheckCircle className="w-6 h-6 mr-3 text-green-500"/> {t('pending_reviews') || 'İnceleme Bekleyen Kayıtlar'}</h2>
+                <div className="grid grid-cols-1 gap-6">
+                    {reviewTasks.map(task => {
+                        const isObjection = task.status === 'itiraz_edildi';
+                        return (
+                            <div key={task.id} className="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 flex flex-col md:flex-row gap-5">
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        <span className="font-bold text-gray-800 dark:text-gray-100">{t(getDeptKey(task.dept))}</span>
+                                        <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${task.priority === 'yuksek' ? 'bg-red-100 text-red-700' : task.priority === 'orta' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{task.priority}</span>
+                                        <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${isObjection ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{isObjection ? (t('stat_itiraz') || 'İtiraz Edildi') : (t('stat_onay') || 'Onay Bekliyor')}</span>
+                                    </div>
+                                    <p className="text-sm text-gray-700 dark:text-gray-200 mb-3"><span className="font-bold">{t('initial_note') || 'İlk İhlal Notu'}:</span> {task.desc}</p>
+                                    
+                                    <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                                        <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">{isObjection ? (t('chief_obj_note') || 'Birim Şefi İtiraz Notu') + ':' : (t('chief_fix_note') || 'Birim Şefi Çözüm Notu') + ':'}</p>
+                                        <p className="text-sm text-gray-700 dark:text-gray-200">{task.chiefNote || (t('no_note') || 'Not girilmemiş.')}</p>
+                                    </div>
+                                </div>
+                                
+                                {task.afterImgUrl && (
+                                    <div className="w-full md:w-48 h-32 flex-shrink-0">
+                                        <img src={task.afterImgUrl} className="w-full h-full object-cover rounded-xl border border-gray-200 dark:border-gray-700" />
+                                    </div>
+                                )}
+                                
+                                <div className="flex flex-col gap-3 justify-center md:min-w-[140px]">
+                                    <button onClick={() => setActionModal({ isOpen: true, taskId: task.id, action: 'approve' })} className="bg-green-100 hover:bg-green-200 text-green-700 font-bold py-2 px-4 rounded-xl text-sm transition-colors shadow-sm">{isObjection ? (t('accept_obj') || 'İtirazı Kabul Et') : (t('approve_close') || 'Onayla (Kapat)')}</button>
+                                    <button onClick={() => setActionModal({ isOpen: true, taskId: task.id, action: 'reject' })} className="bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 px-4 rounded-xl text-sm transition-colors shadow-sm">{isObjection ? (t('reject_obj') || 'İtirazı Reddet') : (t('reject_return') || 'Reddet (Geri Gönder)')}</button>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+             </div>
+             )}
+             
+            {actionModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+                            <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">{actionModal.action === 'approve' ? (t('approve_action') || 'Onaylama İşlemi') : (t('reject_action') || 'Reddetme İşlemi')}</h3>
+                            <button type="button" onClick={() => { setActionModal({ isOpen: false, taskId: null, action: null }); setModNote(''); }} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><X className="w-6 h-6"/></button>
+                        </div>
+                        <form onSubmit={handleActionSubmit} className="space-y-5">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('mod_note') || 'Moderatör Notu / Geri Bildirim'}</label>
+                                <textarea rows="3" value={modNote} onChange={e=>setModNote(e.target.value)} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_mod_note') || 'İsteğe bağlı açıklama...'}></textarea>
+                            </div>
+                            <button type="submit" className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all ${actionModal.action === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
+                                {actionModal.action === 'approve' ? (t('approve_btn') || 'İşlemi Onayla') : (t('reject_btn') || 'Reddet ve Geri Gönder')}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+             
+        </div>
+    );
+  };
+
+  const SefDashboard = () => {
+    const ctx = useAppContext();
+    const { t, tasks, currentUser, updateTaskStatus, handleImageUpload } = ctx;
+    const [actionModal, setActionModal] = React.useState({ isOpen: false, taskId: null, type: null });
+    const [note, setNote] = React.useState('');
+    const [afterImgPreview, setAfterImgPreview] = React.useState(null);
+
+    const myTasks = React.useMemo(() => {
+        return tasks.filter(task => task.dept === currentUser.dept).sort((a,b) => b.timestamp - a.timestamp);
+    }, [tasks, currentUser]);
+
+    const handleActionSubmit = (e) => {
+        e.preventDefault();
+        if (actionModal.type === 'fix') {
+             updateTaskStatus(actionModal.taskId, 'onay_bekliyor', note, afterImgPreview, '');
+        } else if (actionModal.type === 'object') {
+             updateTaskStatus(actionModal.taskId, 'itiraz_edildi', note, '', '');
+        }
+        setActionModal({ isOpen: false, taskId: null, type: null });
+        setNote('');
+        setAfterImgPreview(null);
+    };
+
+    return (
+        <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 animate-slide-up">
+            <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
+                <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100"><ShieldAlert className="w-8 h-8 mr-3 text-blue-500"/> {t(getDeptKey(currentUser.dept))} {t('dept_tasks') || 'Birimi Görevleri'}</h2>
+                <div className="mt-4 md:mt-0 flex items-center bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 text-blue-800 font-bold text-sm shadow-sm">
+                   {t('open_tasks') || 'Açık Görevler'}: {myTasks.filter(t => t.status === 'acik' || t.status === 'itiraz_edildi').length}
+                </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {myTasks.length === 0 && <div className="col-span-full text-center text-gray-500 dark:text-gray-400 p-12 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700">{t('no_tasks') || 'Henüz bir görev bulunmamaktadır.'}</div>}
+                {myTasks.map(task => {
+                    const statusObj = STATUS_INFO[task.status] || STATUS_INFO['acik'];
+                    const StatusIcon = statusObj.icon;
+                    return (
+                        <div key={task.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col transition-all hover:shadow-md">
+                            <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+                                <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${task.priority === 'yuksek' ? 'bg-red-100 text-red-700' : task.priority === 'orta' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{task.priority}</span>
+                                <div className={`flex items-center px-2 py-1 rounded-md border ${statusObj.color}`}><StatusIcon className="w-3.5 h-3.5 mr-1.5" /><span className="text-[10px] font-bold uppercase">{t(statusObj.label_key)}</span></div>
+                            </div>
+                            <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-4 whitespace-pre-wrap">{task.desc}</p>
+                            {task.imgUrl && (
+                                <img src={task.imgUrl} className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-200 dark:border-gray-700" />
+                            )}
+                            <div className="mt-auto pt-4 flex gap-3">
+                                {(task.status === 'acik' || task.status === 'itiraz_edildi') && (
+                                    <>
+                                        <button onClick={() => setActionModal({ isOpen: true, taskId: task.id, type: 'fix' })} className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm">{t('i_fixed_it') || 'Düzelttim'}</button>
+                                        <button onClick={() => setActionModal({ isOpen: true, taskId: task.id, type: 'object' })} className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm">{t('object_btn') || 'İtiraz Et'}</button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {actionModal.isOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
+                        <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+                            <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">{actionModal.type === 'fix' ? (t('send_to_approval') || 'Onaya Gönder') : (t('object_to_violation') || 'İhlale İtiraz Et')}</h3>
+                            <button type="button" onClick={() => { setActionModal({ isOpen: false, taskId: null, type: null }); setNote(''); setAfterImgPreview(null); }} className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"><X className="w-6 h-6"/></button>
+                        </div>
+                        <form onSubmit={handleActionSubmit} className="space-y-5">
+                            {actionModal.type === 'fix' && (
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('fix_photo') || 'Çözüm Fotoğrafı (Zorunlu)'}</label>
+                                    <input type="file" id="sefCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setAfterImgPreview)} />
+                                    <div onClick={() => document.getElementById('sefCamera').click()} className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
+                                        {afterImgPreview ? ( <img src={afterImgPreview} className="w-full h-full object-cover" /> ) : (
+                                            <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-500 group-hover:text-green-500" /></div><span className="text-sm font-bold">{t('open_camera') || 'Kamerayı Aç'}</span></>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('note') || 'Açıklama / Not'}</label>
+                                <textarea required rows="3" value={note} onChange={e=>setNote(e.target.value)} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_chief_note') || 'Açıklama giriniz...'}></textarea>
+                            </div>
+                            <button type="submit" disabled={actionModal.type === 'fix' && !afterImgPreview} className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all ${actionModal.type === 'fix' ? (afterImgPreview ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed') : 'bg-red-600 hover:bg-red-700'}`}>
+                                {actionModal.type === 'fix' ? 'Onaya Gönder' : 'İtirazı Gönder'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+  };
+
   const AdminDashboard = () => {
     const ctx = useAppContext();
 
     const {
       currentUser, setCurrentUser, isFirebaseLoading, setIsFirebaseLoading,
       lang, setLang, darkMode, setDarkMode, users, setUsers, points, setPoints, pointsHistory, setPointsHistory, tasks, setTasks,
-      loadings, setLoadings, adminSystemMode, setAdminSystemMode,
+      loadings, setLoadings, adminSystemMode, setAdminSystemMode, pointLogs,
       adminViewMode, setAdminViewMode, selectedAdminDept, setSelectedAdminDept,
       selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
@@ -788,16 +827,25 @@ const useAppContext = () => React.useContext(AppContext);
     
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
     const [accountTab, setAccountTab] = useState('isg');
+    const [isgCalendarMonth, setIsgCalendarMonth] = useState(new Date().getMonth());
+    const [isgCalendarYear, setIsgCalendarYear] = useState(new Date().getFullYear());
     
     const [historyFilter, setHistoryFilter] = useState('1');
+    const [pointLogsFilter, setPointLogsFilter] = useState('all');
+    const [bonusModalOpen, setBonusModalOpen] = useState(false);
+    const [bonusDept, setBonusDept] = useState('');
+    const [bonusAmount, setBonusAmount] = useState('');
+    const [bonusType, setBonusType] = useState('add');
+    const [bonusReason, setBonusReason] = useState('');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteCountdown, setDeleteCountdown] = useState(10);
-    const [visiblePasswords, setVisiblePasswords] = useState({});
-    
+        
     const [expandedLoadId, setExpandedLoadId] = useState(null);
     const [yuklemeAnaTab, setYuklemeAnaTab] = useState('list');
     const [yuklemeListFilter, setYuklemeListFilter] = useState('all');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [yuklemeCalendarMonth, setYuklemeCalendarMonth] = useState(new Date().getMonth());
+    const [yuklemeCalendarYear, setYuklemeCalendarYear] = useState(new Date().getFullYear());
 
     useEffect(() => {
       let timer;
@@ -807,13 +855,50 @@ const useAppContext = () => React.useContext(AppContext);
       return () => clearTimeout(timer);
     }, [showDeleteModal, deleteCountdown]);
 
-    const togglePasswordVisibility = (userId) => {
-      setVisiblePasswords(prev => ({ ...prev, [userId]: !prev[userId] }));
-    };
+    const handleIsgPrevMonth = useCallback(() => {
+      setIsgCalendarMonth(prev => {
+        if (prev === 0) { setIsgCalendarYear(y => y - 1); return 11; }
+        return prev - 1;
+      });
+    }, []);
+
+    const handleIsgNextMonth = useCallback(() => {
+      setIsgCalendarMonth(prev => {
+        if (prev === 11) { setIsgCalendarYear(y => y + 1); return 0; }
+        return prev + 1;
+      });
+    }, []);
+
+    const handleIsgToday = useCallback(() => {
+      setIsgCalendarMonth(new Date().getMonth());
+      setIsgCalendarYear(new Date().getFullYear());
+    }, []);
+
+    const handleYuklemePrevMonth = useCallback(() => {
+      setYuklemeCalendarMonth(prev => {
+        if (prev === 0) { setYuklemeCalendarYear(y => y - 1); return 11; }
+        return prev - 1;
+      });
+    }, []);
+
+    const handleYuklemeNextMonth = useCallback(() => {
+      setYuklemeCalendarMonth(prev => {
+        if (prev === 11) { setYuklemeCalendarYear(y => y + 1); return 0; }
+        return prev + 1;
+      });
+    }, []);
+
+    const handleYuklemeToday = useCallback(() => {
+      setYuklemeCalendarMonth(new Date().getMonth());
+      setYuklemeCalendarYear(new Date().getFullYear());
+    }, []);
+
+
+    
 
     const handleCreateUser = async (e) => {
       e.preventDefault();
-      if(users.find(u => u.username === newUser.username)) { alert("Username taken!"); return; }
+      if(users.find(u => u.username === newUser.username)) { alert(t('err_username_taken') || 'Username taken!'); return; }
       const newUserId = Date.now().toString();
       const finalRole = accountTab === 'yukleme' ? 'yuklemeci' : newUser.role;
       const finalDept = finalRole === 'sef' ? newUser.dept : null;
@@ -825,10 +910,50 @@ const useAppContext = () => React.useContext(AppContext);
 
     const handleDeleteUser = async (id) => {
       if(id === "1") return; 
-      if(window.confirm("Delete user?")) { await deleteDoc(doc(db, "users", id)); }
+      if(window.confirm(t('confirm_delete_user') || 'Delete user?')) { await deleteDoc(doc(db, "users", id)); }
     };
 
     const [deleteTarget, setDeleteTarget] = useState('isg');
+    
+
+    const handleCustomBonus = (dept) => {
+           setBonusDept(dept);
+           setBonusAmount('');
+           setBonusType('add');
+           setBonusReason('');
+           setBonusModalOpen(true);
+        };
+        
+        const submitCustomBonus = async () => {
+           if (!bonusAmount || !bonusReason) {
+               alert(t('err_fill_all') || 'Lütfen tüm alanları doldurun.');
+               return;
+           }
+           const num = parseInt(bonusAmount, 10);
+           if (isNaN(num) || num <= 0) {
+               alert(t('err_valid_bonus') || 'Geçerli ve pozitif bir puan miktarı girin.');
+               return;
+           }
+           
+           const finalNum = bonusType === 'add' ? num : -num;
+           const pointsRef = doc(db, "system", "points");
+           const currentScore = points[bonusDept] || 100;
+           await updateDoc(pointsRef, { [bonusDept]: currentScore + finalNum });
+           
+           const logRef = doc(collection(db, "point_logs"));
+           await setDoc(logRef, {
+               id: logRef.id,
+               dept: bonusDept,
+               points: finalNum,
+               reason: bonusReason,
+               adminName: currentUser.name,
+               timestamp: Date.now(),
+               dateStr: new Date().toLocaleString('tr-TR')
+           });
+           
+           setBonusModalOpen(false);
+        };
+
     const executeHistoryDelete = async () => {
       const now = Date.now();
       const oneMonth = 30 * 24 * 60 * 60 * 1000;
@@ -853,23 +978,10 @@ const useAppContext = () => React.useContext(AppContext);
       if (adminSystemMode === 'leaderboard') {
         const sortedDepts = Object.keys(points).filter(key => key !== 'lastDailyBonus').sort((a,b) => points[b] - points[a]);
         
-                const handleCustomBonus = async (dept) => {
-           const bonusAmount = window.prompt(`${dept} birimine eklemek istediğiniz puan miktarını girin (Örn: 10, -5):`);
-           if (bonusAmount !== null && bonusAmount !== '') {
-               const num = parseInt(bonusAmount, 10);
-               if (!isNaN(num)) {
-                   const pointsRef = doc(db, "system", "points");
-                   const currentScore = points[dept] || 100;
-                   await updateDoc(pointsRef, { [dept]: currentScore + num });
-                   alert(`${dept} birimine ${num} puan ${num >= 0 ? 'eklendi' : 'düşüldü'}.`);
-               } else {
-                   alert("Geçersiz sayı girdiniz.");
-               }
-           }
-        };
+                
 
         const handleResetAndSave = async () => {
-            if(window.confirm('Yeni aya başlamak için puanları geçmişe kaydedip tüm birimleri 100 olarak sıfırlamak istediğinize emin misiniz?')) {
+            if(window.confirm(t('confirm_reset') || 'Yeni aya başlamak için...')) {
                 const now = new Date();
                 const monthStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
                 
@@ -884,7 +996,7 @@ const useAppContext = () => React.useContext(AppContext);
                 const initialPoints = DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {});
                 initialPoints.lastDailyBonus = points.lastDailyBonus;
                 await updateDoc(doc(db, "system", "points"), initialPoints);
-                alert("Geçmiş başarıyla kaydedildi ve tüm puanlar sıfırlandı!");
+                alert(t('success_reset') || 'Geçmiş başarıyla kaydedildi ve tüm puanlar sıfırlandı!');
             }
         };
 
@@ -892,7 +1004,7 @@ const useAppContext = () => React.useContext(AppContext);
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up h-full flex flex-col">
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b pb-4 border-gray-100 dark:border-gray-700">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center"><TrendingUp className="w-6 h-6 mr-2 text-green-600"/> Liderlik Tablosu</h2>
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center"><TrendingUp className="w-6 h-6 mr-2 text-green-600"/> {t('leaderboard') || 'Liderlik Tablosu'}</h2>
                   <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm mt-1">Birimlerin anlık performans puanları. Ay sonu 1. olan birim ödüllendirilecektir.</p>
                 </div>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
@@ -908,13 +1020,13 @@ const useAppContext = () => React.useContext(AppContext);
                  <div key={dept} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border rounded-2xl transition-colors ${index === 0 ? 'bg-gradient-to-r from-yellow-50 to-white border-yellow-200' : 'bg-white dark:bg-gray-800 hover:bg-gray-50'}`}>
                    <div className="flex items-center">
                       <span className={`w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg mr-4 shadow-sm ${index === 0 ? 'bg-yellow-400 text-white' : index === 1 ? 'bg-gray-300 text-white' : index === 2 ? 'bg-orange-400 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500'}`}>{index + 1}</span>
-                      <span className="font-bold text-lg text-gray-800 dark:text-gray-100">{dept}</span>
+                      <span className="font-bold text-lg text-gray-800 dark:text-gray-100">{t(getDeptKey(dept))}</span>
                    </div>
                    <div className="text-right flex items-center space-x-2 sm:space-x-4 mt-4 sm:mt-0">
-                     <button onClick={() => handleCustomBonus(dept)} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-bold transition-colors">Özel Puan</button>
+                     <button onClick={() => handleCustomBonus(dept)} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-bold transition-colors">{t('custom_bonus') || 'Özel Puan'}</button>
                      <div>
                        <span className="text-3xl font-extrabold text-green-600">{points[dept] || 100}</span>
-                       <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 font-normal ml-1 tracking-wider uppercase">Puan</span>
+                       <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 font-normal ml-1 tracking-wider uppercase">{t('risk') || 'Puan'}</span>
                      </div>
                    </div>
                  </div>
@@ -922,7 +1034,7 @@ const useAppContext = () => React.useContext(AppContext);
              </div>
 
              <div className="mt-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Calendar className="w-5 h-5 mr-2 text-purple-600" /> Geçmiş Sonuçlar</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Calendar className="w-5 h-5 mr-2 text-purple-600" /> {t('historical_results') || 'Geçmiş Sonuçlar'}</h3>
                 {(!pointsHistory || Object.keys(pointsHistory).length === 0) ? (
                    <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm">Henüz kaydedilmiş bir geçmiş tablo bulunmuyor.</p>
                 ) : (
@@ -946,9 +1058,59 @@ const useAppContext = () => React.useContext(AppContext);
                    </div>
                 )}
              </div>
+             <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
+                   <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center"><Activity className="w-5 h-5 mr-2 text-blue-600" /> {t('point_logs') || 'Puan Hareketleri'}</h3>
+                   <div className="flex flex-wrap gap-2">
+                     <button onClick={() => setPointLogsFilter('day')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pointLogsFilter === 'day' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_today') || 'Bugün'}</button>
+                     <button onClick={() => setPointLogsFilter('week')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pointLogsFilter === 'week' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_this_week') || 'Bu Hafta'}</button>
+                     <button onClick={() => setPointLogsFilter('month')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pointLogsFilter === 'month' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_this_month') || 'Bu Ay'}</button>
+                     <button onClick={() => setPointLogsFilter('all')} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pointLogsFilter === 'all' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_all') || 'Tümü'}</button>
+                   </div>
+                </div>
+                {(!pointLogs || pointLogs.length === 0) ? (
+                   <p className="text-gray-500 dark:text-gray-400 text-sm">Henüz bir puan hareketi bulunmuyor.</p>
+                ) : (
+                   <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
+                     {pointLogs.filter(log => {
+                        if (pointLogsFilter === 'all') return true;
+                        const now = new Date();
+                        if (pointLogsFilter === 'day') {
+                           const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+                           return log.timestamp >= startOfDay;
+                        }
+                        if (pointLogsFilter === 'week') {
+                           const day = now.getDay();
+                           const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+                           const startOfWeek = new Date(now.setDate(diff)).setHours(0,0,0,0);
+                           return log.timestamp >= startOfWeek;
+                        }
+                        if (pointLogsFilter === 'month') {
+                           const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+                           return log.timestamp >= startOfMonth;
+                        }
+                        return true;
+                     }).map(log => (
+                       <div key={log.id} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
+                         <div>
+                           <div className="flex items-center space-x-2">
+                             <span className="font-bold text-gray-700 dark:text-gray-200 text-sm">{t(getDeptKey(log.dept))}</span>
+                             <span className="text-[10px] text-gray-400 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">{log.adminName}</span>
+                           </div>
+                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">"{log.reason}" - {log.dateStr}</p>
+                         </div>
+                         <span className={`font-extrabold text-sm px-2 py-1 rounded-lg shadow-sm ${log.points >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                           {log.points >= 0 ? '+' : ''}{log.points}
+                         </span>
+                       </div>
+                     ))}
+                   </div>
+                )}
+             </div>
           </div>
         );
       }
+
 
       if (adminViewMode === 'users') {
         const filteredUsers = users.filter(u => accountTab === 'isg' ? (u.role !== 'yuklemeci') : (u.role === 'yuklemeci'));
@@ -988,9 +1150,9 @@ const useAppContext = () => React.useContext(AppContext);
                     <div>
                     <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">{t('sys_role')}</label>
                     <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
-                        <option value="sef">Birim Şefi</option>
+                        <option value="sef">{t('unit_chief') || 'Birim Şefi'}</option>
                         <option value="mod">İSG Uzmanı (Moderatör)</option>
-                        <option value="admin">Sistem Yöneticisi</option>
+                        <option value="admin">{t('system_admin') || 'Sistem Yöneticisi'}</option>
                     </select>
                     </div>
                 )}
@@ -999,7 +1161,7 @@ const useAppContext = () => React.useContext(AppContext);
                   <div className="md:col-span-2">
                     <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">{t('dept')}</label>
                     <select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
-                      {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                      {DEPARTMENTS.map(d => <option key={d} value={d}>{t(getDeptKey(d))}</option>)}
                     </select>
                   </div>
                 )}
@@ -1013,8 +1175,7 @@ const useAppContext = () => React.useContext(AppContext);
               <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-3">{t('existing_accs')} ({filteredUsers.length})</h3>
               <div className="space-y-2">
                 {filteredUsers.map(u => {
-                  const isVisible = visiblePasswords[u.id];
-                  return (
+                                    return (
                     <div key={u.id} className="flex justify-between items-center p-3.5 border rounded-xl hover:bg-gray-50 dark:bg-gray-900 transition-colors">
                       <div>
                         <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">{u.name} <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-2">@{u.username}</span></p>
@@ -1022,17 +1183,7 @@ const useAppContext = () => React.useContext(AppContext);
                       </div>
                       
                       <div className="flex items-center space-x-3">
-                        {/* Admin şifre görebilme özelliği */}
-                        {currentUser?.username === 'agiradar' && (
-                          <div className="flex items-center bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700">
-                            <span className="text-xs font-mono font-bold text-gray-700 dark:text-gray-200 mr-2">
-                              {isVisible ? u.password : '••••••••'}
-                            </span>
-                            <button onClick={() => togglePasswordVisibility(u.id)} className="text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:text-gray-100 focus:outline-none">
-                              {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                            </button>
-                          </div>
-                        )}
+                         
                         {u.id !== "1" && <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md"><Trash2 className="w-4 h-4"/></button>}
                       </div>
                     </div>
@@ -1150,7 +1301,6 @@ const useAppContext = () => React.useContext(AppContext);
        // Analysis calculations
        const countryStats = {};
        const companyStats = {};
-       
        loadings.forEach(load => {
           const tVal = parseFloat(load.tonnage) || 0;
           const cName = load.destCountry || 'Belirsiz';
@@ -1164,18 +1314,23 @@ const useAppContext = () => React.useContext(AppContext);
           companyStats[compName].count += 1;
           companyStats[compName].ton += tVal;
        });
-
        const sortedCountries = Object.keys(countryStats).sort((a,b) => countryStats[b].ton - countryStats[a].ton);
        const sortedCompanies = Object.keys(companyStats).sort((a,b) => companyStats[b].ton - companyStats[a].ton);
 
        const currDate = new Date();
-       const currentMonth = currDate.getMonth();
-       const currentYear = currDate.getFullYear();
-       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-       const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-       const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
-       const dayNames = lang === 'tr' ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const currentMonth = yuklemeCalendarMonth;
+      const currentYear = yuklemeCalendarYear;
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+       const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+      const dayNames = lang === 'tr' ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const tasksByDate = {}; tasks.forEach(t => { if(!tasksByDate[t.createdAt]) tasksByDate[t.createdAt] = []; tasksByDate[t.createdAt].push(t); });
        const monthNames = lang === 'tr' ? ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+       const loadingsByDate = {};
+         loadings.forEach(l => {
+           if(!loadingsByDate[l.createdAtDate]) loadingsByDate[l.createdAtDate] = [];
+           loadingsByDate[l.createdAtDate].push(l);
+         });
 
        return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
@@ -1200,7 +1355,7 @@ const useAppContext = () => React.useContext(AppContext);
           {yuklemeAnaTab === 'analysis' ? (
             <div className="space-y-8">
               <div>
-                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Globe className="w-5 h-5 mr-2 text-blue-500"/> Ülkelere Göre Sevkiyatlar</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Globe className="w-5 h-5 mr-2 text-blue-500"/> {t('shipments_by_country') || 'Ülkelere Göre Sevkiyatlar'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {sortedCountries.map(c => (
                     <div key={c} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center">
@@ -1214,7 +1369,7 @@ const useAppContext = () => React.useContext(AppContext);
                 </div>
               </div>
               <div>
-                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Building2 className="w-5 h-5 mr-2 text-blue-500"/> Firmalere Göre Sevkiyatlar</h3>
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Building2 className="w-5 h-5 mr-2 text-blue-500"/> {t('shipments_by_company') || 'Firmalara Göre Sevkiyatlar'}</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {sortedCompanies.map(c => (
                     <div key={c} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center">
@@ -1232,9 +1387,16 @@ const useAppContext = () => React.useContext(AppContext);
             <div>
               <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
                  <div>
-                   <h3 className="font-extrabold text-gray-800 dark:text-gray-100 text-xl flex items-center">
-                     <CalendarDays className="w-6 h-6 mr-3 text-orange-500"/> {monthNames[currentMonth]} {currentYear}
-                   </h3>
+                   <div className="flex items-center space-x-4">
+                     <h3 className="font-extrabold text-gray-800 dark:text-gray-100 text-xl flex items-center">
+                       <CalendarDays className="w-6 h-6 mr-3 text-orange-500"/> {monthNames[currentMonth]} {currentYear}
+                     </h3>
+                     <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                       <button onClick={handleYuklemePrevMonth} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-md transition-colors"><ChevronRight className="w-5 h-5 rotate-180" /></button>
+                       <button onClick={handleYuklemeToday} className="px-2 text-xs font-bold text-gray-600 dark:text-gray-300">{t('filter_today') || 'Bugün'}</button>
+                       <button onClick={handleYuklemeNextMonth} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-md transition-colors"><ChevronRight className="w-5 h-5" /></button>
+                     </div>
+                   </div>
                  </div>
               </div>
               <div className="grid grid-cols-7 gap-2 text-center mb-3">
@@ -1245,8 +1407,8 @@ const useAppContext = () => React.useContext(AppContext);
                  {Array.from({ length: daysInMonth }).map((_, i) => {
                    const dayNum = i + 1;
                    const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
-                   const isToday = dayNum === currDate.getDate();
-                   const dayLoadings = loadings.filter(l => l.createdAtDate === formattedDateForCell);
+                   const isToday = dayNum === currDate.getDate() && currentMonth === currDate.getMonth() && currentYear === currDate.getFullYear();
+                   const dayLoadings = loadingsByDate[formattedDateForCell] || [];
                    
                    return (
                      <div key={dayNum} onClick={() => dayLoadings.length > 0 && setSelectedYuklemeDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-100 shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600'}`}>
@@ -1365,7 +1527,7 @@ const useAppContext = () => React.useContext(AppContext);
                           <div className={`p-5 rounded-2xl border-l-4 bg-gray-50 dark:bg-gray-900 ${statusDef.color.split(' ')[2]} ${isGlowing ? 'shadow-[0_0_15px_rgba(239,68,68,0.5)] ring-1 ring-red-400 animate-[pulse_2s_ease-in-out_infinite]' : 'shadow-sm'}`}>
                             <div className="flex justify-between items-start mb-3">
                               <div>
-                                 <span className="font-bold text-gray-800 dark:text-gray-100 block">{task.dept}</span>
+                                 <span className="font-bold text-gray-800 dark:text-gray-100 block">{t(getDeptKey(task.dept))}</span>
                                  <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">{task.createdAt}</span>
                               </div>
                               <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
@@ -1413,21 +1575,29 @@ const useAppContext = () => React.useContext(AppContext);
       }
 
       const currDate = new Date();
-      const currentMonth = currDate.getMonth();
-      const currentYear = currDate.getFullYear();
-      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-      const startOffset = firstDay === 0 ? 6 : firstDay - 1; 
+       const currentMonth = isgCalendarMonth;
+      const currentYear = isgCalendarYear;
+       const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+       const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const startOffset = firstDay === 0 ? 6 : firstDay - 1;
       const dayNames = lang === 'tr' ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"] : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const tasksByDate = {}; tasks.forEach(t => { if(!tasksByDate[t.createdAt]) tasksByDate[t.createdAt] = []; tasksByDate[t.createdAt].push(t); });
       const monthNames = lang === 'tr' ? ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"] : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
       return (
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
           <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
              <div>
-               <h3 className="font-extrabold text-gray-800 dark:text-gray-100 text-2xl flex items-center">
-                 <CalendarDays className="w-7 h-7 mr-3 text-blue-600"/> {monthNames[currentMonth]} {currentYear}
-               </h3>
+               <div className="flex items-center space-x-4">
+                 <h3 className="font-extrabold text-gray-800 dark:text-gray-100 text-2xl flex items-center">
+                   <CalendarDays className="w-7 h-7 mr-3 text-blue-600"/> {monthNames[currentMonth]} {currentYear}
+                 </h3>
+                 <div className="flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                   <button onClick={handleIsgPrevMonth} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-md transition-colors"><ChevronRight className="w-5 h-5 rotate-180" /></button>
+                   <button onClick={handleIsgToday} className="px-2 text-xs font-bold text-gray-600 dark:text-gray-300">{t('filter_today') || 'Bugün'}</button>
+                   <button onClick={handleIsgNextMonth} className="p-1 hover:bg-white dark:hover:bg-gray-600 rounded-md transition-colors"><ChevronRight className="w-5 h-5" /></button>
+                 </div>
+               </div>
              </div>
           </div>
           <div className="grid grid-cols-7 gap-2 text-center mb-3">
@@ -1438,8 +1608,8 @@ const useAppContext = () => React.useContext(AppContext);
              {Array.from({ length: daysInMonth }).map((_, i) => {
                const dayNum = i + 1;
                const formattedDateForCell = `${dayNum.toString().padStart(2, '0')}.${(currentMonth + 1).toString().padStart(2, '0')}.${currentYear}`;
-               const isToday = dayNum === currDate.getDate();
-               const dayTasks = tasks.filter(t => t.createdAt === formattedDateForCell);
+               const isToday = dayNum === currDate.getDate() && currentMonth === currDate.getMonth() && currentYear === currDate.getFullYear();
+               const dayTasks = tasksByDate[formattedDateForCell] || [];
                
                return (
                  <div key={dayNum} onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100 shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600'}`}>
@@ -1453,8 +1623,14 @@ const useAppContext = () => React.useContext(AppContext);
       );
     };
 
-    const getRedTaskCount = (deptName) => tasks.filter(t => t.dept === deptName && (t.status === 'acik' || t.status === 'itiraz_edildi')).length;
-    const sortedDeptsAdmin = [...DEPARTMENTS].sort((a, b) => getRedTaskCount(b) - getRedTaskCount(a));
+    const getRedTaskCount = useCallback((deptName) => {
+      return tasks.filter(t => t.dept === deptName && (t.status === 'acik' || t.status === 'itiraz_edildi')).length;
+    }, [tasks]);
+
+    const sortedDeptsAdmin = useMemo(() => {
+      const depts = currentUser.role === 'sef' ? [currentUser.dept] : [...DEPARTMENTS];
+      return depts.sort((a, b) => getRedTaskCount(b) - getRedTaskCount(a));
+    }, [getRedTaskCount, currentUser]);
 
     return (
       <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
@@ -1470,8 +1646,8 @@ const useAppContext = () => React.useContext(AppContext);
             <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col xl:flex-row flex-wrap w-full md:w-auto bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner gap-1`}>
                <button onClick={() => { setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'isg' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
                <button onClick={() => { setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'yukleme' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
-               <button onClick={() => { setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'users' ? 'bg-white dark:bg-gray-800 text-purple-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><Users className="w-4 h-4 mr-2" /> {t('btn_users') || 'Kullanıcı Hesapları'}</button>
-               <button onClick={() => { setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'leaderboard' ? 'bg-white dark:bg-gray-800 text-green-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><TrendingUp className="w-4 h-4 mr-2" /> Liderlik Tablosu</button>
+               {currentUser.role === 'admin' && <button onClick={() => { setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'users' ? 'bg-white dark:bg-gray-800 text-purple-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><Users className="w-4 h-4 mr-2" /> {t('btn_users') || 'Kullanıcı Hesapları'}</button>}
+               <button onClick={() => { setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'leaderboard' ? 'bg-white dark:bg-gray-800 text-green-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><TrendingUp className="w-4 h-4 mr-2" /> {t('leaderboard') || 'Liderlik Tablosu'}</button>
 
             </div>
           </div>
@@ -1494,7 +1670,7 @@ const useAppContext = () => React.useContext(AppContext);
                   const isSelected = selectedAdminDept === dept;
                   return (
                   <div key={dept} onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); setAdminViewMode('calendar'); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
-                    <div className="flex items-center"><span className="w-6 text-center text-sm font-bold mr-3 text-gray-400 dark:text-gray-500">{index + 1}.</span><span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 dark:text-gray-200 group-hover:text-blue-600'}`}>{dept}</span></div>
+                    <div className="flex items-center"><span className="w-6 text-center text-sm font-bold mr-3 text-gray-400 dark:text-gray-500">{index + 1}.</span><span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 dark:text-gray-200 group-hover:text-blue-600'}`}>{t(getDeptKey(dept))}</span></div>
                     <div className="flex items-center">
                        {redCount > 0 ? <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm"><span className="font-bold text-xs">{redCount} {t('problem')}</span></div> : <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90"><span className="font-bold text-xs">{t('no_problem')}</span></div>}
                        <ChevronRight className={`w-5 h-5 transition-transform ${isSelected ? 'text-blue-500 translate-x-1' : 'text-gray-300'}`} />
@@ -1522,7 +1698,49 @@ const useAppContext = () => React.useContext(AppContext);
           </div>
         )}
 
-        {showDeleteModal && (
+        {bonusModalOpen && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
+              <div className="flex justify-between items-center mb-6">
+                 <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                    <TrendingUp className="w-6 h-6 mr-2 text-blue-600" /> Özel Puan: {bonusDept}
+                 </h3>
+                 <button onClick={() => setBonusModalOpen(false)} className="text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 p-2 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+              </div>
+              
+              <div className="space-y-4">
+                 <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('action_type') || 'İşlem Türü'}</label>
+                    <div className="grid grid-cols-2 gap-3">
+                       <button onClick={() => setBonusType('add')} className={`py-3 rounded-xl font-bold flex items-center justify-center transition-colors ${bonusType === 'add' ? 'bg-green-100 text-green-700 border-2 border-green-500' : 'bg-gray-50 dark:bg-gray-700 text-gray-500 border-2 border-transparent'}`}>
+                          <Plus className="w-5 h-5 mr-1" /> Puan Ekle
+                       </button>
+                       <button onClick={() => setBonusType('subtract')} className={`py-3 rounded-xl font-bold flex items-center justify-center transition-colors ${bonusType === 'subtract' ? 'bg-red-100 text-red-700 border-2 border-red-500' : 'bg-gray-50 dark:bg-gray-700 text-gray-500 border-2 border-transparent'}`}>
+                          <ArrowDownRight className="w-5 h-5 mr-1" /> Puan Düş
+                       </button>
+                    </div>
+                 </div>
+                 
+                 <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('amount') || 'Miktar'}</label>
+                    <input type="number" value={bonusAmount} onChange={e => setBonusAmount(e.target.value)} placeholder={t('ph_bonus_amt') || 'Örn: 10'} className="w-full border border-gray-200 dark:border-gray-600 rounded-xl p-3 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500 font-bold" min="1" />
+                 </div>
+                 
+                 <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Açıklama / Sebep</label>
+                    <input type="text" value={bonusReason} onChange={e => setBonusReason(e.target.value)} placeholder={t('ph_bonus_reason') || 'Neden puan veriliyor?'} className="w-full border border-gray-200 dark:border-gray-600 rounded-xl p-3 bg-gray-50 dark:bg-gray-700 text-gray-800 dark:text-gray-100 outline-none focus:ring-2 focus:ring-blue-500" />
+                 </div>
+              </div>
+              
+              <div className="mt-6 flex space-x-3">
+                 <button onClick={() => setBonusModalOpen(false)} className="flex-1 py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">{t('cancel') || 'İptal'}</button>
+                 <button onClick={submitCustomBonus} className={`flex-1 py-3 font-bold rounded-xl text-white shadow-md transition-colors ${bonusType === 'add' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>{t('save_btn') || 'Kaydet'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+{showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
               <div className="p-6 bg-red-600 text-white flex justify-between items-center"><h3 className="font-bold text-xl flex items-center"><ShieldAlert className="w-6 h-6 mr-2"/> {t('are_you_sure')}</h3><button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="p-1 hover:bg-white dark:bg-gray-800/20 rounded-full"><X className="w-6 h-6" /></button></div>
@@ -1563,6 +1781,7 @@ export default function App() {
   const [points, setPoints] = useState({});
   const [pointsHistory, setPointsHistory] = useState({});
   const [tasks, setTasks] = useState([]);
+  const [pointLogs, setPointLogs] = useState([]);
   const [loadings, setLoadings] = useState([]);
 
   const [adminSystemMode, setAdminSystemMode] = useState('isg'); 
@@ -1614,6 +1833,12 @@ export default function App() {
       }
     });
 
+    const unsubPointLogs = onSnapshot(collection(db, "point_logs"), (snapshot) => {
+      const logsData = snapshot.docs.map(doc => doc.data());
+      logsData.sort((a, b) => b.timestamp - a.timestamp);
+      setPointLogs(logsData);
+    });
+
     const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
       const tasksData = snapshot.docs.map(doc => doc.data());
       tasksData.sort((a, b) => b.timestamp - a.timestamp);
@@ -1631,7 +1856,7 @@ export default function App() {
       setLoadings(loadingData);
     });
 
-    return () => { unsubUsers(); unsubPoints(); unsubTasks(); unsubLoadings(); unsubPointsHistory(); };
+    return () => { unsubUsers(); unsubPoints(); unsubTasks(); unsubLoadings(); unsubPointsHistory(); unsubPointLogs(); };
   }, []);
 
   useEffect(() => {
@@ -1707,7 +1932,7 @@ export default function App() {
       if (taskSnap.exists()) {
         const taskData = taskSnap.data();
         if (taskData.status !== 'cozuldu') {
-           const now = Date.now();
+           const now = taskData.resolvedTimestamp || Date.now();
            const createdAt = taskData.timestamp;
            const deadlineHours = parseInt(taskData.deadlineHours, 10) || 24;
            const timePassedHours = (now - createdAt) / (1000 * 60 * 60);
@@ -1735,6 +1960,9 @@ export default function App() {
     if (chiefNote) updates.chiefNote = chiefNote;
     if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
     if (modNote) updates.modNote = modNote;
+    if (newStatus === 'onay_bekliyor' || newStatus === 'itiraz_edildi') {
+      updates.resolvedTimestamp = Date.now();
+    }
     await updateDoc(taskRef, updates);
   }, [db]);
 
@@ -1829,7 +2057,7 @@ export default function App() {
     createLoading, startLoadingProcess, finishLoading, get24HourTonnage, CompanyLogo,
     handleImageUpload, db
   }), [
-    currentUser, isFirebaseLoading, lang, darkMode, users, points, pointsHistory, tasks, loadings, 
+    currentUser, isFirebaseLoading, lang, darkMode, users, points, pointsHistory, tasks, loadings, pointLogs, 
     adminSystemMode, adminViewMode, selectedAdminDept, selectedAdminDate, selectedYuklemeDate,
     previewModalImg, previewModalTitle, t, toggleLang, getLastFridayOfCurrentMonth, 
     logout, createTask, updateTaskStatus, createLoading, startLoadingProcess, finishLoading, 
@@ -1853,8 +2081,8 @@ export default function App() {
           <TopBar theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'} />
           <main className="flex-1 w-full flex">
              {currentUser.role === 'admin' && <AdminDashboard />}
-             {currentUser.role === 'mod' && <div className="p-8 text-xl font-bold flex-1 text-center mt-10">ISG Mod Paneli (Active)</div>}
-             {currentUser.role === 'sef' && <div className="p-8 text-xl font-bold flex-1 text-center mt-10">Birim Şefi Paneli (Active)</div>}
+             {currentUser.role === 'mod' && <ModDashboard />}
+             {currentUser.role === 'sef' && <SefDashboard />}
              {currentUser.role === 'yuklemeci' && <YuklemeciDashboard />}
           </main>
         </>
