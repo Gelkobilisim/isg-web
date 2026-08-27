@@ -1,7 +1,7 @@
 import { DICT } from "./i18n";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer } from 'lucide-react';
+import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
@@ -847,6 +847,15 @@ const useAppContext = () => React.useContext(AppContext);
 
 
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
+    const [editingUserId, setEditingUserId] = useState(null);
+    const [editUserForm, setEditUserForm] = useState({ username: '', password: '', name: '' });
+    const [showUpdateUserModal, setShowUpdateUserModal] = useState(false);
+    const [userToUpdate, setUserToUpdate] = useState(null);
+    const [showDeleteUserModal, setShowDeleteUserModal] = useState(false);
+    const [userToDelete, setUserToDelete] = useState(null);
+    const [deleteUserCountdown, setDeleteUserCountdown] = useState(5);
+
+
     const [accountTab, setAccountTab] = useState('isg');
     const [isgCalendarMonth, setIsgCalendarMonth] = useState(new Date().getMonth());
     const [isgCalendarYear, setIsgCalendarYear] = useState(new Date().getFullYear());
@@ -884,6 +893,14 @@ const useAppContext = () => React.useContext(AppContext);
     const [yuklemeCalendarYear, setYuklemeCalendarYear] = useState(new Date().getFullYear());
     const [selectedYuklemeCountry, setSelectedYuklemeCountry] = useState(null);
     const [selectedYuklemeCompany, setSelectedYuklemeCompany] = useState(null);
+
+    useEffect(() => {
+      let timer;
+      if (showDeleteUserModal && deleteUserCountdown > 0) {
+        timer = setTimeout(() => setDeleteUserCountdown(deleteUserCountdown - 1), 1000);
+      }
+      return () => clearTimeout(timer);
+    }, [showDeleteUserModal, deleteUserCountdown]);
 
     useEffect(() => {
       let timer;
@@ -954,9 +971,35 @@ const useAppContext = () => React.useContext(AppContext);
       setNewUser({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
     };
 
-    const handleDeleteUser = async (id) => {
+    const handleUpdateUserClick = (id) => {
+      setUserToUpdate(id);
+      setShowUpdateUserModal(true);
+    };
+
+    const confirmUpdateUser = async () => {
+      if (!userToUpdate || !editUserForm.username || !editUserForm.password || !editUserForm.name) return;
+      await updateDoc(doc(db, "users", userToUpdate), {
+          username: editUserForm.username,
+          password: editUserForm.password,
+          name: editUserForm.name
+      });
+      setShowUpdateUserModal(false);
+      setUserToUpdate(null);
+      setEditingUserId(null);
+    };
+
+    const handleDeleteUserClick = (id) => {
       if(id === "1") return; 
-      if(window.confirm(t('confirm_delete_user') || 'Delete user?')) { await deleteDoc(doc(db, "users", id)); }
+      setUserToDelete(id);
+      setDeleteUserCountdown(5);
+      setShowDeleteUserModal(true);
+    };
+
+    const confirmDeleteUser = async () => {
+      if (!userToDelete || deleteUserCountdown > 0) return;
+      await deleteDoc(doc(db, "users", userToDelete));
+      setShowDeleteUserModal(false);
+      setUserToDelete(null);
     };
 
     const [deleteTarget, setDeleteTarget] = useState('isg');
@@ -1412,16 +1455,35 @@ const useAppContext = () => React.useContext(AppContext);
               <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-3">{t('existing_accs')} ({filteredUsers.length})</h3>
               <div className="space-y-2">
                 {filteredUsers.map(u => {
-                                    return (
-                    <div key={u.id} className="flex justify-between items-center p-3.5 border rounded-xl hover:bg-gray-50 dark:bg-gray-900 transition-colors">
-                      <div>
-                        <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">{u.name} <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-2">@{u.username}</span></p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p>
-                      </div>
+                    const isEditing = editingUserId === u.id;
+                    const canEdit = currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin';
+                    return (
+                    <div key={u.id} className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 border rounded-xl hover:bg-gray-50 dark:bg-gray-900 transition-colors gap-3">
+                      {isEditing ? (
+                         <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <input type="text" value={editUserForm.name} onChange={e => setEditUserForm({...editUserForm, name: e.target.value})} className="border rounded-md p-1.5 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" placeholder="Ad Soyad" />
+                            <input type="text" value={editUserForm.username} onChange={e => setEditUserForm({...editUserForm, username: e.target.value})} className="border rounded-md p-1.5 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" placeholder="Kullanıcı Adı" />
+                            <input type="text" value={editUserForm.password} onChange={e => setEditUserForm({...editUserForm, password: e.target.value})} className="border rounded-md p-1.5 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white" placeholder="Şifre" />
+                         </div>
+                      ) : (
+                         <div>
+                           <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">{u.name} <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-2">@{u.username}</span></p>
+                           <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p>
+                         </div>
+                      )}
                       
-                      <div className="flex items-center space-x-3">
-                         
-                        {u.id !== "1" && <button onClick={() => handleDeleteUser(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md"><Trash2 className="w-4 h-4"/></button>}
+                      <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end">
+                          {isEditing ? (
+                              <>
+                                <button onClick={() => handleUpdateUserClick(u.id)} className="text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-md text-sm font-bold flex items-center"><Save className="w-4 h-4 mr-1"/> Kaydet</button>
+                                <button onClick={() => setEditingUserId(null)} className="text-gray-500 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-sm font-bold">İptal</button>
+                              </>
+                          ) : (
+                              <>
+                                {canEdit && <button onClick={() => { setEditingUserId(u.id); setEditUserForm({ username: u.username, password: u.password, name: u.name }); }} className="text-blue-500 hover:bg-blue-50 p-2 rounded-md"><Edit className="w-4 h-4"/></button>}
+                                {u.id !== "1" && <button onClick={() => handleDeleteUserClick(u.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-md"><Trash2 className="w-4 h-4"/></button>}
+                              </>
+                          )}
                       </div>
                     </div>
                   );
@@ -1899,7 +1961,7 @@ const useAppContext = () => React.useContext(AppContext);
             <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col xl:flex-row flex-wrap w-full md:w-auto bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner gap-1`}>
                <button onClick={() => { navigate('/'); setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'isg' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
                <button onClick={() => { navigate('/'); setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'yukleme' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
-               {currentUser.role === 'admin' && <button onClick={() => { navigate('/'); setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'users' ? 'bg-white dark:bg-gray-800 text-purple-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Users className="w-4 h-4 mr-2" /> {t('btn_users') || 'Kullanıcı Hesapları'}</button>}
+               {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && <button onClick={() => { navigate('/'); setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'users' ? 'bg-white dark:bg-gray-800 text-purple-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Users className="w-4 h-4 mr-2" /> {t('btn_users') || 'Kullanıcı Hesapları'}</button>}
                <button onClick={() => { navigate('/'); setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'leaderboard' ? 'bg-white dark:bg-gray-800 text-green-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><TrendingUp className="w-4 h-4 mr-2" /> {t('leaderboard') || 'Liderlik Tablosu'}</button>
                <button onClick={() => { navigate('/analysis'); setAdminSystemMode('analysis'); setAdminViewMode('analysis'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'analysis' ? 'bg-white dark:bg-gray-800 text-indigo-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Activity className="w-4 h-4 mr-2" /> {t('analysis_tab') || 'Analiz Raporları'}</button>
 
@@ -1994,7 +2056,51 @@ const useAppContext = () => React.useContext(AppContext);
           </div>
         )}
 
-{showDeleteModal && (
+{showUpdateUserModal && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slide-up">
+              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
+                <AlertTriangle className="w-6 h-6 mr-2 text-orange-500" />
+                Hesabı Güncelle
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Kullanıcı bilgilerini güncellemek istediğinize emin misiniz? Yanlış değişiklikler yetkili hesapların erişimini etkileyebilir.
+              </p>
+              <div className="flex space-x-3 justify-end">
+                <button onClick={() => { setShowUpdateUserModal(false); setUserToUpdate(null); }} className="px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 transition-colors">
+                  İptal
+                </button>
+                <button onClick={confirmUpdateUser} className="px-5 py-2.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors shadow-md">
+                  Onayla ve Kaydet
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showDeleteUserModal && (
+          <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slide-up">
+              <h3 className="text-xl font-bold text-red-600 mb-2 flex items-center">
+                <AlertCircle className="w-6 h-6 mr-2" />
+                Kullanıcıyı Sil
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Bu hesabı kalıcı olarak silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+              </p>
+              <div className="flex space-x-3 justify-end">
+                <button onClick={() => { setShowDeleteUserModal(false); setUserToDelete(null); }} className="px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 transition-colors">
+                  İptal
+                </button>
+                <button onClick={confirmDeleteUser} disabled={deleteUserCountdown > 0} className={`px-5 py-2.5 rounded-xl font-bold shadow-md transition-colors ${deleteUserCountdown > 0 ? 'bg-gray-300 text-gray-500 cursor-not-allowed' : 'bg-red-600 text-white hover:bg-red-700'}`}>
+                  {deleteUserCountdown > 0 ? `Sil (${deleteUserCountdown})` : 'Evet, Kalıcı Olarak Sil'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
               <div className="p-6 bg-red-600 text-white flex justify-between items-center"><h3 className="font-bold text-xl flex items-center"><ShieldAlert className="w-6 h-6 mr-2"/> {t('are_you_sure')}</h3><button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="p-1 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button></div>
@@ -2317,7 +2423,7 @@ export default function App() {
         <>
           <TopBar theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'} />
           <main className="flex-1 w-full flex">
-             {currentUser.role === 'admin' && <AdminDashboard />}
+             {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && <AdminDashboard />}
              {currentUser.role === 'mod' && <ModDashboard />}
              {currentUser.role === 'sef' && <SefDashboard />}
              {currentUser.role === 'yuklemeci' && <YuklemeciDashboard />}
