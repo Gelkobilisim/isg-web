@@ -903,8 +903,6 @@ const useAppContext = () => React.useContext(AppContext);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [yuklemeCalendarMonth, setYuklemeCalendarMonth] = useState(new Date().getMonth());
     const [yuklemeCalendarYear, setYuklemeCalendarYear] = useState(new Date().getFullYear());
-    const [showLogoutModal, setShowLogoutModal] = useState(false);
-    const [logoutCountdown, setLogoutCountdown] = useState(5);
     const [selectedYuklemeCountry, setSelectedYuklemeCountry] = useState(null);
     const [selectedYuklemeCompany, setSelectedYuklemeCompany] = useState(null);
 
@@ -915,14 +913,6 @@ const useAppContext = () => React.useContext(AppContext);
       }
       return () => clearTimeout(timer);
     }, [showDeleteUserModal, deleteUserCountdown]);
-
-    useEffect(() => {
-      let timer;
-      if (showLogoutModal && logoutCountdown > 0) {
-        timer = setTimeout(() => setLogoutCountdown(logoutCountdown - 1), 1000);
-      }
-      return () => clearTimeout(timer);
-    }, [showLogoutModal, logoutCountdown]);
 
     useEffect(() => {
       let timer;
@@ -2171,6 +2161,17 @@ export default function App() {
   const [selectedAdminDept, setSelectedAdminDept] = useState(null);
   const [selectedAdminDate, setSelectedAdminDate] = useState(null);
   const [selectedYuklemeDate, setSelectedYuklemeDate] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [logoutCountdown, setLogoutCountdown] = useState(5);
+
+  useEffect(() => {
+    let timer;
+    if (showLogoutModal && logoutCountdown > 0) {
+      timer = setTimeout(() => setLogoutCountdown(logoutCountdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [showLogoutModal, logoutCountdown]);
+
 
   // Full-screen Image Modal Viewer
   const [previewModalImg, setPreviewModalImg] = useState(null);
