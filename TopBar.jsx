@@ -1,1 +1,0 @@
-const TopBar = ({ theme = 'blue' }

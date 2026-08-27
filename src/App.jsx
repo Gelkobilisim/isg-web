@@ -1,9 +1,12 @@
 import { DICT } from "./i18n";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer } from 'lucide-react';
 
+import html2pdf from 'html2pdf.js';
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -81,8 +84,27 @@ const handleImageUpload = (file, callback) => {
   };
 };
 
+const CompanyLogo = ({ className = "", scale = "scale-100", theme = 'blue' }) => (
+    <div className={`flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm ${className}`}>
+      <div className={`flex items-center space-x-1 ${scale} origin-center`}>
+        <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden">
+           <div className={`absolute top-0 left-0 w-full h-full border-t-4 border-l-4 rounded-tl-full opacity-80 ${theme==='orange'?'border-orange-600':'border-blue-900'}`}></div>
+           <div className={`absolute top-1 left-1 w-[90%] h-[90%] border-t-4 border-l-4 rounded-tl-full ${theme==='orange'?'border-orange-400':'border-blue-400'}`}></div>
+           <div className="absolute top-3 left-2 w-[80%] h-[80%] border-t-4 border-l-4 border-gray-400 rounded-tl-full opacity-50"></div>
+        </div>
+        <div className="flex flex-col">
+          <div className="flex items-baseline space-x-1">
+            <span className="text-gray-800 dark:text-gray-100 font-extrabold text-2xl tracking-tighter">ADS</span>
+            <span className="text-gray-800 dark:text-gray-100 font-bold text-xl">Metal A.Ş.</span>
+          </div>
+          <span className={`text-[6px] font-bold text-white px-1 rounded-sm tracking-widest uppercase -mt-1 w-max ${theme==='orange'?'bg-orange-600':'bg-blue-900'}`}>Transformer Tanks & Fin Walls</span>
+        </div>
+      </div>
+    </div>
+  );
+
 const TimerWrapper = ({ children }) => {
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60000);
     return () => clearInterval(timer);
@@ -104,8 +126,8 @@ const useAppContext = () => React.useContext(AppContext);
       selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
-      createLoading, startLoadingProcess, finishLoading, get24HourTonnage, CompanyLogo,
-      handleImageUpload, db
+      createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
+      db
     } = ctx;
     
     if (!previewModalImg) return null;
@@ -113,7 +135,7 @@ const useAppContext = () => React.useContext(AppContext);
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-slide-up" onClick={() => setPreviewModalImg(null)}>
         <div className="relative max-w-5xl w-full max-h-[90vh] flex flex-col items-center justify-center" onClick={(e) => e.stopPropagation()}>
           <div className="absolute top-4 right-4 z-10 flex space-x-2">
-            <button onClick={() => setPreviewModalImg(null)} className="p-3 bg-white dark:bg-gray-800/20 hover:bg-white dark:bg-gray-800/40 text-white rounded-full transition-colors shadow-lg">
+            <button onClick={() => setPreviewModalImg(null)} className="p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-colors shadow-lg">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -142,8 +164,8 @@ const useAppContext = () => React.useContext(AppContext);
       selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
-      createLoading, startLoadingProcess, finishLoading, get24HourTonnage, CompanyLogo,
-      handleImageUpload, db
+      createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
+      db
     } = ctx;
     
     const [username, setUsername] = useState('');
@@ -166,6 +188,9 @@ const useAppContext = () => React.useContext(AppContext);
 
         if (rememberMe) {
           localStorage.setItem('isg_logged_in_user', account.id);
+        }
+        if (account.role === 'admin') {
+           setAdminSystemMode(loginTheme);
         }
         setCurrentUser(account);
         setLoginErr('');
@@ -197,17 +222,17 @@ const useAppContext = () => React.useContext(AppContext);
         <div className="absolute inset-0 bg-black/60 z-0"></div>
 
         <div className="w-full max-w-4xl flex justify-end z-10 mb-4 md:absolute md:top-6 md:right-6 md:mb-0">
-            <button onClick={toggleLang} className="flex items-center space-x-2 bg-white dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg text-sm font-bold text-gray-800 dark:text-gray-100 hover:bg-white dark:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700">
+            <button onClick={toggleLang} className="flex items-center space-x-2 bg-white dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg text-sm font-bold text-gray-800 dark:text-gray-100 hover:bg-white dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700">
                 <Globe className="w-4 h-4 text-blue-600" />
                 <span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
             </button>
         </div>
 
         <div className="bg-white dark:bg-gray-800/90 backdrop-blur-md p-1.5 rounded-full shadow-2xl mb-8 flex space-x-1 border border-white/40 z-10">
-          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:bg-gray-800'}`}>
+          <button onClick={() => setLoginTheme('isg')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800'}`}>
             <ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}
           </button>
-          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:bg-gray-800'}`}>
+          <button onClick={() => setLoginTheme('yukleme')} className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? 'bg-orange-600 text-white shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800'}`}>
             <Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}
           </button>
         </div>
@@ -220,14 +245,14 @@ const useAppContext = () => React.useContext(AppContext);
             </h1>
           </div>
 
-          <div className="w-full md:w-1/2 p-8 md:p-12 flex flex-col justify-center">
+          <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center">
             <div className="md:hidden text-center mb-8">
               <CompanyLogo className="mx-auto" scale="scale-110" theme={isISG ? 'blue' : 'orange'} />
               <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 mt-4">{isISG ? t('sys_isg_title') : t('sys_yukleme_title')}</h1>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">{t('welcome')}</h2>
-            <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-8 text-sm">{t('login_desc')}</p>
+            <p className="text-gray-500 dark:text-gray-400 mb-8 text-sm">{t('login_desc')}</p>
             
             <form onSubmit={handleLogin} className="space-y-5">
               {loginErr && (
@@ -240,7 +265,7 @@ const useAppContext = () => React.useContext(AppContext);
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('username')}</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
-                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required />
+                  <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required />
                 </div>
               </div>
               
@@ -248,7 +273,7 @@ const useAppContext = () => React.useContext(AppContext);
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('password')}</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required />
+                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? 'focus:ring-blue-500' : 'focus:ring-orange-500'}`} required />
                 </div>
               </div>
               
@@ -279,8 +304,8 @@ const useAppContext = () => React.useContext(AppContext);
       selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
-      createLoading, startLoadingProcess, finishLoading, get24HourTonnage, CompanyLogo,
-      handleImageUpload, db
+      createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
+      db
     } = ctx;
     
     let roleText = currentUser.role;
@@ -296,7 +321,7 @@ const useAppContext = () => React.useContext(AppContext);
             </div>
             <div className="border-l pl-4 border-gray-300 dark:border-gray-600">
               <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm md:text-base leading-tight">{currentUser.name}</h2>
-              <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 capitalize leading-tight">{roleText}</span>
+              <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 capitalize leading-tight">{roleText}</span>
             </div>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
@@ -348,21 +373,12 @@ const useAppContext = () => React.useContext(AppContext);
       selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
-      createLoading, startLoadingProcess, finishLoading, get24HourTonnage, CompanyLogo,
-      handleImageUpload, db
+      createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
+      db
     } = ctx;
     
     const [isCreating, setIsCreating] = useState(false);
-    const formRef = useRef({ 
-      plaka: '', 
-      sofor: '', 
-      destCountry: 'Türkiye',
-      destLocation: '', 
-      destCompany: '', 
-      projectNo: '', 
-      tonnage: '', 
-      not: '' 
-    });
+    const [formState, setFormState] = useState({ plaka: '', sofor: '', destCountry: 'Türkiye', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
     const [imgPreview, setImgPreview] = useState(null);
     const [finishModal, setFinishModal] = useState({ isOpen: false, loadId: null, note: '', imgPreview: null });
 
@@ -371,10 +387,8 @@ const useAppContext = () => React.useContext(AppContext);
 
     const handleStartLoading = (e) => {
       e.preventDefault();
-      const current = formRef.current;
-      createLoading(current.plaka, current.sofor, current.destCountry, current.destLocation, current.destCompany, current.projectNo, current.tonnage, current.not, imgPreview);
-      formRef.current = { plaka: '', sofor: '', destCountry: 'Türkiye', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' };
-      e.target.reset();
+      createLoading(formState.plaka, formState.sofor, formState.destCountry, formState.destLocation, formState.destCompany, formState.projectNo, formState.tonnage, formState.not, imgPreview);
+      setFormState({ plaka: '', sofor: '', destCountry: 'Türkiye', destLocation: '', destCompany: '', projectNo: '', tonnage: '', not: '' });
       setImgPreview(null);
       setIsCreating(false);
     };
@@ -412,23 +426,23 @@ const useAppContext = () => React.useContext(AppContext);
           <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-orange-100 mb-8 animate-slide-up">
             <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
               <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 flex items-center"><Truck className="w-6 h-6 mr-2 text-orange-500"/> {t('load_form_title')}</h3>
-              <button onClick={() => {setIsCreating(false); setImgPreview(null); formRef.current = {plaka:'', sofor:'', destCountry:'Türkiye', destLocation:'', destCompany:'', projectNo:'', tonnage:'', not:''};}} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200"><X className="w-6 h-6"/></button>
+              <button onClick={() => {setIsCreating(false); setImgPreview(null); setFormState({plaka:'', sofor:'', destCountry:'Türkiye', destLocation:'', destCompany:'', projectNo:'', tonnage:'', not:''});}} className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200"><X className="w-6 h-6"/></button>
             </div>
             <form onSubmit={handleStartLoading} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('plate_no')}</label>
-                  <input required type="text" defaultValue={formRef.current.plaka} onChange={e=>formRef.current.plaka = e.target.value.toUpperCase()} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 font-bold" />
+                  <input required type="text" value={formState.plaka} onChange={e=>setFormState({...formState, plaka: e.target.value.toUpperCase()})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-gray-800 dark:text-gray-100" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('driver_name')}</label>
-                  <input type="text" defaultValue={formRef.current.sofor} onChange={e=>formRef.current.sofor = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" />
+                  <input type="text" value={formState.sofor} onChange={e=>setFormState({...formState, sofor: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 dark:text-gray-100" />
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('dest_country')}</label>
                   <div className="relative">
                     <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <select required defaultValue={formRef.current.destCountry} onChange={e=>formRef.current.destCountry = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500">
+                    <select required value={formState.destCountry} onChange={e=>setFormState({...formState, destCountry: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 dark:text-gray-100">
                       {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
@@ -437,44 +451,44 @@ const useAppContext = () => React.useContext(AppContext);
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('dest_location')}</label>
                   <div className="relative">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <input required type="text" defaultValue={formRef.current.destLocation} onChange={e=>formRef.current.destLocation = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder={t('ph_dest_loc') || 'Örn: İstanbul / Dilovası'} />
+                    <input required type="text" value={formState.destLocation} onChange={e=>setFormState({...formState, destLocation: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 dark:text-gray-100" placeholder={t('ph_dest_loc') || 'Örn: İstanbul / Dilovası'} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('dest_company')}</label>
                   <div className="relative">
                     <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <input required type="text" defaultValue={formRef.current.destCompany} onChange={e=>formRef.current.destCompany = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder={t('ph_dest_comp') || 'Örn: ABB Trafo A.Ş.'} />
+                    <input required type="text" value={formState.destCompany} onChange={e=>setFormState({...formState, destCompany: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 dark:text-gray-100" placeholder={t('ph_dest_comp') || 'Örn: ABB Trafo A.Ş.'} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('project_no')}</label>
                   <div className="relative">
                     <Hash className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <input required type="text" defaultValue={formRef.current.projectNo} onChange={e=>formRef.current.projectNo = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" placeholder={t('ph_proj_no') || 'Örn: PRJ-2026-88'} />
+                    <input required type="text" value={formState.projectNo} onChange={e=>setFormState({...formState, projectNo: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 dark:text-gray-100" placeholder={t('ph_proj_no') || 'Örn: PRJ-2026-88'} />
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('tonnage')}</label>
                   <div className="relative">
                     <Scale className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <input required type="number" step="any" defaultValue={formRef.current.tonnage} onChange={e=>formRef.current.tonnage = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700" placeholder={t('ph_tonnage') || 'Örn: 24.5 (Ton)'} />
+                    <input required type="number" step="any" value={formState.tonnage} onChange={e=>setFormState({...formState, tonnage: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-10 pr-3.5 py-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-orange-700 dark:text-orange-400" placeholder={t('ph_tonnage') || 'Örn: 24.5 (Ton)'} />
                   </div>
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('cam_pre')}</label>
                 <input type="file" id="preLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImgPreview)} />
-                <div onClick={() => document.getElementById('preLoadCamera').click()} className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 dark:text-gray-500 cursor-pointer transition-colors group overflow-hidden">
+                <div onClick={() => document.getElementById('preLoadCamera').click()} className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                   {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
-                    <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 dark:text-gray-500 group-hover:text-orange-500" /></div>
+                    <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-orange-500" /></div>
                     <span className="text-sm font-bold">{t('cam_open')}</span><span className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('optional')}</span></>
                   )}
                 </div>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('note_pre')}</label>
-                <input type="text" defaultValue={formRef.current.not} onChange={e=>formRef.current.not = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500" />
+                <input type="text" value={formState.not} onChange={e=>setFormState({...formState, not: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-orange-500 text-gray-800 dark:text-gray-100" />
               </div>
               <button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-4 rounded-xl shadow-lg">{t('start_load_btn')}</button>
             </form>
@@ -489,7 +503,7 @@ const useAppContext = () => React.useContext(AppContext);
           <div className="bg-white dark:bg-gray-800 p-10 rounded-3xl text-center border border-gray-100 dark:border-gray-700 shadow-sm">
             <CheckCircle className="w-16 h-16 mx-auto text-green-400 mb-4" />
             <p className="font-bold text-xl text-gray-800 dark:text-gray-100">{t('no_active_loads')}</p>
-            <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm mt-2">{t('no_active_desc')}</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">{t('no_active_desc')}</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -506,7 +520,7 @@ const useAppContext = () => React.useContext(AppContext);
                     <div><span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">{t('dest_country')}</span><span className="font-bold text-gray-800 dark:text-gray-100">{load.destCountry || '-'}</span></div>
                     <div><span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">{t('dest_location')}</span><span className="font-bold text-gray-800 dark:text-gray-100">{load.destLocation || '-'}</span></div>
                     <div><span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">{t('dest_company')}</span><span className="font-bold text-gray-800 dark:text-gray-100">{load.destCompany || '-'}</span></div>
-                    <div><span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-700">{load.tonnage ? `${load.tonnage} Ton` : '-'}</span></div>
+                    <div><span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">{t('tonnage')}</span><span className="font-extrabold text-orange-700 dark:text-orange-400">{load.tonnage ? `${load.tonnage} Ton` : '-'}</span></div>
                   </div>
 
                   <div className="flex items-start space-x-4 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700 mt-auto">
@@ -543,22 +557,22 @@ const useAppContext = () => React.useContext(AppContext);
             <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
               <div className="p-6 bg-green-600 text-white flex justify-between items-center">
                 <h3 className="font-bold text-xl flex items-center"><Save className="w-6 h-6 mr-3"/> {t('finish_form_title')}</h3>
-                <button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="p-2 hover:bg-white dark:bg-gray-800/20 rounded-full"><X className="w-6 h-6" /></button>
+                <button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="p-2 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button>
               </div>
-              <div className="p-8 space-y-6">
+              <div className="p-6 md:p-8 space-y-6">
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('cam_post')}</label>
                   <input type="file" id="postLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setFinishModal({...finishModal, imgPreview: img}))} />
-                  <div onClick={() => document.getElementById('postLoadCamera').click()} className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 dark:text-gray-500 cursor-pointer transition-colors group overflow-hidden">
+                  <div onClick={() => document.getElementById('postLoadCamera').click()} className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                     {finishModal.imgPreview ? ( <img src={finishModal.imgPreview} className="w-full h-full object-cover" /> ) : (
-                      <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 dark:text-gray-500 group-hover:text-green-500" /></div>
+                      <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-green-500" /></div>
                       <span className="text-sm font-bold">{t('cam_open')}</span></>
                     )}
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('note_post')}</label>
-                  <input type="text" value={finishModal.note} onChange={e=>setFinishModal({...finishModal, note: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-green-500" />
+                  <input type="text" value={finishModal.note} onChange={e=>setFinishModal({...finishModal, note: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-green-500 text-gray-800 dark:text-gray-100" />
                 </div>
                 <div className="flex space-x-3 pt-4 border-t border-gray-100 dark:border-gray-700">
                   <button onClick={() => setFinishModal({ isOpen: false, loadId: null, note: '', imgPreview: null })} className="flex-1 py-4 font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl">{t('cancel')}</button>
@@ -595,7 +609,7 @@ const useAppContext = () => React.useContext(AppContext);
         setModNote('');
     };
     const [imgPreview, setImgPreview] = React.useState(null);
-    const formRef = React.useRef({ dept: "Boyahane", priority: 'yuksek', desc: '' });
+    const [formState, setFormState] = React.useState({ dept: 'Boyahane', priority: 'yuksek', desc: '' });
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -603,10 +617,8 @@ const useAppContext = () => React.useContext(AppContext);
             alert(t('err_photo_required') || "Lütfen ihlali kanıtlayacak bir fotoğraf ekleyin.");
             return;
         }
-        const current = formRef.current;
-        createTask(current.dept, current.priority, current.desc, 24, imgPreview);
-        formRef.current = { dept: "Boyahane", priority: 'yuksek', desc: '' };
-        e.target.reset();
+        createTask(formState.dept, formState.priority, formState.desc, 24, imgPreview);
+        setFormState({ dept: 'Boyahane', priority: 'yuksek', desc: '' });
         setImgPreview(null);
         alert(t('success_created') || "İhlal kaydı oluşturuldu.");
     };
@@ -619,7 +631,7 @@ const useAppContext = () => React.useContext(AppContext);
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('department') || 'İlgili Birim'}</label>
-                            <select required defaultValue={formRef.current.dept} onChange={e=>formRef.current.dept = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                            <select required value={formState.dept} onChange={e=>setFormState({...formState, dept: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
                                 <option value="Boyahane">{t('dept_boyahane') || 'Boyahane'}</option>
                                 <option value="Altyapı">{t('dept_altyapi') || 'Altyapı'}</option>
                                 <option value="Dalgaduvar">{t('dept_dalgaduvar') || 'Dalgaduvar'}</option>
@@ -632,7 +644,7 @@ const useAppContext = () => React.useContext(AppContext);
                         </div>
                         <div>
                             <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('priority') || 'Öncelik Seviyesi'}</label>
-                            <select required defaultValue={formRef.current.priority} onChange={e=>formRef.current.priority = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                            <select required value={formState.priority} onChange={e=>setFormState({...formState, priority: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
                                 <option value="yuksek">{t('high') || 'Yüksek'}</option>
                                 <option value="orta">{t('medium') || 'Orta'}</option>
                                 <option value="dusuk">{t('low') || 'Düşük'}</option>
@@ -641,7 +653,7 @@ const useAppContext = () => React.useContext(AppContext);
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('description') || 'Açıklama / İhlal Detayı'}</label>
-                        <textarea required rows="4" defaultValue={formRef.current.desc} onChange={e=>formRef.current.desc = e.target.value} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_desc') || 'İhlal detayı...'}></textarea>
+                        <textarea required rows="4" value={formState.desc} onChange={e=>setFormState({...formState, desc: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_desc') || 'İhlal detayı...'}></textarea>
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} <span className="text-red-500">({t('photo_required') || 'Zorunlu'})</span></label>
@@ -825,10 +837,16 @@ const useAppContext = () => React.useContext(AppContext);
       selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
-      createLoading, startLoadingProcess, finishLoading, get24HourTonnage, CompanyLogo,
-      handleImageUpload, db
+      createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
+      db
     } = ctx;
     
+    
+    const navigate = useNavigate();
+    const location = useLocation();
+
+
+
     const [newUser, setNewUser] = useState({ username: '', password: '', name: '', role: 'sef', dept: DEPARTMENTS[0] });
     const [accountTab, setAccountTab] = useState('isg');
     const [isgCalendarMonth, setIsgCalendarMonth] = useState(new Date().getMonth());
@@ -838,6 +856,17 @@ const useAppContext = () => React.useContext(AppContext);
     const [pointLogsFilter, setPointLogsFilter] = useState('all');
     const [analysisFilter, setAnalysisFilter] = useState('month');
     const [selectedAnalysisDept, setSelectedAnalysisDept] = useState(null);
+    useEffect(() => {
+        const path = location.pathname;
+        if (path.startsWith('/analysis/')) {
+            const dept = decodeURIComponent(path.split('/')[2]);
+            if (dept) {
+                setAdminSystemMode('analysis');
+                setSelectedAnalysisDept(dept);
+                setAnalysisFilter('all');
+            }
+        }
+    }, [location.pathname, setAdminSystemMode]);
     const [bonusModalOpen, setBonusModalOpen] = useState(false);
     const [bonusDept, setBonusDept] = useState('');
     const [bonusAmount, setBonusAmount] = useState('');
@@ -845,6 +874,8 @@ const useAppContext = () => React.useContext(AppContext);
     const [bonusReason, setBonusReason] = useState('');
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [deleteCountdown, setDeleteCountdown] = useState(10);
+    const [showResetModal, setShowResetModal] = useState(false);
+    const [resetCountdown, setResetCountdown] = useState(10);
         
     const [expandedLoadId, setExpandedLoadId] = useState(null);
     const [yuklemeAnaTab, setYuklemeAnaTab] = useState('list');
@@ -860,6 +891,14 @@ const useAppContext = () => React.useContext(AppContext);
       }
       return () => clearTimeout(timer);
     }, [showDeleteModal, deleteCountdown]);
+
+    useEffect(() => {
+      let timer;
+      if (showResetModal && resetCountdown > 0) {
+        timer = setTimeout(() => setResetCountdown(resetCountdown - 1), 1000);
+      }
+      return () => clearTimeout(timer);
+    }, [showResetModal, resetCountdown]);
 
     const handleIsgPrevMonth = useCallback(() => {
       setIsgCalendarMonth(prev => {
@@ -980,6 +1019,34 @@ const useAppContext = () => React.useContext(AppContext);
     };
 
     const renderRightPanel = () => {
+    const handleExportPDF = () => {
+        const element = document.getElementById('analysis-report-container');
+        if (!element) return;
+        
+        const buttonsToHide = element.querySelectorAll('.print\\:hidden');
+        buttonsToHide.forEach(btn => btn.style.display = 'none');
+        
+        // Remove styling that causes scrollbars/fixed heights in pdf
+        const originalHeight = element.style.height;
+        const originalOverflow = element.style.overflow;
+        element.style.height = 'auto';
+        element.style.overflow = 'visible';
+
+        const opt = {
+          margin:       10,
+          filename:     'Analiz_Raporu.pdf',
+          image:        { type: 'jpeg', quality: 0.98 },
+          html2canvas:  { scale: 2, useCORS: true, logging: false },
+          jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            buttonsToHide.forEach(btn => btn.style.display = '');
+            element.style.height = originalHeight;
+            element.style.overflow = originalOverflow;
+        });
+    };
+
 
       
             if (adminSystemMode === 'analysis') {
@@ -998,10 +1065,10 @@ const useAppContext = () => React.useContext(AppContext);
         if (selectedAnalysisDept) {
             const deptTasks = filteredTasks.filter(t => t.dept === selectedAnalysisDept).sort((a,b) => b.timestamp - a.timestamp);
             return (
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up h-full flex flex-col print:shadow-none print:border-none print:p-0 print:h-auto print:block">
+                <div id="analysis-report-container" className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up h-full flex flex-col print:shadow-none print:border-none print:p-0 print:h-auto print:block">
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4 border-gray-100 dark:border-gray-700 print:border-b-2 print:pb-2">
                         <div>
-                            <button onClick={() => setSelectedAnalysisDept(null)} className="mb-2 text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center print:hidden">
+                            <button onClick={() => { navigate(-1); setTimeout(() => setSelectedAnalysisDept(null), 100); }} className="mb-2 text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center print:hidden">
                                 <ArrowLeft className="w-4 h-4 mr-1" /> {t('back_to_analysis') || 'Analizlere Dön'}
                             </button>
                             <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
@@ -1015,11 +1082,12 @@ const useAppContext = () => React.useContext(AppContext);
                                  (t('filter_all') || 'Tümü')}
                             </p>
                         </div>
-                        <button onClick={() => window.print()} className="print:hidden px-4 py-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold rounded-lg hover:bg-indigo-100 transition-colors flex items-center">
+                        <button onClick={handleExportPDF} className="print:hidden px-4 py-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold rounded-lg hover:bg-indigo-100 transition-colors flex items-center">
                             <Printer className="w-4 h-4 mr-2" /> {t('export_pdf') || 'PDF Olarak Kaydet'}
                         </button>
                     </div>
-                    <div className="flex-1 overflow-y-auto pr-2 print:overflow-visible">
+                    
+                <div className="flex-1 overflow-y-auto pr-2 print:overflow-visible">
                         {deptTasks.length === 0 ? (
                             <div className="text-center py-10 text-gray-500 dark:text-gray-400">
                                 {t('no_records') || 'Kayıt bulunmamaktadır.'}
@@ -1066,7 +1134,7 @@ const useAppContext = () => React.useContext(AppContext);
         const leastIssues = sortedAnalysis.filter(d => d.count === minCount);
 
         return (
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up h-full flex flex-col print:shadow-none print:border-none print:p-0 print:h-auto print:block">
+            <div id="analysis-report-container" className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up h-full flex flex-col print:shadow-none print:border-none print:p-0 print:h-auto print:block">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4 border-gray-100 dark:border-gray-700 print:border-b-2 print:pb-2">
                     <div>
                         <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center"><Activity className="w-6 h-6 mr-2 text-indigo-600"/> {t('analysis_tab') || 'Analiz Raporları'}</h2>
@@ -1080,7 +1148,7 @@ const useAppContext = () => React.useContext(AppContext);
                             <button onClick={() => setAnalysisFilter('year')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${analysisFilter === 'year' ? 'bg-white dark:bg-gray-800 text-indigo-700 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_yearly') || 'Bu Yıl'}</button>
                             <button onClick={() => setAnalysisFilter('all')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${analysisFilter === 'all' ? 'bg-white dark:bg-gray-800 text-indigo-700 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_all') || 'Tümü'}</button>
                         </div>
-                        <button onClick={() => window.print()} className="px-4 py-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold rounded-xl hover:bg-indigo-100 transition-colors flex items-center">
+                        <button onClick={handleExportPDF} className="px-4 py-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold rounded-xl hover:bg-indigo-100 transition-colors flex items-center">
                             <Printer className="w-4 h-4 mr-2" /> {t('export_pdf') || 'PDF Olarak Kaydet'}
                         </button>
                     </div>
@@ -1099,7 +1167,28 @@ const useAppContext = () => React.useContext(AppContext);
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto pr-2 print:overflow-visible">
+                
+                <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 print:break-inside-avoid">
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">{t('chart_violations') || 'İhlal Dağılım Grafiği'}</h3>
+                    <div className="w-full overflow-x-auto pb-2">
+                        <div className="h-80 min-w-[500px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={sortedAnalysis.map(item => ({ name: t(getDeptKey(item.name)), issues: item.count }))} margin={{ top: 10, right: 10, left: -20, bottom: 80 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={darkMode ? '#374151' : '#E5E7EB'} />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: darkMode ? '#9CA3AF' : '#6B7280', fontSize: 11 }} angle={-45} textAnchor="end" />
+                                    <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: darkMode ? '#9CA3AF' : '#6B7280', fontSize: 11 }} />
+                                    <Tooltip cursor={{fill: darkMode ? '#1F2937' : '#F3F4F6'}} contentStyle={{backgroundColor: darkMode ? '#1F2937' : '#FFFFFF', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} itemStyle={{color: '#6366F1', fontWeight: 'bold'}} labelStyle={{color: darkMode ? '#D1D5DB' : '#374151', fontWeight: 'bold', marginBottom: '4px'}} formatter={(value) => [value, t('issues') || 'İhlal']} />
+                                    <Bar dataKey="issues" name={t('issues') || 'İhlal'} radius={[4, 4, 0, 0]}>
+                                    {sortedAnalysis.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.count > 0 ? (index === 0 ? '#EF4444' : '#6366F1') : '#9CA3AF'} />
+                                    ))}
+                                </Bar>
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+            </div>
+<div className="flex-1 overflow-y-auto pr-2 print:overflow-visible">
                     <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">{t('total_issues') || 'Toplam Sorun (İhlal)'}</h3>
                     <div className="space-y-4">
                         {sortedAnalysis.map((item, index) => (
@@ -1127,24 +1216,24 @@ const useAppContext = () => React.useContext(AppContext);
         
                 
 
-        const handleResetAndSave = async () => {
-            if(window.confirm(t('confirm_reset') || 'Yeni aya başlamak için...')) {
-                const now = new Date();
-                const monthStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
-                
-                const pointsToSave = {};
-                Object.keys(points).forEach(k => {
-                   if (k !== 'lastDailyBonus') pointsToSave[k] = points[k];
-                });
+        const executeResetAndSave = async () => {
+            const now = new Date();
+            const monthStr = `${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getFullYear()}`;
+            
+            const pointsToSave = {};
+            Object.keys(points).forEach(k => {
+               if (k !== 'lastDailyBonus') pointsToSave[k] = points[k];
+            });
 
-                const historyRef = doc(db, "system", "points_history");
-                await setDoc(historyRef, { [monthStr]: pointsToSave }, { merge: true });
+            const historyRef = doc(db, "system", "points_history");
+            await setDoc(historyRef, { [monthStr]: pointsToSave }, { merge: true });
 
-                const initialPoints = DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {});
-                initialPoints.lastDailyBonus = points.lastDailyBonus;
-                await updateDoc(doc(db, "system", "points"), initialPoints);
-                alert(t('success_reset') || 'Geçmiş başarıyla kaydedildi ve tüm puanlar sıfırlandı!');
-            }
+            const initialPoints = DEPARTMENTS.reduce((acc, dept) => { acc[dept] = 100; return acc; }, {});
+            initialPoints.lastDailyBonus = points.lastDailyBonus;
+            await updateDoc(doc(db, "system", "points"), initialPoints);
+            setShowResetModal(false);
+            setResetCountdown(10);
+            alert(t('success_reset') || 'Geçmiş başarıyla kaydedildi ve tüm puanlar sıfırlandı!');
         };
 
         return (
@@ -1152,11 +1241,11 @@ const useAppContext = () => React.useContext(AppContext);
              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b pb-4 border-gray-100 dark:border-gray-700">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center"><TrendingUp className="w-6 h-6 mr-2 text-green-600"/> {t('leaderboard') || 'Liderlik Tablosu'}</h2>
-                  <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm mt-1">Birimlerin anlık performans puanları. Ay sonu 1. olan birim ödüllendirilecektir.</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Birimlerin anlık performans puanları. Ay sonu 1. olan birim ödüllendirilecektir.</p>
                 </div>
                 <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
-                   <button onClick={handleResetAndSave} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-xl font-bold flex items-center shadow-sm text-sm whitespace-nowrap">
-                      Sıfırla ve Geçmişe Kaydet
+                   <button onClick={() => { setShowResetModal(true); setResetCountdown(10); }} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-xl font-bold flex items-center shadow-sm text-sm whitespace-nowrap">
+                      {t('save_history') || 'Sıfırla ve Geçmişe Kaydet'}
                    </button>
                    
                 </div>
@@ -1166,14 +1255,14 @@ const useAppContext = () => React.useContext(AppContext);
                {sortedDepts.map((dept, index) => (
                  <div key={dept} className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border rounded-2xl transition-colors ${index === 0 ? 'bg-gradient-to-r from-yellow-50 to-white border-yellow-200' : 'bg-white dark:bg-gray-800 hover:bg-gray-50'}`}>
                    <div className="flex items-center">
-                      <span className={`w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg mr-4 shadow-sm ${index === 0 ? 'bg-yellow-400 text-white' : index === 1 ? 'bg-gray-300 text-white' : index === 2 ? 'bg-orange-400 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 dark:text-gray-500'}`}>{index + 1}</span>
+                      <span className={`w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg mr-4 shadow-sm ${index === 0 ? 'bg-yellow-400 text-white' : index === 1 ? 'bg-gray-300 text-white' : index === 2 ? 'bg-orange-400 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>{index + 1}</span>
                       <span className="font-bold text-lg text-gray-800 dark:text-gray-100">{t(getDeptKey(dept))}</span>
                    </div>
                    <div className="text-right flex items-center space-x-2 sm:space-x-4 mt-4 sm:mt-0">
                      <button onClick={() => handleCustomBonus(dept)} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-bold transition-colors">{t('custom_bonus') || 'Özel Puan'}</button>
                      <div>
                        <span className="text-3xl font-extrabold text-green-600">{points[dept] || 100}</span>
-                       <span className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500 font-normal ml-1 tracking-wider uppercase">{t('risk') || 'Puan'}</span>
+                       <span className="text-sm text-gray-500 dark:text-gray-400 font-normal ml-1 tracking-wider uppercase">{t('risk') || 'Puan'}</span>
                      </div>
                    </div>
                  </div>
@@ -1183,7 +1272,7 @@ const useAppContext = () => React.useContext(AppContext);
              <div className="mt-4 pt-6 border-t border-gray-100 dark:border-gray-700">
                 <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center"><Calendar className="w-5 h-5 mr-2 text-purple-600" /> {t('historical_results') || 'Geçmiş Sonuçlar'}</h3>
                 {(!pointsHistory || Object.keys(pointsHistory).length === 0) ? (
-                   <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm">Henüz kaydedilmiş bir geçmiş tablo bulunmuyor.</p>
+                   <p className="text-gray-500 dark:text-gray-400 text-sm">Henüz kaydedilmiş bir geçmiş tablo bulunmuyor.</p>
                 ) : (
                    <div className="space-y-4">
                      {Object.keys(pointsHistory).sort().reverse().map(monthKey => {
@@ -1254,6 +1343,27 @@ const useAppContext = () => React.useContext(AppContext);
                    </div>
                 )}
              </div>
+
+             {showResetModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-4">
+                <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+                  <div className="p-6 bg-orange-600 text-white flex justify-between items-center"><h3 className="font-bold text-xl flex items-center"><AlertTriangle className="w-6 h-6 mr-2"/> {t('are_you_sure') || 'Emin misiniz?'}</h3><button onClick={() => { setShowResetModal(false); setResetCountdown(10); }} className="p-1 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button></div>
+                  <div className="p-6 md:p-8 text-center space-y-6">
+                    <TrendingUp className="w-16 h-16 text-orange-500 mx-auto animate-pulse" />
+                    <div>
+                      <h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">{t('save_history_title') || 'Puanları Sıfırla ve Kaydet'}</h4>
+                      <p className="text-gray-600 dark:text-gray-300 text-sm">{t('save_history_desc') || 'Geçerli ayın puan durumu geçmişe kaydedilecek ve tüm departmanların puanları yeniden 100 olarak sıfırlanacaktır.'}</p>
+                    </div>
+                    <div className="flex space-x-3 pt-4">
+                      <button onClick={() => { setShowResetModal(false); setResetCountdown(10); }} className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-bold rounded-xl hover:bg-gray-200">{t('cancel')}</button>
+                      <button onClick={executeResetAndSave} disabled={resetCountdown > 0} className={`flex-1 py-4 font-bold rounded-xl shadow-md ${resetCountdown > 0 ? 'bg-orange-200 text-orange-500 cursor-not-allowed' : 'bg-orange-600 text-white hover:bg-orange-700'}`}>
+                        {resetCountdown > 0 ? `${t('wait')} (${resetCountdown}s)` : (t('save_btn_confirm') || 'Sıfırla ve Kaydet')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         );
       }
@@ -1269,10 +1379,10 @@ const useAppContext = () => React.useContext(AppContext);
             </div>
 
             <div className="flex bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner mb-6">
-               <button onClick={() => setAccountTab('isg')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'isg' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500'}`}>
+               <button onClick={() => setAccountTab('isg')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'isg' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
                  <ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_accounts')}
                </button>
-               <button onClick={() => setAccountTab('yukleme')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'yukleme' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500'}`}>
+               <button onClick={() => setAccountTab('yukleme')} className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === 'yukleme' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
                  <Truck className="w-4 h-4 mr-2" /> {t('yukleme_accounts')}
                </button>
             </div>
@@ -1281,22 +1391,22 @@ const useAppContext = () => React.useContext(AppContext);
               <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-2 border-b pb-2">{t('new_account')} ({accountTab === 'isg' ? 'İSG' : 'Yükleme'})</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">{t('fullname')}</label>
-                  <input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('fullname')}</label>
+                  <input type="text" required value={newUser.name} onChange={e=>setNewUser({...newUser, name: e.target.value})} className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">{t('username')}</label>
-                  <input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('username')}</label>
+                  <input type="text" required value={newUser.username} onChange={e=>setNewUser({...newUser, username: e.target.value})} className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">{t('password')}</label>
-                  <input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border rounded-lg p-2 text-sm" />
+                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('password')}</label>
+                  <input type="text" required value={newUser.password} onChange={e=>setNewUser({...newUser, password: e.target.value})} className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100" />
                 </div>
                 
                 {accountTab === 'isg' && (
                     <div>
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">{t('sys_role')}</label>
-                    <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('sys_role')}</label>
+                    <select value={newUser.role} onChange={e=>setNewUser({...newUser, role: e.target.value})} className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
                         <option value="sef">{t('unit_chief') || 'Birim Şefi'}</option>
                         <option value="mod">İSG Uzmanı (Moderatör)</option>
                         <option value="admin">{t('system_admin') || 'Sistem Yöneticisi'}</option>
@@ -1306,8 +1416,8 @@ const useAppContext = () => React.useContext(AppContext);
                 
                 {accountTab === 'isg' && newUser.role === 'sef' && (
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-gray-500 mb-1">{t('dept')}</label>
-                    <select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border rounded-lg p-2 text-sm">
+                    <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">{t('dept')}</label>
+                    <select value={newUser.dept} onChange={e=>setNewUser({...newUser, dept: e.target.value})} className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
                       {DEPARTMENTS.map(d => <option key={d} value={d}>{t(getDeptKey(d))}</option>)}
                     </select>
                   </div>
@@ -1326,7 +1436,7 @@ const useAppContext = () => React.useContext(AppContext);
                     <div key={u.id} className="flex justify-between items-center p-3.5 border rounded-xl hover:bg-gray-50 dark:bg-gray-900 transition-colors">
                       <div>
                         <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">{u.name} <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-2">@{u.username}</span></p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">{u.role === 'sef' ? `Şef - ${u.dept}` : u.role}</p>
                       </div>
                       
                       <div className="flex items-center space-x-3">
@@ -1345,7 +1455,7 @@ const useAppContext = () => React.useContext(AppContext);
     const renderLoadingList = (listToRender) => {
       return (
         <div className="space-y-4">
-          {listToRender.length === 0 ? <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-center py-10">{t('no_records')}</p> : (
+          {listToRender.length === 0 ? <p className="text-gray-500 dark:text-gray-400 text-center py-10">{t('no_records')}</p> : (
             listToRender.map(load => {
               const isExpanded = expandedLoadId === load.id;
               const statusColor = load.status === 'tamamlandi' ? 'bg-green-100 text-green-700' : load.status === 'yukleniyor' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700';
@@ -1378,7 +1488,7 @@ const useAppContext = () => React.useContext(AppContext);
                         <div className="flex items-center space-x-3 mb-1">
                           <span className="text-xl font-extrabold text-gray-800 dark:text-gray-100">{load.plaka}</span>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium"><Calendar className="w-3 h-3 inline mr-1"/> {load.createdAtDate} - {load.createdAtTime} {load.finishedAtTime && `| Çıkış: ${load.finishedAtTime}`}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium"><Calendar className="w-3 h-3 inline mr-1"/> {load.createdAtDate} - {load.createdAtTime} {load.finishedAtTime && `| Çıkış: ${load.finishedAtTime}`}</p>
                       </div>
                       <div className="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300"><User className="w-4 h-4 inline text-gray-400 dark:text-gray-500 mr-1"/> {load.sofor || '-'}</div>
                     </div>
@@ -1431,11 +1541,11 @@ const useAppContext = () => React.useContext(AppContext);
            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
              <div className="flex justify-between items-start mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
                <div>
-                 <button onClick={() => setSelectedYuklemeDate(null)} className="flex items-center text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4">
+                 <button onClick={() => setSelectedYuklemeDate(null)} className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4">
                    <ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}
                  </button>
                  <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedYuklemeDate} Sevkiyat Raporu</h2>
-                 <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">{t('total_record')} {dateLoadings.length}</p>
+                 <p className="text-gray-500 dark:text-gray-400 mt-1">{t('total_record')} {dateLoadings.length}</p>
                </div>
              </div>
              {renderLoadingList(dateLoadings)}
@@ -1484,16 +1594,16 @@ const useAppContext = () => React.useContext(AppContext);
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
             <div>
               <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center"><Truck className="w-6 h-6 mr-3 text-orange-500"/> {t('all_reports')}</h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} Ton</b></p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('total_tonnage')}: <b className="text-orange-600 font-bold">{totalTonnageAll.toLocaleString('tr-TR')} Ton</b></p>
             </div>
             <div className="flex bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner">
-              <button onClick={() => setYuklemeAnaTab('list')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'list' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500'}`}>
+              <button onClick={() => setYuklemeAnaTab('list')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'list' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
                 Liste
               </button>
-              <button onClick={() => setYuklemeAnaTab('analysis')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'analysis' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500'}`}>
+              <button onClick={() => setYuklemeAnaTab('analysis')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'analysis' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
                 Analiz
               </button>
-              <button onClick={() => setYuklemeAnaTab('calendar')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'calendar' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500'}`}>
+              <button onClick={() => setYuklemeAnaTab('calendar')} className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === 'calendar' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}>
                 Takvim
               </button>
             </div>
@@ -1509,7 +1619,7 @@ const useAppContext = () => React.useContext(AppContext);
                       <span className="font-bold text-gray-700 dark:text-gray-200">{c}</span>
                       <div className="text-right">
                         <span className="block text-lg font-extrabold text-orange-600">{countryStats[c].ton.toLocaleString('tr-TR')} Ton</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">{countryStats[c].count} Sevkiyat</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{countryStats[c].count} Sevkiyat</span>
                       </div>
                     </div>
                   ))}
@@ -1523,7 +1633,7 @@ const useAppContext = () => React.useContext(AppContext);
                       <span className="font-bold text-gray-700 dark:text-gray-200 truncate w-32" title={c}>{c}</span>
                       <div className="text-right shrink-0">
                         <span className="block text-lg font-extrabold text-orange-600">{companyStats[c].ton.toLocaleString('tr-TR')} Ton</span>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">{companyStats[c].count} Sevkiyat</span>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{companyStats[c].count} Sevkiyat</span>
                       </div>
                     </div>
                   ))}
@@ -1605,11 +1715,11 @@ const useAppContext = () => React.useContext(AppContext);
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
             <div className="flex justify-between items-start mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
               <div>
-                <button onClick={() => { setSelectedAdminDept(null); setSelectedAdminDate(null); }} className="flex items-center text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4">
+                <button onClick={() => { setSelectedAdminDept(null); setSelectedAdminDate(null); }} className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4">
                   <ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}
                 </button>
                 <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedAdminDept || selectedAdminDate} Raporu</h2>
-                <p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 mt-1">{t('total_record')} {filterTasks.length}</p>
+                <p className="text-gray-500 dark:text-gray-400 mt-1">{t('total_record')} {filterTasks.length}</p>
               </div>
               {selectedAdminDept && (
               <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center">
@@ -1619,7 +1729,7 @@ const useAppContext = () => React.useContext(AppContext);
             </div>
 
             <div className="space-y-4">
-              {filterTasks.length === 0 ? <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-500">{t('no_records')}</p> : (
+              {filterTasks.length === 0 ? <p className="text-sm text-gray-500 dark:text-gray-400">{t('no_records')}</p> : (
                 filterTasks.map(task => {
                   return (
                     <TimerWrapper key={task.id}>
@@ -1675,7 +1785,7 @@ const useAppContext = () => React.useContext(AppContext);
                             <div className="flex justify-between items-start mb-3">
                               <div>
                                  <span className="font-bold text-gray-800 dark:text-gray-100 block">{t(getDeptKey(task.dept))}</span>
-                                 <span className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-500 font-medium">{task.createdAt}</span>
+                                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{task.createdAt}</span>
                               </div>
                               <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
                                 <Icon className="w-3 h-3 mr-1" /> {t(statusDef.label_key)}
@@ -1784,18 +1894,18 @@ const useAppContext = () => React.useContext(AppContext);
         <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full xl:w-auto">
             <div className="flex justify-between items-center w-full md:w-auto">
-              <div><h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-1">{t('admin_panel')}</h1><p className="text-gray-500 dark:text-gray-400 dark:text-gray-500 text-sm">{t('admin_desc')}</p></div>
+              <div><h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-1">{t('admin_panel')}</h1><p className="text-gray-500 dark:text-gray-400 text-sm">{t('admin_desc')}</p></div>
               <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
                 <Menu className="w-6 h-6 text-gray-700 dark:text-gray-200" />
               </button>
             </div>
             <div className="h-10 w-px bg-gray-200 hidden md:block"></div>
             <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col xl:flex-row flex-wrap w-full md:w-auto bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner gap-1`}>
-               <button onClick={() => { setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'isg' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
-               <button onClick={() => { setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'yukleme' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
-               {currentUser.role === 'admin' && <button onClick={() => { setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'users' ? 'bg-white dark:bg-gray-800 text-purple-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><Users className="w-4 h-4 mr-2" /> {t('btn_users') || 'Kullanıcı Hesapları'}</button>}
-               <button onClick={() => { setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'leaderboard' ? 'bg-white dark:bg-gray-800 text-green-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><TrendingUp className="w-4 h-4 mr-2" /> {t('leaderboard') || 'Liderlik Tablosu'}</button>
-               <button onClick={() => { setAdminSystemMode('analysis'); setAdminViewMode('analysis'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'analysis' ? 'bg-white dark:bg-gray-800 text-indigo-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200'}`}><Activity className="w-4 h-4 mr-2" /> {t('analysis_tab') || 'Analiz Raporları'}</button>
+               <button onClick={() => { navigate('/'); setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'isg' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
+               <button onClick={() => { navigate('/'); setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'yukleme' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
+               {currentUser.role === 'admin' && <button onClick={() => { navigate('/'); setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'users' ? 'bg-white dark:bg-gray-800 text-purple-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Users className="w-4 h-4 mr-2" /> {t('btn_users') || 'Kullanıcı Hesapları'}</button>}
+               <button onClick={() => { navigate('/'); setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'leaderboard' ? 'bg-white dark:bg-gray-800 text-green-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><TrendingUp className="w-4 h-4 mr-2" /> {t('leaderboard') || 'Liderlik Tablosu'}</button>
+               <button onClick={() => { navigate('/analysis'); setAdminSystemMode('analysis'); setAdminViewMode('analysis'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'analysis' ? 'bg-white dark:bg-gray-800 text-indigo-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Activity className="w-4 h-4 mr-2" /> {t('analysis_tab') || 'Analiz Raporları'}</button>
 
             </div>
           </div>
@@ -1817,7 +1927,7 @@ const useAppContext = () => React.useContext(AppContext);
                   const redCount = getRedTaskCount(dept);
                   const isSelected = selectedAdminDept === dept;
                   return (
-                  <div key={dept} onClick={() => { setSelectedAdminDept(dept); setSelectedAdminDate(null); setAdminViewMode('calendar'); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
+                  <div key={dept} onClick={() => { navigate('/analysis/' + encodeURIComponent(dept)); window.scrollTo(0,0); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
                     <div className="flex items-center"><span className="w-6 text-center text-sm font-bold mr-3 text-gray-400 dark:text-gray-500">{index + 1}.</span><span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 dark:text-gray-200 group-hover:text-blue-600'}`}>{t(getDeptKey(dept))}</span></div>
                     <div className="flex items-center">
                        {redCount > 0 ? <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm"><span className="font-bold text-xs">{redCount} {t('problem')}</span></div> : <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90"><span className="font-bold text-xs">{t('no_problem')}</span></div>}
@@ -1891,8 +2001,8 @@ const useAppContext = () => React.useContext(AppContext);
 {showDeleteModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-4">
             <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
-              <div className="p-6 bg-red-600 text-white flex justify-between items-center"><h3 className="font-bold text-xl flex items-center"><ShieldAlert className="w-6 h-6 mr-2"/> {t('are_you_sure')}</h3><button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="p-1 hover:bg-white dark:bg-gray-800/20 rounded-full"><X className="w-6 h-6" /></button></div>
-              <div className="p-8 text-center space-y-6">
+              <div className="p-6 bg-red-600 text-white flex justify-between items-center"><h3 className="font-bold text-xl flex items-center"><ShieldAlert className="w-6 h-6 mr-2"/> {t('are_you_sure')}</h3><button onClick={() => { setShowDeleteModal(false); setDeleteCountdown(10); }} className="p-1 hover:bg-white/20 rounded-full"><X className="w-6 h-6" /></button></div>
+              <div className="p-6 md:p-8 text-center space-y-6">
                 <AlertTriangle className="w-16 h-16 text-red-500 mx-auto animate-pulse" />
                 <div>
                   <h4 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-2">{t('are_you_sure')}</h4>
@@ -2112,7 +2222,7 @@ export default function App() {
       updates.resolvedTimestamp = Date.now();
     }
     await updateDoc(taskRef, updates);
-  }, [db]);
+  }, []);
 
   const createLoading = useCallback(async (plaka, sofor, destCountry, destLocation, destCompany, projectNo, tonnage, not, imgUrl) => {
     const loadId = Date.now().toString();
@@ -2168,24 +2278,7 @@ export default function App() {
       }, 0);
   }, [loadings]);
 
-  const CompanyLogo = ({ className = "", scale = "scale-100", theme = 'blue' }) => (
-    <div className={`flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm ${className}`}>
-      <div className={`flex items-center space-x-1 ${scale} origin-center`}>
-        <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden">
-           <div className={`absolute top-0 left-0 w-full h-full border-t-4 border-l-4 rounded-tl-full opacity-80 ${theme==='orange'?'border-orange-600':'border-blue-900'}`}></div>
-           <div className={`absolute top-1 left-1 w-[90%] h-[90%] border-t-4 border-l-4 rounded-tl-full ${theme==='orange'?'border-orange-400':'border-blue-400'}`}></div>
-           <div className="absolute top-3 left-2 w-[80%] h-[80%] border-t-4 border-l-4 border-gray-400 rounded-tl-full opacity-50"></div>
-        </div>
-        <div className="flex flex-col">
-          <div className="flex items-baseline space-x-1">
-            <span className="text-gray-800 dark:text-gray-100 font-extrabold text-2xl tracking-tighter">ADS</span>
-            <span className="text-gray-800 dark:text-gray-100 font-bold text-xl">Metal A.Ş.</span>
-          </div>
-          <span className={`text-[6px] font-bold text-white px-1 rounded-sm tracking-widest uppercase -mt-1 w-max ${theme==='orange'?'bg-orange-600':'bg-blue-900'}`}>Transformer Tanks & Fin Walls</span>
-        </div>
-      </div>
-    </div>
-  );
+  
 
   // Full Screen Image Modal Lightbox Component
 
@@ -2202,19 +2295,19 @@ export default function App() {
     selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
     previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
     t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
-    createLoading, startLoadingProcess, finishLoading, get24HourTonnage, CompanyLogo,
-    handleImageUpload, db
+    createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
+    db
   }), [
-    currentUser, isFirebaseLoading, lang, darkMode, users, points, pointsHistory, tasks, loadings, pointLogs, 
+    currentUser, isFirebaseLoading, lang, darkMode, users, points, pointsHistory, tasks, loadings, 
     adminSystemMode, adminViewMode, selectedAdminDept, selectedAdminDate, selectedYuklemeDate,
     previewModalImg, previewModalTitle, t, toggleLang, getLastFridayOfCurrentMonth, 
     logout, createTask, updateTaskStatus, createLoading, startLoadingProcess, finishLoading, 
-    get24HourTonnage, CompanyLogo
+    get24HourTonnage
   ]);
 
   return (
     <AppContext.Provider value={contextValue}>
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans text-gray-900 w-full">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans text-gray-900 dark:text-gray-100 w-full">
       <style>{`
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
         .animate-slide-up { animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }

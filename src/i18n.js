@@ -190,6 +190,11 @@ export const DICT = {
     dept_least_issues: "En Az Sorun Çıkan Birim",
     total_issues: "Toplam Sorun (İhlal)",
     issues: "İhlal",
+    chart_violations: "İhlal Dağılım Grafiği",
+    save_history: "Sıfırla ve Geçmişe Kaydet",
+    save_history_title: "Puanları Sıfırla ve Kaydet",
+    save_history_desc: "Geçerli ayın puan durumu geçmişe kaydedilecek ve tüm departmanların puanları yeniden 100 olarak sıfırlanacaktır.",
+    save_btn_confirm: "Sıfırla ve Kaydet",
     analysis_desc: "Günlük, haftalık, aylık ve yıllık bazda departmanların sorun/ihlal sayılarını detaylı olarak inceleyebilirsiniz."
   },
   en: {
@@ -383,6 +388,11 @@ export const DICT = {
     dept_least_issues: "Department with Least Issues",
     total_issues: "Total Issues (Violations)",
     issues: "Violations",
+    chart_violations: "Violation Distribution Chart",
+    save_history: "Reset & Save to History",
+    save_history_title: "Reset & Save Scores",
+    save_history_desc: "Current month's scores will be saved to history and all department scores will be reset to 100.",
+    save_btn_confirm: "Reset & Save",
     analysis_desc: "You can examine the number of issues/violations of departments in detail on a daily, weekly, monthly and yearly basis."
   }
 };
