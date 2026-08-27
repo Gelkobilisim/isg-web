@@ -5,7 +5,6 @@ import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, C
 
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
-import { getStorage, ref, uploadString, getDownloadURL } from "firebase/storage";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
 const firebaseConfig = {
@@ -19,7 +18,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {});
-const storage = getStorage(app);
 
 
 const getDeptKey = (deptStr) => {
@@ -71,7 +69,7 @@ const handleImageUpload = (file, callback) => {
     const img = new Image();
     img.onload = () => {
       const canvas = document.createElement('canvas');
-      const MAX_DIM = 1200;
+      const MAX_DIM = 800;
       let width = img.width;
       let height = img.height;
       
@@ -89,7 +87,8 @@ const handleImageUpload = (file, callback) => {
       canvas.height = height;
       const ctx = canvas.getContext('2d');
       ctx.drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.6)); 
+      // Aggressive compression for Firestore Base64 limits
+      callback(canvas.toDataURL('image/jpeg', 0.5)); 
     };
     img.src = event.target.result;
   };
@@ -642,10 +641,8 @@ const useAppContext = () => React.useContext(AppContext);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!imgPreview) {
-            alert(t('err_photo_required') || "Lütfen ihlali kanıtlayacak bir fotoğraf ekleyin.");
-            return;
-        }
+        // Photo is now optional for ISG Mod
+        // if (!imgPreview) { ... }
         createTask(formState.dept, formState.priority, formState.desc, 24, imgPreview);
         setFormState({ dept: 'Boyahane', priority: 'yuksek', desc: '' });
         setImgPreview(null);
@@ -685,7 +682,7 @@ const useAppContext = () => React.useContext(AppContext);
                         <textarea required rows="4" value={formState.desc} onChange={e=>setFormState({...formState, desc: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_desc') || 'İhlal detayı...'}></textarea>
                     </div>
                     <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} <span className="text-red-500">({t('photo_required') || 'Zorunlu'})</span></label>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} <span className="text-gray-400 dark:text-gray-500">({t('optional') || 'İsteğe Bağlı'})</span></label>
                         <input type="file" id="modCamera" accept="image/*" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setImgPreview); e.target.value = null; }} />
                         <label htmlFor="modCamera" className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                             {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
@@ -2328,28 +2325,16 @@ export default function App() {
 
   const createTask = useCallback(async (dept, priority, desc, deadlineHours, imgUrl) => {
     const taskId = Date.now().toString();
-    let finalImgUrl = imgUrl || '';
-    if (imgUrl && imgUrl.startsWith('data:image')) {
-      const storageRef = ref(storage, `tasks/${taskId}.jpg`);
-      await uploadString(storageRef, imgUrl, 'data_url');
-      finalImgUrl = await getDownloadURL(storageRef);
-    }
     const newTask = {
       id: taskId, dept, priority, desc, status: 'acik', 
       createdAt: formatDate(new Date()), timestamp: Date.now(), 
-      deadlineHours, imgUrl: finalImgUrl, modNote: ''
+      deadlineHours, imgUrl: imgUrl || '', modNote: ''
     };
     await setDoc(doc(db, "tasks", taskId), newTask);
   }, []);
 
   const updateTaskStatus = useCallback(async (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
     const taskRef = doc(db, "tasks", id);
-    let finalAfterImgUrl = afterImgUrl || '';
-    if (afterImgUrl && afterImgUrl.startsWith('data:image')) {
-      const storageRef = ref(storage, `tasks/${id}_after.jpg`);
-      await uploadString(storageRef, afterImgUrl, 'data_url');
-      finalAfterImgUrl = await getDownloadURL(storageRef);
-    }
     
     // Puan sistemi mantığı: Sadece "acik" durumdan "cozuldu" durumuna geçerken
     if (newStatus === 'cozuldu') {
@@ -2383,7 +2368,7 @@ export default function App() {
     
     const updates = { status: newStatus };
     if (chiefNote) updates.chiefNote = chiefNote;
-    if (finalAfterImgUrl) updates.afterImgUrl = finalAfterImgUrl;
+    if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
     if (modNote) updates.modNote = modNote;
     if (newStatus === 'onay_bekliyor' || newStatus === 'itiraz_edildi') {
       updates.resolvedTimestamp = Date.now();
