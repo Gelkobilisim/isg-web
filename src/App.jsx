@@ -198,6 +198,11 @@ const useAppContext = () => React.useContext(AppContext);
         }
         if (registerDevice) {
             localStorage.setItem('isg_notification_device_owner', account.id);
+            if ("Notification" in window) {
+                Notification.requestPermission().then(permission => {
+                    console.log("Notification permission:", permission);
+                });
+            }
         }
         setCurrentUser(account);
         setLoginErr('');
@@ -494,12 +499,12 @@ const useAppContext = () => React.useContext(AppContext);
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('cam_pre')}</label>
                 <input type="file" id="preLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImgPreview)} />
-                <div onClick={() => document.getElementById('preLoadCamera').click()} className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
+                <label htmlFor="preLoadCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                   {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
                     <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-orange-500" /></div>
                     <span className="text-sm font-bold">{t('cam_open')}</span><span className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('optional')}</span></>
                   )}
-                </div>
+                </label>
               </div>
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('note_pre')}</label>
@@ -578,12 +583,12 @@ const useAppContext = () => React.useContext(AppContext);
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('cam_post')}</label>
                   <input type="file" id="postLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], (img) => setFinishModal({...finishModal, imgPreview: img}))} />
-                  <div onClick={() => document.getElementById('postLoadCamera').click()} className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
+                  <label htmlFor="postLoadCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                     {finishModal.imgPreview ? ( <img src={finishModal.imgPreview} className="w-full h-full object-cover" /> ) : (
                       <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-green-500" /></div>
                       <span className="text-sm font-bold">{t('cam_open')}</span></>
                     )}
-                  </div>
+                  </label>
                 </div>
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('note_post')}</label>
@@ -673,12 +678,12 @@ const useAppContext = () => React.useContext(AppContext);
                     <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} <span className="text-red-500">({t('photo_required') || 'Zorunlu'})</span></label>
                         <input type="file" id="modCamera" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setImgPreview)} />
-                        <div onClick={() => document.getElementById('modCamera').click()} className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
+                        <label htmlFor="modCamera" className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
                             {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
                                 <><div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-8 h-8 text-gray-500 group-hover:text-blue-500" /></div>
                                 <span className="text-sm font-bold">{t('cam_open') || 'Kamerayı Aç / Fotoğraf Yükle'}</span></>
                             )}
-                        </div>
+                        </label>
                     </div>
                     <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center transition-colors"><Send className="w-5 h-5 mr-2"/> {t('send') || 'Kaydı Gönder'}</button>
                 </form>
@@ -819,11 +824,11 @@ const useAppContext = () => React.useContext(AppContext);
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('fix_photo') || 'Çözüm Fotoğrafı (Zorunlu)'}</label>
                                     <input type="file" id="sefCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => handleImageUpload(e.target.files[0], setAfterImgPreview)} />
-                                    <div onClick={() => document.getElementById('sefCamera').click()} className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
+                                    <label htmlFor="sefCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
                                         {afterImgPreview ? ( <img src={afterImgPreview} className="w-full h-full object-cover" /> ) : (
                                             <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-500 group-hover:text-green-500" /></div><span className="text-sm font-bold">{t('open_camera') || 'Kamerayı Aç'}</span></>
                                         )}
-                                    </div>
+                                    </label>
                                 </div>
                             )}
                             <div>
