@@ -2228,7 +2228,10 @@ export default function App() {
         yesterday.setDate(yesterday.getDate() - 1);
         const formattedYesterday = `${yesterday.getDate().toString().padStart(2, '0')}.${(yesterday.getMonth() + 1).toString().padStart(2, '0')}.${yesterday.getFullYear()}`;
         
-        if (points.lastDailyBonus === formattedYesterday) return;
+        if (points.lastDailyBonus === formattedYesterday || (points.lastDailyBonus && points.lastDailyBonus.startsWith(formattedYesterday))) return;
+        const today = new Date();
+        const formattedToday = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;
+        if (points.lastDailyBonus === formattedToday) return; // Prevent double distribution on same day
         
         const yesterdaysTasks = tasks.filter(t => t.createdAt === formattedYesterday);
         const deptsWithTasks = new Set(yesterdaysTasks.map(t => t.dept));
@@ -2243,7 +2246,7 @@ export default function App() {
           }
         });
         
-        updates.lastDailyBonus = formattedYesterday;
+        updates.lastDailyBonus = formattedToday;
         
         const pointsRef = doc(db, "system", "points");
         await updateDoc(pointsRef, updates);
