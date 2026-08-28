@@ -206,6 +206,8 @@ const useAppContext = () => React.useContext(AppContext);
         }
         if (registerDevice) {
             localStorage.setItem('isg_notification_device_owner', account.id);
+            localStorage.setItem('isg_notification_role', account.role);
+            localStorage.setItem('isg_notification_dept', account.dept || '');
             if ("Notification" in window) {
                 Notification.requestPermission().then(permission => {
                     console.log("Notification permission:", permission);
@@ -617,7 +619,7 @@ const useAppContext = () => React.useContext(AppContext);
 
   const ModDashboard = () => {
     const ctx = useAppContext();
-    const { t, tasks, createTask, updateTaskStatus, handleImageUpload, DEPARTMENTS } = ctx;
+    const { t, tasks, createTask, updateTaskStatus, DEPARTMENTS } = ctx;
     
     const [actionModal, setActionModal] = React.useState({ isOpen: false, taskId: null, action: null });
     const [modNote, setModNote] = React.useState('');
@@ -760,7 +762,7 @@ const useAppContext = () => React.useContext(AppContext);
 
   const SefDashboard = () => {
     const ctx = useAppContext();
-    const { t, tasks, currentUser, updateTaskStatus, handleImageUpload } = ctx;
+    const { t, tasks, currentUser, updateTaskStatus } = ctx;
     const [actionModal, setActionModal] = React.useState({ isOpen: false, taskId: null, type: null });
     const [note, setNote] = React.useState('');
     const [afterImgPreview, setAfterImgPreview] = React.useState(null);
@@ -2217,7 +2219,13 @@ export default function App() {
         const savedUserId = localStorage.getItem('isg_logged_in_user');
         if (savedUserId) {
           const autoUser = usersData.find(u => u.id === savedUserId);
-          if (autoUser) setCurrentUser(autoUser);
+          if (autoUser) {
+            setCurrentUser(autoUser);
+            if (localStorage.getItem('isg_notification_device_owner') === autoUser.id) {
+               localStorage.setItem('isg_notification_role', autoUser.role);
+               localStorage.setItem('isg_notification_dept', autoUser.dept || '');
+            }
+          }
         }
       }
     });
@@ -2240,7 +2248,54 @@ export default function App() {
     const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
       const tasksData = snapshot.docs.map(doc => doc.data());
       tasksData.sort((a, b) => b.timestamp - a.timestamp);
-      setTasks(tasksData);
+      
+      setTasks(prevTasks => {
+        if (prevTasks.length > 0 && "Notification" in window && Notification.permission === "granted") {
+          const ownerId = localStorage.getItem('isg_notification_device_owner');
+          const notifRole = localStorage.getItem('isg_notification_role');
+          const notifDept = localStorage.getItem('isg_notification_dept');
+          const localLang = localStorage.getItem('isg_lang') || 'tr';
+          
+          if (ownerId && notifRole) {
+            tasksData.forEach(newTask => {
+              const oldTask = prevTasks.find(t => t.id === newTask.id);
+              if (!oldTask) {
+                const isTargetUser = (notifRole === 'sef' && notifDept === newTask.dept) || notifRole === 'admin';
+                if (isTargetUser) {
+                  new Notification(localLang === 'tr' ? "Yeni İSG İhlali" : "New OHS Violation", {
+                    body: newTask.desc,
+                    icon: '/favicon.svg'
+                  });
+                }
+              } else if (oldTask.status !== newTask.status) {
+                const isTargetAdmin = notifRole === 'admin' || notifRole === 'mod';
+                const isTargetChief = notifRole === 'sef' && notifDept === newTask.dept;
+              
+              let title = "";
+              let body = "";
+              if (newTask.status === 'cozuldu' && isTargetAdmin) {
+                title = localLang === 'tr' ? "İhlal Çözüldü" : "Violation Resolved";
+                body = `${newTask.dept} departmanı bir ihlali çözdü ve onay bekliyor.`;
+              } else if (newTask.status === 'itiraz_edildi' && isTargetAdmin) {
+                title = localLang === 'tr' ? "İhlale İtiraz Edildi" : "Violation Objected";
+                body = `${newTask.dept} departmanı bir ihlale itiraz etti.`;
+              } else if (newTask.status === 'kapatildi' && isTargetChief) {
+                title = localLang === 'tr' ? "İhlal Kapatıldı" : "Violation Closed";
+                body = `${newTask.dept} departmanındaki bir ihlal kaydı onaylandı ve kapatıldı.`;
+              } else if (newTask.status === 'acik' && oldTask.status === 'cozuldu' && isTargetChief) {
+                title = localLang === 'tr' ? "Çözüm Reddedildi" : "Solution Rejected";
+                body = `İSG Uzmanı çözümünüzü reddetti, ihlal tekrar açıldı.`;
+              }
+              
+              if (title && body) {
+                new Notification(title, { body, icon: '/favicon.svg' });
+              }
+            }
+          });
+          }
+        }
+        return tasksData;
+      });
       setIsFirebaseLoading(false);
     });
 
@@ -2313,6 +2368,8 @@ export default function App() {
   const executeLogout = useCallback((disableNotifications) => {
     if (disableNotifications) {
       localStorage.removeItem('isg_notification_device_owner');
+      localStorage.removeItem('isg_notification_role');
+      localStorage.removeItem('isg_notification_dept');
     }
     setCurrentUser(null); 
     setSelectedAdminDept(null); 
