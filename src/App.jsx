@@ -1,7 +1,7 @@
 import { DICT } from "./i18n";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
+import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
@@ -154,7 +154,7 @@ const useAppContext = () => React.useContext(AppContext);
       selectedAdminDate, setSelectedAdminDate, selectedYuklemeDate, setSelectedYuklemeDate,
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
-      createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
+      createLoading, startLoadingProcess, finishLoading, get24HourTonnage, notificationStatus, requestNotificationPermission,
       db
     } = ctx;
     
@@ -193,7 +193,9 @@ const useAppContext = () => React.useContext(AppContext);
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
       createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
-      db
+    db,
+    notificationStatus,
+    requestNotificationPermission
     } = ctx;
     
     const [username, setUsername] = useState('');
@@ -365,7 +367,9 @@ const useAppContext = () => React.useContext(AppContext);
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
       createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
-      db
+    db,
+    notificationStatus,
+    requestNotificationPermission
     } = ctx;
     
     let roleText = currentUser.role;
@@ -391,7 +395,14 @@ const useAppContext = () => React.useContext(AppContext);
              <button onClick={() => setDarkMode(!darkMode)} className="hidden sm:flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 transition-colors">
                 {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
              </button>
+             
+             {notificationStatus !== 'unsupported' && (
+                 <button onClick={requestNotificationPermission} title={notificationStatus === 'granted' ? 'Bildirimler Açık' : notificationStatus === 'denied' ? 'Bildirimler Engellendi' : 'Bildirimleri Aç'} className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${notificationStatus === 'granted' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : notificationStatus === 'denied' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                    <Bell className="w-4 h-4" />
+                 </button>
+             )}
              <button onClick={logout} className="hidden sm:flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
+
                <span className="hidden sm:inline">{t('logout')}</span>
                <LogOut className="w-5 h-5" />
              </button>
@@ -409,8 +420,16 @@ const useAppContext = () => React.useContext(AppContext);
                     <button onClick={() => {setDarkMode(!darkMode); setSettingsOpen(false);}} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center font-bold">
                       {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />} {darkMode ? 'Açık Mod' : 'Koyu Mod'}
                     </button>
+                    
+                    {notificationStatus !== 'unsupported' && (
+                        <button onClick={() => { requestNotificationPermission(); setSettingsOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center font-bold">
+                           <Bell className={`w-4 h-4 mr-2 ${notificationStatus === 'granted' ? 'text-green-500' : notificationStatus === 'denied' ? 'text-red-500' : 'text-orange-500'}`} /> 
+                           {notificationStatus === 'granted' ? 'Bildirimler: Açık' : notificationStatus === 'denied' ? 'Bildirimler: Engellendi' : 'Bildirimleri Aç'}
+                        </button>
+                    )}
                     <hr className="my-1 border-gray-100 dark:border-gray-700" />
-                    <button onClick={logout} className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center font-bold">
+                    <button onClick={logout}
+ className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center font-bold">
                       <LogOut className="w-4 h-4 mr-2"/> {t('logout')}
                     </button>
                  </div>
@@ -434,7 +453,9 @@ const useAppContext = () => React.useContext(AppContext);
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
       createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
-      db
+    db,
+    notificationStatus,
+    requestNotificationPermission
     } = ctx;
     
     const [isCreating, setIsCreating] = useState(false);
@@ -896,7 +917,9 @@ const useAppContext = () => React.useContext(AppContext);
       previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
       t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
       createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
-      db
+    db,
+    notificationStatus,
+    requestNotificationPermission
     } = ctx;
     
     
@@ -2205,6 +2228,40 @@ export default function App() {
 
   const [adminSystemMode, setAdminSystemMode] = useState('isg'); 
   const [adminViewMode, setAdminViewMode] = useState('list');
+
+  const [notificationStatus, setNotificationStatus] = useState(
+    ("Notification" in window) ? Notification.permission : 'unsupported'
+  );
+
+  const requestNotificationPermission = () => {
+    if (!("Notification" in window)) {
+        alert("Tarayıcınız bildirimleri desteklemiyor.");
+        return;
+    }
+    Notification.requestPermission().then(permission => {
+        setNotificationStatus(permission);
+        if (permission === 'granted' && messaging && currentUser) {
+            navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`)
+            .then((registration) => {
+                getToken(messaging, { 
+                    vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                    serviceWorkerRegistration: registration 
+                }).then((currentToken) => {
+                    if (currentToken) {
+                        updateDoc(doc(db, "users", currentUser.id), { fcmToken: currentToken });
+                        alert("Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek.");
+                    }
+                }).catch(err => {
+                    console.error("FCM Token alınamadı:", err);
+                    alert("Token alınamadı. Lütfen tekrar deneyin. Cihazınız desteklemiyor olabilir.");
+                });
+            });
+        } else if (permission === 'denied') {
+            alert("Bildirimler reddedildi. Lütfen cihaz ayarlarınızdan bu site için bildirimlere izin verin.");
+        }
+    });
+  };
+
   const [selectedAdminDept, setSelectedAdminDept] = useState(null);
   const [selectedAdminDate, setSelectedAdminDate] = useState(null);
   const [selectedYuklemeDate, setSelectedYuklemeDate] = useState(null);
@@ -2584,13 +2641,16 @@ export default function App() {
     previewModalImg, setPreviewModalImg, previewModalTitle, setPreviewModalTitle,
     t, toggleLang, getLastFridayOfCurrentMonth, logout, createTask, updateTaskStatus,
     createLoading, startLoadingProcess, finishLoading, get24HourTonnage,
-    db
+    db,
+    notificationStatus,
+    requestNotificationPermission
   }), [
     currentUser, isFirebaseLoading, lang, darkMode, users, points, pointsHistory, tasks, loadings, 
     adminSystemMode, adminViewMode, selectedAdminDept, selectedAdminDate, selectedYuklemeDate,
     previewModalImg, previewModalTitle, t, toggleLang, getLastFridayOfCurrentMonth, 
     logout, createTask, updateTaskStatus, createLoading, startLoadingProcess, finishLoading, 
-    get24HourTonnage
+    get24HourTonnage,
+    notificationStatus
   ]);
 
   return (
