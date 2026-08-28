@@ -7,6 +7,13 @@ import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
+// Firebase Debug Mechanism
+console.log("🔥 Firebase Initialization Debug:");
+console.log("API Key Status:", import.meta.env.VITE_FIREBASE_API_KEY ? "✅ Mevcut (Yüklendi)" : "❌ EKSİK (.env dosyasını kontrol edin!)");
+if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+    console.error("KRİTİK HATA: VITE_FIREBASE_API_KEY bulunamadı! .env dosyası eksik veya okunmuyor olabilir.");
+}
+
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: "isg-web-6363.firebaseapp.com",
