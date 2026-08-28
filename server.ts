@@ -30,7 +30,7 @@ try {
         isFirebaseAdminInitialized = true;
         console.log("✅ Firebase Admin SDK successfully initialized.");
     } else {
-        console.warn("⚠️ FIREBASE_SERVICE_ACCOUNT_KEY environment variable is missing.");
+        console.warn("⚠️ FIREBASE_SERVICE_ACCOUNT_KEY environment variable is missing. Check your .env file or Environment Variables settings.");
     }
 } catch (error) {
     console.error("❌ Failed to initialize Firebase Admin SDK:", error);
