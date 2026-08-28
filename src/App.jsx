@@ -5,6 +5,7 @@ import { Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, C
 
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
 // Firebase Debug Mechanism
@@ -25,6 +26,15 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = initializeFirestore(app, {});
+
+let messaging = null;
+if (import.meta.env.VITE_FIREBASE_VAPID_KEY) {
+  try {
+    messaging = getMessaging(app);
+  } catch (e) {
+    console.error("Messaging error", e);
+  }
+}
 
 
 const getDeptKey = (deptStr) => {
@@ -218,6 +228,19 @@ const useAppContext = () => React.useContext(AppContext);
             if ("Notification" in window) {
                 Notification.requestPermission().then(permission => {
                     console.log("Notification permission:", permission);
+                    if (permission === 'granted' && messaging && import.meta.env.VITE_FIREBASE_VAPID_KEY) {
+                        navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`)
+                        .then((registration) => {
+                            getToken(messaging, { 
+                                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                                serviceWorkerRegistration: registration 
+                            }).then((currentToken) => {
+                                if (currentToken) {
+                                    updateDoc(doc(db, "users", account.id), { fcmToken: currentToken });
+                                }
+                            }).catch(err => console.error("FCM Token alınamadı:", err));
+                        });
+                    }
                 });
             }
         }
@@ -2210,6 +2233,17 @@ export default function App() {
   }, [lang]);
 
   useEffect(() => {
+    if (messaging) {
+      onMessage(messaging, (payload) => {
+        console.log("Ön planda mesaj alındı: ", payload);
+        if ("Notification" in window && Notification.permission === "granted") {
+          new Notification(payload.notification.title, {
+            body: payload.notification.body,
+            icon: '/adsmetal_logo.jpg'
+          });
+        }
+      });
+    }
     const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
       const usersData = snapshot.docs.map(doc => doc.data());
       if (usersData.length === 0) {
@@ -2372,11 +2406,21 @@ export default function App() {
     setLogoutCountdown(5);
   }, []);
 
-  const executeLogout = useCallback((disableNotifications) => {
+  const executeLogout = useCallback(async (disableNotifications) => {
     if (disableNotifications) {
       localStorage.removeItem('isg_notification_device_owner');
       localStorage.removeItem('isg_notification_role');
       localStorage.removeItem('isg_notification_dept');
+      
+      // Remove FCM Token from database to stop background push notifications
+      const loggedInUserId = localStorage.getItem('isg_logged_in_user');
+      if (loggedInUserId) {
+        try {
+          await updateDoc(doc(db, "users", loggedInUserId), { fcmToken: null });
+        } catch (e) {
+          console.error("FCM Token silinemedi:", e);
+        }
+      }
     }
     setCurrentUser(null); 
     setSelectedAdminDept(null); 
@@ -2395,6 +2439,16 @@ export default function App() {
       deadlineHours, imgUrl: imgUrl || '', modNote: ''
     };
     await setDoc(doc(db, "tasks", taskId), newTask);
+    
+    // API Notification trigger
+    fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'NEW_TASK',
+        payload: { dept, desc, lang: localStorage.getItem('isg_lang') || 'tr' }
+      })
+    }).catch(err => console.error("API notify error:", err));
   }, []);
 
   const updateTaskStatus = useCallback(async (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
@@ -2438,6 +2492,24 @@ export default function App() {
       updates.resolvedTimestamp = Date.now();
     }
     await updateDoc(taskRef, updates);
+
+    // Fetch the task data to get the department and oldStatus for notification
+    try {
+        const tSnap = await getDoc(taskRef);
+        if (tSnap.exists()) {
+           const tData = tSnap.data();
+           const dept = tData.dept;
+           // We infer oldStatus as it might not be explicitly passed, but we pass newStatus
+           fetch('/api/notify', {
+               method: 'POST',
+               headers: { 'Content-Type': 'application/json' },
+               body: JSON.stringify({
+                   type: 'STATUS_CHANGE',
+                   payload: { dept, newStatus, lang: localStorage.getItem('isg_lang') || 'tr' }
+               })
+           }).catch(err => console.error("API notify error:", err));
+        }
+    } catch(e) {}
   }, []);
 
   const createLoading = useCallback(async (plaka, sofor, destCountry, destLocation, destCompany, projectNo, tonnage, not, imgUrl) => {
