@@ -2495,11 +2495,29 @@ export default function App() {
         const permission = await Notification.requestPermission();
         setNotificationStatus(permission);
         if (permission === 'granted' && messaging && currentUser) {
-            const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`);
-            const currentToken = await getToken(messaging, { 
-                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-                serviceWorkerRegistration: registration 
+            
+            // Timeout wrapper for mobile devices where serviceWorker/getToken can hang
+            const getTokenWithTimeout = new Promise((resolve, reject) => {
+                const timer = setTimeout(() => reject(new Error("İşlem zaman aşımına uğradı. Telefonunuz bu özelliği desteklemiyor olabilir.")), 8000);
+                
+                (async () => {
+                    try {
+                        const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`);
+                        const currentToken = await getToken(messaging, { 
+                            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                            serviceWorkerRegistration: registration 
+                        });
+                        clearTimeout(timer);
+                        resolve(currentToken);
+                    } catch (e) {
+                        clearTimeout(timer);
+                        reject(e);
+                    }
+                })();
             });
+
+            const currentToken = await getTokenWithTimeout;
+
             if (currentToken) {
                 await updateDoc(doc(db, "users", currentUser.id), { fcmToken: currentToken, lastActive: new Date() });
                 alert("Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek.");
@@ -2511,7 +2529,7 @@ export default function App() {
         }
     } catch(err) {
         console.error("FCM Token alınamadı:", err);
-        alert("Kayıt sırasında hata oluştu. Tarayıcı izinlerini kontrol edin.");
+        alert(`Kayıt sırasında hata oluştu: ${err.message || 'Tarayıcı izinlerini kontrol edin.'}`);
     } finally {
         setIsRegisteringDevice(false);
     }
@@ -2521,11 +2539,25 @@ export default function App() {
     if (!("Notification" in window) || Notification.permission !== "granted" || !messaging || !userObj) return;
     
     try {
-        const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`);
-        const currentToken = await getToken(messaging, { 
-            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-            serviceWorkerRegistration: registration 
+        const getTokenWithTimeout = new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error("Background token sync timed out")), 8000);
+            (async () => {
+                try {
+                    const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`);
+                    const currentToken = await getToken(messaging, { 
+                        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                        serviceWorkerRegistration: registration 
+                    });
+                    clearTimeout(timer);
+                    resolve(currentToken);
+                } catch (e) {
+                    clearTimeout(timer);
+                    reject(e);
+                }
+            })();
         });
+
+        const currentToken = await getTokenWithTimeout;
         
         if (currentToken && userObj.fcmToken !== currentToken) {
             console.log("Token mismatch detected, updating Firestore...");
