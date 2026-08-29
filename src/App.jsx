@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
-import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc } from "firebase/firestore";
+import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit } from "firebase/firestore";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 
@@ -373,8 +373,71 @@ const useAppContext = () => React.useContext(AppContext);
     } = ctx;
     
     let roleText = currentUser.role;
-    if (currentUser.role === 'sef') roleText = `${t(getDeptKey(currentUser.dept))} Birimi`;
-    if (currentUser.role === 'yuklemeci') roleText = `Yükleme Sorumlusu`;
+    if (currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') roleText = `Geliştirici (Developer) Hesabı`;
+    else if (currentUser.role === 'sef') roleText = `${t(getDeptKey(currentUser.dept))} Birimi`;
+    else if (currentUser.role === 'yuklemeci') roleText = `Yükleme Sorumlusu`;
+
+    const [showDebug, setShowDebug] = useState(false);
+    const [debugTab, setDebugTab] = useState('users');
+    const [notifLogs, setNotifLogs] = useState([]);
+    
+    // Tools State
+    const [testDept, setTestDept] = useState('');
+    const [isTesting, setIsTesting] = useState(false);
+    const [isCleaning, setIsCleaning] = useState(false);
+
+    const handleTestNotification = async () => {
+        if (!testDept) return;
+        setIsTesting(true);
+        try {
+            const res = await fetch('/api/notify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: 'TEST_NOTIFICATION',
+                    payload: { dept: testDept }
+                })
+            });
+            const data = await res.json();
+            alert(`Test bildirimi gönderildi!\nBaşarılı: ${data.sentCount}\nHatalı: ${data.failureCount}`);
+        } catch (error) {
+            console.error(error);
+            alert("Test gönderilirken hata oluştu.");
+        } finally {
+            setIsTesting(false);
+        }
+    };
+
+    const handleTokenCleanup = async () => {
+        if (!confirm("Tüm kayıtlı token'ları test edip geçersiz olanları temizlemek istediğinize emin misiniz?")) return;
+        setIsCleaning(true);
+        try {
+            const res = await fetch('/api/cleanup-tokens', { method: 'POST' });
+            const data = await res.json();
+            if (data.success) {
+                alert(`Temizlik tamamlandı!\n\nToplam Test Edilen: ${data.totalTested}\nSilinen Geçersiz Token: ${data.removedCount}`);
+            } else {
+                alert("Temizlik işlemi sırasında hata: " + data.error);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Temizlik işlemi başlatılamadı.");
+        } finally {
+            setIsCleaning(false);
+        }
+    };
+    
+    useEffect(() => {
+        if (showDebug && debugTab === 'logs') {
+            const q = query(collection(db, "notification_logs"), orderBy("timestamp", "desc"), limit(50));
+            const unsub = onSnapshot(q, (snap) => {
+                setNotifLogs(snap.docs.map(d => ({id: d.id, ...d.data()})));
+            });
+            return () => unsub();
+        }
+    }, [showDebug, debugTab, db]);
+
+
     
     return (
       <header className="print:hidden bg-white dark:bg-gray-800 px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700">
@@ -389,6 +452,11 @@ const useAppContext = () => React.useContext(AppContext);
             </div>
           </div>
           <div className="flex items-center space-x-2 sm:space-x-4">
+             { (currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && (
+                 <button onClick={() => setShowDebug(true)} className="hidden sm:flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">
+                    <Activity className="w-3.5 h-3.5 mr-1" /> Debug Bildirim
+                 </button>
+             )}
              <button onClick={toggleLang} className="hidden sm:flex items-center space-x-1 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 text-xs font-bold bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700">
                  <Globe className="w-3.5 h-3.5" /> <span>{lang === 'tr' ? 'EN' : 'TR'}</span>
              </button>
@@ -437,6 +505,172 @@ const useAppContext = () => React.useContext(AppContext);
              </div>
           </div>
         </div>
+
+        {showDebug && (
+            <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-4xl w-full p-6 shadow-2xl animate-slide-up max-h-[90vh] flex flex-col">
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
+                        <Activity className="w-6 h-6 mr-2 text-purple-600" />
+                        Geliştirici Konsolu (Debug)
+                    </h3>
+                    <button onClick={() => setShowDebug(false)} className="text-gray-400 hover:text-gray-600"><X className="w-6 h-6" /></button>
+                </div>
+                
+                <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700 mb-4 pb-2 overflow-x-auto hide-scrollbar">
+                    <button onClick={() => setDebugTab('users')} className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors whitespace-nowrap ${debugTab === 'users' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>Kullanıcılar & Tokenlar</button>
+                    <button onClick={() => setDebugTab('logs')} className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors flex items-center whitespace-nowrap ${debugTab === 'logs' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}><AlertCircle className="w-4 h-4 mr-1"/> Gönderim Hataları (Log)</button>
+                    <button onClick={() => setDebugTab('tools')} className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors flex items-center whitespace-nowrap ${debugTab === 'tools' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}><Send className="w-4 h-4 mr-1"/> Test & Bakım</button>
+                </div>
+
+                <div className="overflow-y-auto pr-2 flex-1 min-h-0">
+                    {debugTab === 'tools' ? (
+                        <div className="space-y-6">
+                            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
+                                    <Send className="w-5 h-5 mr-2 text-blue-500" />
+                                    Birim Test Bildirimi
+                                </h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Seçtiğiniz departmandaki şeflere anlık bir test bildirimi göndererek cihazlarının açık/aktif olup olmadığını test edebilirsiniz.</p>
+                                <div className="flex flex-col sm:flex-row gap-3">
+                                    <select className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none" value={testDept} onChange={e => setTestDept(e.target.value)}>
+                                        <option value="">Departman Seçin...</option>
+                                        <option value="all">Tüm Departmanlar (Herkes)</option>
+                                        <option value="imalat_kaynak">İmalat - Kaynaklı İmalat</option>
+                                        <option value="imalat_talasli">İmalat - Talaşlı İmalat</option>
+                                        <option value="imalat_montaj">İmalat - Montaj</option>
+                                        <option value="kalite">Kalite</option>
+                                        <option value="depo_sevkiyat">Depo & Sevkiyat</option>
+                                        <option value="bakim_onarim">Bakım & Onarım</option>
+                                        <option value="boyahane">Boyahane</option>
+                                        <option value="ik">İnsan Kaynakları</option>
+                                        <option value="idari_isler">İdari İşler</option>
+                                        <option value="satin_alma">Satın Alma</option>
+                                    </select>
+                                    <button 
+                                        onClick={handleTestNotification} 
+                                        disabled={!testDept || isTesting} 
+                                        className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-sm"
+                                    >
+                                        {isTesting ? 'Gönderiliyor...' : 'Gönder'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                                <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
+                                    <Trash2 className="w-5 h-5 mr-2 text-red-500" />
+                                    Ölü Token Temizliği
+                                </h4>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Uygulamayı silmiş veya bildirim iznini iptal etmiş kullanıcıların geçersiz token'larını test edip veritabanından siler. Bu işlem, hatalı gönderim loglarını azaltır.</p>
+                                <button 
+                                    onClick={handleTokenCleanup} 
+                                    disabled={isCleaning} 
+                                    className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 font-bold py-2 px-4 rounded-lg w-full flex justify-center items-center transition-colors border border-red-200 dark:border-red-800"
+                                >
+                                    {isCleaning ? 'Temizleniyor...' : 'Kayıtsız Cihazları (Ölü Token) Temizle'}
+                                </button>
+                            </div>
+                        </div>
+                    ) : debugTab === 'users' ? (
+                        <>
+                            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800 mb-4 text-sm text-purple-800 dark:text-purple-300">
+                                Bu ekran, rapor atıldığında kimlere bildirim gideceğini anlamanız içindir. Bir şefe bildirim gitmesi için hem <strong>Departman eşleşmesi</strong> gereklidir hem de o cihazın <strong>Geçerli Bir Token'ı (Yeşil Işık)</strong> olmalıdır.
+                            </div>
+
+                            {(() => {
+                                const total = users.length;
+                                const active = users.filter(u => u.fcmToken).length;
+                                const ratio = total > 0 ? Math.round((active/total)*100) : 0;
+                                return (
+                                    <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
+                                        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                                            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium text-center">Sistemdeki Hesaplar</span>
+                                            <span className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">{total}</span>
+                                        </div>
+                                        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm">
+                                            <span className="text-xs sm:text-sm text-green-600 dark:text-green-400 font-medium text-center">Aktif Cihazlar</span>
+                                            <span className="text-xl sm:text-2xl font-bold text-green-700 dark:text-green-300">{active}</span>
+                                        </div>
+                                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm relative overflow-hidden">
+                                            <div className="absolute inset-y-0 left-0 bg-blue-200 dark:bg-blue-900/50 transition-all duration-1000" style={{ width: `${ratio}%` }}></div>
+                                            <span className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 font-medium text-center relative z-10 drop-shadow-sm">Kayıt Oranı</span>
+                                            <span className="text-xl sm:text-2xl font-bold text-blue-800 dark:text-blue-200 relative z-10 drop-shadow-sm">%{ratio}</span>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+                            
+                            <div className="space-y-3">
+                                {users.map(u => (
+                            <div key={u.id} className="flex justify-between items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                                <div>
+                                    <div className="font-bold text-gray-800 dark:text-gray-100">{u.name} <span className="text-xs font-normal text-gray-500">(@{u.username})</span></div>
+                                    <div className="text-xs mt-1 text-gray-600 dark:text-gray-400 flex flex-wrap gap-1 items-center">
+                                        <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">Rol: {u.role}</span>
+                                        {u.dept && <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-0.5 rounded-full">Birim: {u.dept}</span>}
+                                        {u.lastPing && (
+                                            <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded-full flex items-center">
+                                                <Activity className="w-3 h-3 mr-1" /> Son Ping: {u.lastPing?.toDate ? u.lastPing.toDate().toLocaleString('tr-TR') : new Date(u.lastPing).toLocaleString('tr-TR')}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                            {u.fcmToken ? (
+                                                <div className="flex items-center text-green-600 dark:text-green-400 font-bold text-sm bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full">
+                                                    <CheckCircle className="w-4 h-4 mr-1" /> Token Var
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center text-red-500 font-bold text-sm bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full">
+                                                    <XCircle className="w-4 h-4 mr-1" /> Cihaz Kayıtlı Değil
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    ) : (
+                        <div className="space-y-3">
+                            {notifLogs.length === 0 ? (
+                                <div className="text-center text-gray-500 p-8 border border-dashed rounded-xl border-gray-300 dark:border-gray-700">Kayıtlı log bulunamadı.</div>
+                            ) : (
+                                notifLogs.map(log => (
+                                    <div key={log.id} className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50">
+                                        <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-2">
+                                            <div className="font-bold flex items-center">
+                                                {log.failureCount > 0 ? <AlertTriangle className="w-4 h-4 text-orange-500 mr-2" /> : <CheckCircle className="w-4 h-4 text-green-500 mr-2" />}
+                                                {log.title}
+                                            </div>
+                                            <div className="text-xs text-gray-500">{log.timestamp?.toDate ? log.timestamp.toDate().toLocaleString('tr-TR') : ''}</div>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2 text-xs font-medium mb-3">
+                                            <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">Hedef: {log.dept}</span>
+                                            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded">Bulunan Cihaz: {log.targetCount}</span>
+                                            <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded">Başarılı: {log.successCount}</span>
+                                            <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded">Hatalı: {log.failureCount}</span>
+                                        </div>
+                                        {log.failureCount > 0 && log.failedDetails && log.failedDetails.length > 0 && (
+                                            <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-800 text-xs text-red-800 dark:text-red-300 font-mono">
+                                                {log.failedDetails.map((f, i) => (
+                                                    <div key={i} className="mb-1 truncate border-b border-red-100 dark:border-red-900/50 pb-1 last:border-0 last:pb-0 last:mb-0">
+                                                        <span className="font-bold">Hata:</span> {f.error} <br/>
+                                                        <span className="text-[10px] opacity-75">Token: {f.token?.substring(0,20)}...</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )}
+                </div>
+              </div>
+            </div>
+        )}
+
       </header>
     );
   };
@@ -2207,6 +2441,19 @@ const useAppContext = () => React.useContext(AppContext);
   };
 
 
+const getTimeAgo = (timestamp) => {
+    if (!timestamp) return 'Bilinmiyor';
+    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+    const seconds = Math.floor((new Date() - date) / 1000);
+    if (seconds < 60) return `Az önce`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} dk önce`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} saat önce`;
+    const days = Math.floor(hours / 24);
+    return `${days} gün önce`;
+};
+
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isFirebaseLoading, setIsFirebaseLoading] = useState(true);
@@ -2232,35 +2479,107 @@ export default function App() {
   const [notificationStatus, setNotificationStatus] = useState(
     ("Notification" in window) ? Notification.permission : 'unsupported'
   );
+  const [isRegisteringDevice, setIsRegisteringDevice] = useState(false);
 
-  const requestNotificationPermission = () => {
+  useEffect(() => {
+    if (currentUser && currentUser.id) {
+        try {
+            updateDoc(doc(db, "users", currentUser.id), { lastActive: new Date() });
+        } catch(e) {}
+    }
+  }, [currentUser]);
+
+  const requestNotificationPermission = async () => {
     if (!("Notification" in window)) {
         alert("Tarayıcınız bildirimleri desteklemiyor.");
         return;
     }
-    Notification.requestPermission().then(permission => {
+    setIsRegisteringDevice(true);
+    try {
+        const permission = await Notification.requestPermission();
         setNotificationStatus(permission);
         if (permission === 'granted' && messaging && currentUser) {
-            navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`)
-            .then((registration) => {
-                getToken(messaging, { 
-                    vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-                    serviceWorkerRegistration: registration 
-                }).then((currentToken) => {
-                    if (currentToken) {
-                        updateDoc(doc(db, "users", currentUser.id), { fcmToken: currentToken });
-                        alert("Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek.");
-                    }
-                }).catch(err => {
-                    console.error("FCM Token alınamadı:", err);
-                    alert("Token alınamadı. Lütfen tekrar deneyin. Cihazınız desteklemiyor olabilir.");
-                });
+            const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`);
+            const currentToken = await getToken(messaging, { 
+                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                serviceWorkerRegistration: registration 
             });
+            if (currentToken) {
+                await updateDoc(doc(db, "users", currentUser.id), { fcmToken: currentToken, lastActive: new Date() });
+                alert("Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek.");
+            } else {
+                alert("Token alınamadı. Cihazınız desteklemiyor olabilir.");
+            }
         } else if (permission === 'denied') {
-            alert("Bildirimler reddedildi. Lütfen cihaz ayarlarınızdan bu site için bildirimlere izin verin.");
+            alert("Bildirimler reddedildi. Lütfen cihaz/tarayıcı ayarlarınızdan bu site için bildirimlere izin verin.");
         }
-    });
+    } catch(err) {
+        console.error("FCM Token alınamadı:", err);
+        alert("Kayıt sırasında hata oluştu. Tarayıcı izinlerini kontrol edin.");
+    } finally {
+        setIsRegisteringDevice(false);
+    }
   };
+
+  const verifyAndSyncToken = useCallback(async (userObj) => {
+    if (!("Notification" in window) || Notification.permission !== "granted" || !messaging || !userObj) return;
+    
+    try {
+        const registration = await navigator.serviceWorker.register(`/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`);
+        const currentToken = await getToken(messaging, { 
+            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+            serviceWorkerRegistration: registration 
+        });
+        
+        if (currentToken && userObj.fcmToken !== currentToken) {
+            console.log("Token mismatch detected, updating Firestore...");
+            await updateDoc(doc(db, "users", userObj.id), { fcmToken: currentToken });
+            console.log("Token updated successfully for user:", userObj.username);
+        }
+    } catch (error) {
+        console.error("Token verification failed:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!currentUser || notificationStatus !== 'granted') return;
+
+    // Initial sync
+    verifyAndSyncToken(currentUser);
+
+    // Sync on tab focus (visibilitychange)
+    const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+            verifyAndSyncToken(currentUser);
+        }
+    };
+
+    // Periodic sync (every 6 hours) to catch expired tokens in long-lived sessions
+    const syncInterval = setInterval(() => {
+        verifyAndSyncToken(currentUser);
+    }, 6 * 60 * 60 * 1000);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Listen for Service Worker messages (e.g., token refresh requests)
+    const handleSWMessage = (event) => {
+        if (event.data && event.data.type === 'TOKEN_REFRESH_REQUIRED') {
+            console.log("Service Worker requested token refresh, running background sync...");
+            verifyAndSyncToken(currentUser);
+        }
+    };
+    if (navigator.serviceWorker) {
+        navigator.serviceWorker.addEventListener('message', handleSWMessage);
+    }
+
+    return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+        if (navigator.serviceWorker) {
+            navigator.serviceWorker.removeEventListener('message', handleSWMessage);
+        }
+        clearInterval(syncInterval);
+    };
+  }, [currentUser, notificationStatus, verifyAndSyncToken]);
 
   const [selectedAdminDept, setSelectedAdminDept] = useState(null);
   const [selectedAdminDate, setSelectedAdminDate] = useState(null);
@@ -2505,7 +2824,14 @@ export default function App() {
         type: 'NEW_TASK',
         payload: { dept, desc, lang: localStorage.getItem('isg_lang') || 'tr' }
       })
-    }).catch(err => console.error("API notify error:", err));
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data && data.failureCount > 0) {
+            alert(`Sistem Uyarısı: İhlal kaydedildi ancak ilgili birime bildirim gönderilirken cihaz kaynaklı bir hata oluştu (${data.failureCount} başarısız). Sistem yöneticisine otomatik hata logu bırakıldı.`);
+        }
+    })
+    .catch(err => console.error("API notify error:", err));
   }, []);
 
   const updateTaskStatus = useCallback(async (id, newStatus, chiefNote = '', afterImgUrl = '', modNote = '') => {
@@ -2516,55 +2842,76 @@ export default function App() {
       const taskSnap = await getDoc(taskRef);
       if (taskSnap.exists()) {
         const taskData = taskSnap.data();
-        if (taskData.status !== 'cozuldu') {
+        if (taskData.status !== 'cozuldu') { 
            const now = taskData.resolvedTimestamp || Date.now();
            const createdAt = taskData.timestamp;
-           const deadlineHours = parseInt(taskData.deadlineHours, 10) || 24;
-           const timePassedHours = (now - createdAt) / (1000 * 60 * 60);
-           
-           let deduction = 5; // Vaktinde çözülürse düşük puan kaybı (-5)
-           if (timePassedHours > deadlineHours) {
-             deduction = 15; // Vaktinde çözülmezse 3 katı puan kaybı (-15)
-           }
-           
-           const pointsRef = doc(db, "system", "points");
-           const pointsSnap = await getDoc(pointsRef);
-           if (pointsSnap.exists()) {
-             const currentPoints = pointsSnap.data();
-             const dept = taskData.dept;
-             if (dept) {
-               const newPoints = (currentPoints[dept] || 100) - deduction;
-               await updateDoc(pointsRef, { [dept]: newPoints });
-             }
+           const deadlineHours = taskData.deadlineHours;
+           if (deadlineHours) {
+              const diffMs = now - createdAt;
+              const diffHours = diffMs / (1000 * 60 * 60);
+              let multiplier = 1;
+              if (diffHours <= deadlineHours / 2) multiplier = 2;
+              
+              let basePoint = 0;
+              if (taskData.priority === 'C_KRITIK') basePoint = 20;
+              else if (taskData.priority === 'B_YUKSEK') basePoint = 15;
+              else if (taskData.priority === 'A_NORMAL') basePoint = 10;
+              
+              const earnedPoint = basePoint * multiplier;
+              
+              if (earnedPoint > 0 && taskData.dept) {
+                  const pointsRef = doc(db, "system", "points");
+                  const deptKey = taskData.dept;
+                  await updateDoc(pointsRef, { [deptKey]: (points[deptKey] || 100) + earnedPoint });
+                  
+                  const logRef = doc(collection(db, "point_logs"));
+                  await setDoc(logRef, {
+                      timestamp: Date.now(),
+                      dept: taskData.dept,
+                      points: earnedPoint,
+                      taskId: taskData.id,
+                      reason: `${taskData.priority} ihlal çözümü`
+                  });
+              }
            }
         }
       }
     }
-    
-    const updates = { status: newStatus };
-    if (chiefNote) updates.chiefNote = chiefNote;
-    if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
-    if (modNote) updates.modNote = modNote;
-    if (newStatus === 'onay_bekliyor' || newStatus === 'itiraz_edildi') {
-      updates.resolvedTimestamp = Date.now();
-    }
-    await updateDoc(taskRef, updates);
 
-    // Fetch the task data to get the department and oldStatus for notification
     try {
-        const tSnap = await getDoc(taskRef);
-        if (tSnap.exists()) {
-           const tData = tSnap.data();
-           const dept = tData.dept;
-           // We infer oldStatus as it might not be explicitly passed, but we pass newStatus
+        const taskSnap = await getDoc(taskRef);
+        let dept = '';
+        let oldStatus = '';
+        if (taskSnap.exists()) {
+            dept = taskSnap.data().dept;
+            oldStatus = taskSnap.data().status;
+        }
+
+        const updates = { status: newStatus };
+        if (chiefNote) updates.chiefNote = chiefNote;
+        if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
+        if (modNote) updates.modNote = modNote;
+        if (newStatus === 'cozuldu') updates.resolvedTimestamp = Date.now();
+        
+        await updateDoc(taskRef, updates);
+        
+        // Notification trigger
+        if (dept && (newStatus === 'cozuldu' || newStatus === 'itiraz_edildi' || newStatus === 'kapatildi' || newStatus === 'acik')) {
            fetch('/api/notify', {
                method: 'POST',
                headers: { 'Content-Type': 'application/json' },
                body: JSON.stringify({
                    type: 'STATUS_CHANGE',
-                   payload: { dept, newStatus, lang: localStorage.getItem('isg_lang') || 'tr' }
+                   payload: { dept, newStatus, oldStatus, lang: localStorage.getItem('isg_lang') || 'tr' }
                })
-           }).catch(err => console.error("API notify error:", err));
+           })
+           .then(res => res.json())
+           .then(data => {
+                if (data && data.failureCount > 0) {
+                    alert(`Sistem Uyarısı: İşlem başarılı ancak karşı tarafa bildirim iletilemedi. Yöneticiye hata logu bırakıldı.`);
+                }
+           })
+           .catch(err => console.error("API notify error:", err));
         }
     } catch(e) {}
   }, []);
@@ -2632,6 +2979,25 @@ export default function App() {
 
 
 
+  const [showNotifPrompt, setShowNotifPrompt] = useState(false);
+
+  useEffect(() => {
+    if (currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || notificationStatus !== 'granted')) {
+        const dismissed = sessionStorage.getItem('isg_notif_prompt_dismissed');
+        if (!dismissed) {
+            const timer = setTimeout(() => setShowNotifPrompt(true), 1500);
+            return () => clearTimeout(timer);
+        }
+    } else {
+        setShowNotifPrompt(false);
+    }
+  }, [currentUser, notificationStatus]);
+
+  const handleDismissNotifPrompt = () => {
+      sessionStorage.setItem('isg_notif_prompt_dismissed', 'true');
+      setShowNotifPrompt(false);
+  };
+
   const contextValue = useMemo(() => ({
     currentUser, setCurrentUser, isFirebaseLoading, setIsFirebaseLoading,
     lang, setLang, darkMode, setDarkMode, users, setUsers, points, setPoints, pointsHistory, setPointsHistory, tasks, setTasks,
@@ -2663,11 +3029,62 @@ export default function App() {
 
       <ImageLightboxModal />
       
+      {showNotifPrompt && (
+        <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full p-8 shadow-2xl animate-slide-up text-center border border-gray-100 dark:border-gray-700">
+            <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                <Bell className="w-10 h-10 animate-pulse" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-3">
+                Bildirimleri Aktifleştirin
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-8 leading-relaxed">
+                Yeni İSG ihlalleri, görev atamaları ve anlık durum güncellemelerinden haberdar olmak için bu cihazı sisteme kaydetmeniz gerekmektedir.
+            </p>
+            <div className="flex flex-col gap-3">
+                <button 
+                    onClick={() => {
+                        requestNotificationPermission();
+                    }}
+                    disabled={isRegisteringDevice}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                    {isRegisteringDevice ? 'Kayıt Yapılıyor...' : 'Evet, Cihazımı Kaydet'}
+                </button>
+                <button 
+                    onClick={handleDismissNotifPrompt}
+                    className="w-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 font-bold py-3.5 px-4 rounded-xl transition-colors"
+                >
+                    Daha Sonra
+                </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {!currentUser ? (
         <LoginScreen />
       ) : (
         <>
           <TopBar theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'} />
+          {currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || notificationStatus !== 'granted') && (
+            <div className="bg-red-600 text-white px-4 py-3 flex flex-col sm:flex-row justify-between items-center text-sm font-medium shadow-md">
+              <div className="flex items-start sm:items-center mb-3 sm:mb-0 max-w-4xl">
+                <AlertTriangle className="w-5 h-5 mr-3 shrink-0 mt-0.5 sm:mt-0" />
+                <span>
+                  <strong>Cihazınız bildirim sistemine kayıtlı değil!</strong> <br className="sm:hidden" />
+                  Bildirimleri (yeni görevler, ihlaller vb.) anında alabilmek için bu cihazı sisteme kaydetmeniz gerekmektedir. <span className="hidden sm:inline">Nasıl kayıt olurum? Yandaki butona tıklayıp tarayıcınızdan izin verin.</span>
+                </span>
+              </div>
+              <button 
+                onClick={requestNotificationPermission} 
+                disabled={isRegisteringDevice}
+                className="bg-white text-red-600 px-4 py-2 sm:py-1.5 rounded-lg font-bold shadow-sm hover:bg-gray-100 transition-colors whitespace-nowrap w-full sm:w-auto disabled:opacity-50"
+              >
+                {isRegisteringDevice ? 'Kaydediliyor...' : 'Cihazı Şimdi Kaydet'}
+              </button>
+            </div>
+          )}
           <main className="flex-1 w-full flex">
              {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && <AdminDashboard />}
              {currentUser.role === 'mod' && <ModDashboard />}

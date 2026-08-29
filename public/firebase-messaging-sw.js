@@ -27,3 +27,17 @@ try {
 } catch(e) {
     console.error("SW Init error", e);
 }
+
+
+self.addEventListener('pushsubscriptionchange', function(event) {
+  console.log('[firebase-messaging-sw.js] Push subscription expired/changed, attempting to resync...');
+  // The actual Firebase SDK running in the client tab will handle token refresh on next visit/visibility change.
+  // But we can also notify clients to refresh immediately if they are open.
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
+      for (const client of clients) {
+        client.postMessage({ type: 'TOKEN_REFRESH_REQUIRED' });
+      }
+    })
+  );
+});
