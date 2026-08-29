@@ -268,7 +268,10 @@ const useAppContext = () => React.useContext(AppContext);
       >
         <div className="absolute inset-0 bg-black/60 z-0"></div>
 
-        <div className="w-full max-w-4xl flex justify-end z-10 mb-4 md:absolute md:top-6 md:right-6 md:mb-0">
+        <div className="w-full max-w-4xl flex justify-end items-center gap-3 z-10 mb-4 md:absolute md:top-6 md:right-6 md:mb-0">
+            <button onClick={() => setDarkMode(!darkMode)} className="flex items-center justify-center bg-white dark:bg-gray-800/90 backdrop-blur-sm w-10 h-10 rounded-full shadow-lg text-gray-800 dark:text-gray-100 hover:bg-white dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700" title={darkMode ? 'Açık Mod' : 'Karanlık Mod'}>
+                {darkMode ? <Sun className="w-5 h-5 text-orange-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
+            </button>
             <button onClick={toggleLang} className="flex items-center space-x-2 bg-white dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg text-sm font-bold text-gray-800 dark:text-gray-100 hover:bg-white dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700">
                 <Globe className="w-4 h-4 text-blue-600" />
                 <span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
