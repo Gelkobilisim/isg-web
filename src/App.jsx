@@ -268,12 +268,20 @@ const useAppContext = () => React.useContext(AppContext);
       >
         <div className="absolute inset-0 bg-black/60 z-0"></div>
 
-        <div className="w-full max-w-4xl flex justify-end items-center gap-3 z-10 mb-4 md:absolute md:top-6 md:right-6 md:mb-0">
-            <button onClick={() => setDarkMode(!darkMode)} className="flex items-center justify-center bg-white dark:bg-gray-800/90 backdrop-blur-sm w-10 h-10 rounded-full shadow-lg text-gray-800 dark:text-gray-100 hover:bg-white dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700" title={darkMode ? 'Açık Mod' : 'Karanlık Mod'}>
-                {darkMode ? <Sun className="w-5 h-5 text-orange-400" /> : <Moon className="w-5 h-5 text-indigo-600" />}
+        <div className="w-full max-w-4xl flex justify-end items-center gap-3 z-40 mb-6 mt-2 px-2 md:px-0 md:absolute md:top-8 md:right-8 md:mt-0">
+            <button 
+                onClick={() => setDarkMode(!darkMode)} 
+                className="group flex items-center justify-center gap-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-4 py-2.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-gray-800 dark:text-gray-100 hover:scale-105 transition-all duration-300 border border-white/50 dark:border-gray-700/50" 
+                title={darkMode ? 'Açık Mod' : 'Karanlık Mod'}
+            >
+                {darkMode ? <Sun className="w-5 h-5 text-amber-500 group-hover:rotate-90 transition-transform duration-500" /> : <Moon className="w-5 h-5 text-indigo-500 group-hover:-rotate-12 transition-transform duration-500" />}
+                <span className="text-sm font-bold hidden sm:inline-block">{darkMode ? 'Açık Mod' : 'Koyu Mod'}</span>
             </button>
-            <button onClick={toggleLang} className="flex items-center space-x-2 bg-white dark:bg-gray-800/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg text-sm font-bold text-gray-800 dark:text-gray-100 hover:bg-white dark:hover:bg-gray-800 transition-colors border border-gray-200 dark:border-gray-700">
-                <Globe className="w-4 h-4 text-blue-600" />
+            <button 
+                onClick={toggleLang} 
+                className="group flex items-center gap-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-sm font-bold text-gray-800 dark:text-gray-100 hover:scale-105 transition-all duration-300 border border-white/50 dark:border-gray-700/50"
+            >
+                <Globe className="w-5 h-5 text-blue-500" />
                 <span>{lang === 'tr' ? 'English' : 'Türkçe'}</span>
             </button>
         </div>
@@ -2492,13 +2500,27 @@ export default function App() {
     }
     setIsRegisteringDevice(true);
     try {
-        const permission = await Notification.requestPermission();
+        // Timeout wrapper for requestPermission to prevent hanging on mobile/iOS
+        const requestPermissionWithTimeout = new Promise((resolve, reject) => {
+            const timer = setTimeout(() => reject(new Error("İzin isteği zaman aşımına uğradı. Lütfen tarayıcı ayarlarınızdan bildirim izinlerini manuel kontrol edin.")), 5000);
+            
+            Notification.requestPermission().then((permission) => {
+                clearTimeout(timer);
+                resolve(permission);
+            }).catch((err) => {
+                clearTimeout(timer);
+                reject(err);
+            });
+        });
+
+        const permission = await requestPermissionWithTimeout;
+        
         setNotificationStatus(permission);
         if (permission === 'granted' && messaging && currentUser) {
             
             // Timeout wrapper for mobile devices where serviceWorker/getToken can hang
             const getTokenWithTimeout = new Promise((resolve, reject) => {
-                const timer = setTimeout(() => reject(new Error("İşlem zaman aşımına uğradı. Telefonunuz bu özelliği desteklemiyor olabilir.")), 8000);
+                const timer = setTimeout(() => reject(new Error("Cihaz kayıt işlemi zaman aşımına uğradı. Telefonunuz bu özelliği desteklemiyor olabilir veya bağlantı sorunu var.")), 8000);
                 
                 (async () => {
                     try {
@@ -2528,7 +2550,7 @@ export default function App() {
             alert("Bildirimler reddedildi. Lütfen cihaz/tarayıcı ayarlarınızdan bu site için bildirimlere izin verin.");
         }
     } catch(err) {
-        console.error("FCM Token alınamadı:", err);
+        console.error("Bildirim izni/token alınamadı:", err);
         alert(`Kayıt sırasında hata oluştu: ${err.message || 'Tarayıcı izinlerini kontrol edin.'}`);
     } finally {
         setIsRegisteringDevice(false);
