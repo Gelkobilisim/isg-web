@@ -7,13 +7,15 @@ import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit } from "firebase/firestore";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
+import { LoadingSpinner } from "./components/LoadingSpinner";
 
-// Firebase Debug Mechanism
-console.log("🔥 Firebase Initialization Debug:");
-console.log("API Key Status:", import.meta.env.VITE_FIREBASE_API_KEY ? "✅ Mevcut (Yüklendi)" : "❌ EKSİK (.env dosyasını kontrol edin!)");
-if (!import.meta.env.VITE_FIREBASE_API_KEY) {
-    console.error("KRİTİK HATA: VITE_FIREBASE_API_KEY bulunamadı! .env dosyası eksik veya okunmuyor olabilir.");
+import { validateEnvVariables } from "./utils/envValidator";
+
+const envCheck = validateEnvVariables();
+if (!envCheck.isValid) {
+    console.warn("Lütfen eksik .env ayarlarınızı tamamlayın!");
 }
+
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -252,15 +254,6 @@ const useAppContext = () => React.useContext(AppContext);
         setLoginErr(t('err_wrong_cred'));
       }
     };
-
-    if (isFirebaseLoading) {
-      return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-700">
-           <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
-           <p className="text-gray-600 dark:text-gray-300 font-medium animate-pulse">{t('loading_server')}</p>
-        </div>
-      );
-    }
 
     const isISG = loginTheme === 'isg';
 
@@ -3029,7 +3022,25 @@ export default function App() {
 
       <ImageLightboxModal />
       
-      {showNotifPrompt && (
+      {!envCheck.isValid && (
+        <div className="bg-red-600 text-white px-4 py-3 shadow-md z-[110] relative text-sm font-medium">
+            <div className="max-w-7xl mx-auto flex items-start sm:items-center">
+                <AlertTriangle className="w-5 h-5 mr-3 shrink-0 mt-0.5 sm:mt-0" />
+                <div>
+                  <strong className="block mb-1">Sistem Yapılandırma Hatası (.env)</strong>
+                  <ul className="list-disc pl-5 space-y-1">
+                    {envCheck.errors.map((err, i) => <li key={i}>{err}</li>)}
+                  </ul>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {isFirebaseLoading ? (
+        <LoadingSpinner message={t('loading_server') || 'Sistem Yükleniyor...'} />
+      ) : (
+        <>
+          {showNotifPrompt && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex justify-center items-center p-4">
           <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-sm w-full p-8 shadow-2xl animate-slide-up text-center border border-gray-100 dark:border-gray-700">
             <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
@@ -3116,6 +3127,8 @@ export default function App() {
               </div>
             </div>
           )}
+        </>
+      )}
         </>
       )}
     </div>
