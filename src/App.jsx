@@ -363,6 +363,8 @@ const useAppContext = () => React.useContext(AppContext);
   const MainLayout = ({ theme = 'blue', children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
     const ctx = useAppContext();
 
     const {
@@ -471,10 +473,33 @@ const useAppContext = () => React.useContext(AppContext);
 
            <nav className="flex-1 overflow-y-auto p-4 space-y-2">
                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Ana Menü</div>
-               <button onClick={() => setSidebarOpen(false)} className="w-full flex items-center px-3 py-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-bold rounded-xl transition-colors">
-                   <Activity className="w-5 h-5 mr-3 shrink-0" />
-                   <span>Kontrol Paneli</span>
+               
+               <button onClick={() => { navigate('/isg'); setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'isg' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                   <ShieldAlert className="w-5 h-5 mr-3 shrink-0" />
+                   <span>{t('isg_tab') || 'İSG Takip'}</span>
                </button>
+
+               <button onClick={() => { navigate('/yukleme'); setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'yukleme' ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                   <Truck className="w-5 h-5 mr-3 shrink-0" />
+                   <span>{t('yukleme_tab') || 'Yükleme İşlemleri'}</span>
+               </button>
+
+               <button onClick={() => { navigate('/leaderboard'); setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'leaderboard' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                   <TrendingUp className="w-5 h-5 mr-3 shrink-0" />
+                   <span>{t('leaderboard') || 'Liderlik Tablosu'}</span>
+               </button>
+
+               <button onClick={() => { navigate('/analysis'); setAdminSystemMode('analysis'); setAdminViewMode('analysis'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'analysis' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                   <Activity className="w-5 h-5 mr-3 shrink-0" />
+                   <span>{t('analysis_tab') || 'Analiz & Birimler'}</span>
+               </button>
+
+               {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && (
+                   <button onClick={() => { navigate('/users'); setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'users' ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                       <Users className="w-5 h-5 mr-3 shrink-0" />
+                       <span>{t('btn_users') || 'Kullanıcı Hesapları'}</span>
+                   </button>
+               )}
            </nav>
 
            <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 shrink-0">
@@ -1207,6 +1232,26 @@ const useAppContext = () => React.useContext(AppContext);
                 setSelectedAnalysisDept(dept);
                 setAnalysisFilter('all');
             }
+        } else if (path === '/' || path === '/isg') {
+            setAdminSystemMode('isg');
+            setSelectedAdminDept(null);
+            setSelectedAnalysisDept(null);
+        } else if (path === '/yukleme') {
+            setAdminSystemMode('yukleme');
+            setSelectedAdminDept(null);
+            setSelectedAnalysisDept(null);
+        } else if (path === '/users') {
+            setAdminSystemMode('users');
+            setSelectedAdminDept(null);
+            setSelectedAnalysisDept(null);
+        } else if (path === '/leaderboard') {
+            setAdminSystemMode('leaderboard');
+            setSelectedAdminDept(null);
+            setSelectedAnalysisDept(null);
+        } else if (path === '/analysis') {
+            setAdminSystemMode('analysis');
+            setSelectedAdminDept(null);
+            setSelectedAnalysisDept(null);
         }
     }, [location.pathname, setAdminSystemMode]);
     const [bonusModalOpen, setBonusModalOpen] = useState(false);
@@ -1222,7 +1267,6 @@ const useAppContext = () => React.useContext(AppContext);
     const [expandedLoadId, setExpandedLoadId] = useState(null);
     const [yuklemeAnaTab, setYuklemeAnaTab] = useState('list');
     const [yuklemeListFilter, setYuklemeListFilter] = useState('all');
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [yuklemeCalendarMonth, setYuklemeCalendarMonth] = useState(new Date().getMonth());
     const [yuklemeCalendarYear, setYuklemeCalendarYear] = useState(new Date().getFullYear());
     const [selectedYuklemeCountry, setSelectedYuklemeCountry] = useState(null);
@@ -2286,18 +2330,6 @@ const useAppContext = () => React.useContext(AppContext);
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full xl:w-auto">
             <div className="flex justify-between items-center w-full md:w-auto">
               <div><h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-1">{t('admin_panel')}</h1><p className="text-gray-500 dark:text-gray-400 text-sm">{t('admin_desc')}</p></div>
-              <button onClick={() => setMobileMenuOpen(!mobileMenuOpen)} className="md:hidden p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
-                <Menu className="w-6 h-6 text-gray-700 dark:text-gray-200" />
-              </button>
-            </div>
-            <div className="h-10 w-px bg-gray-200 hidden md:block"></div>
-            <div className={`${mobileMenuOpen ? 'flex' : 'hidden'} md:flex flex-col xl:flex-row flex-wrap w-full md:w-auto bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner gap-1`}>
-               <button onClick={() => { navigate('/'); setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'isg' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><ShieldAlert className="w-4 h-4 mr-2" /> {t('isg_tab')}</button>
-               <button onClick={() => { navigate('/'); setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'yukleme' ? 'bg-white dark:bg-gray-800 text-orange-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Truck className="w-4 h-4 mr-2" /> {t('yukleme_tab')}</button>
-               {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && <button onClick={() => { navigate('/'); setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'users' ? 'bg-white dark:bg-gray-800 text-purple-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Users className="w-4 h-4 mr-2" /> {t('btn_users') || 'Kullanıcı Hesapları'}</button>}
-               <button onClick={() => { navigate('/'); setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'leaderboard' ? 'bg-white dark:bg-gray-800 text-green-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><TrendingUp className="w-4 h-4 mr-2" /> {t('leaderboard') || 'Liderlik Tablosu'}</button>
-               <button onClick={() => { navigate('/analysis'); setAdminSystemMode('analysis'); setAdminViewMode('analysis'); setSelectedAdminDept(null); setMobileMenuOpen(false); }} className={`w-full sm:w-auto justify-center sm:justify-start py-2 px-4 text-sm font-bold rounded-lg transition-all flex items-center whitespace-nowrap ${adminSystemMode === 'analysis' ? 'bg-white dark:bg-gray-800 text-indigo-600 shadow-sm' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200'}`}><Activity className="w-4 h-4 mr-2" /> {t('analysis_tab') || 'Analiz Raporları'}</button>
-
             </div>
           </div>
           {adminSystemMode === 'isg' && (
