@@ -358,7 +358,8 @@ const useAppContext = () => React.useContext(AppContext);
     );
   };
 
-  const TopBar = ({ theme = 'blue' }) => {
+  const MainLayout = ({ theme = 'blue', children }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
     const ctx = useAppContext();
 
@@ -444,71 +445,81 @@ const useAppContext = () => React.useContext(AppContext);
 
     
     return (
-      <header className="print:hidden bg-white dark:bg-gray-800 px-6 py-3 shadow-sm flex justify-between items-center sticky top-0 z-30 border-b border-gray-200 dark:border-gray-700">
-        <div className="flex items-center space-x-4 max-w-7xl mx-auto w-full justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1 scale-75 md:scale-90 origin-left">
-              <CompanyLogo className="bg-transparent shadow-none !p-0" theme={theme} />
-            </div>
-            <div className="border-l pl-4 border-gray-300 dark:border-gray-600">
-              <h2 className="font-bold text-gray-800 dark:text-gray-100 text-sm md:text-base leading-tight">{currentUser.name}</h2>
-              <span className="text-[10px] md:text-xs text-gray-500 dark:text-gray-400 capitalize leading-tight">{roleText}</span>
-            </div>
-          </div>
-          <div className="flex items-center space-x-2 sm:space-x-4">
-             { (currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && (
-                 <button onClick={() => setShowDebug(true)} className="hidden sm:flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors">
-                    <Activity className="w-3.5 h-3.5 mr-1" /> Debug Bildirim
-                 </button>
-             )}
-             <button onClick={toggleLang} className="hidden sm:flex items-center space-x-1 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 text-xs font-bold bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700">
-                 <Globe className="w-3.5 h-3.5" /> <span>{lang === 'tr' ? 'EN' : 'TR'}</span>
-             </button>
-             <button onClick={() => setDarkMode(!darkMode)} className="hidden sm:flex items-center justify-center w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 transition-colors">
-                {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-             </button>
-             
-             {notificationStatus !== 'unsupported' && (
-                 <button onClick={requestNotificationPermission} title={notificationStatus === 'granted' ? 'Bildirimler Açık' : notificationStatus === 'denied' ? 'Bildirimleri Aç (Engelli)' : 'Bildirimleri Aç'} className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${notificationStatus === 'granted' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : notificationStatus === 'denied' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'}`}>
-                    <Bell className="w-4 h-4" />
-                 </button>
-             )}
-             <button onClick={logout} className="hidden sm:flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium text-sm">
+      <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900 w-full font-sans text-gray-900 dark:text-gray-100">
+        {/* Mobile Overlay */}
+        {sidebarOpen && (
+           <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        )}
 
-               <span className="hidden sm:inline">{t('logout')}</span>
-               <LogOut className="w-5 h-5" />
-             </button>
-             
-             {/* Mobile Settings Hamburger */}
-             <div className="sm:hidden relative">
-               <button onClick={() => setSettingsOpen(!settingsOpen)} className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
-                 <Menu className="w-5 h-5" />
-               </button>
-               {settingsOpen && (
-                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
-                    <button onClick={() => {toggleLang(); setSettingsOpen(false);}} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center font-bold">
-                      <Globe className="w-4 h-4 mr-2"/> {lang === 'tr' ? 'EN' : 'TR'}
-                    </button>
-                    <button onClick={() => {setDarkMode(!darkMode); setSettingsOpen(false);}} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center font-bold">
-                      {darkMode ? <Sun className="w-4 h-4 mr-2" /> : <Moon className="w-4 h-4 mr-2" />} {darkMode ? 'Açık Mod' : 'Koyu Mod'}
-                    </button>
-                    
-                    {notificationStatus !== 'unsupported' && (
-                        <button onClick={() => { requestNotificationPermission(); setSettingsOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center font-bold">
-                           <Bell className={`w-4 h-4 mr-2 ${notificationStatus === 'granted' ? 'text-green-500' : notificationStatus === 'denied' ? 'text-red-500' : 'text-orange-500'}`} /> 
-                           {notificationStatus === 'granted' ? 'Bildirimler: Açık' : notificationStatus === 'denied' ? 'Bildirimleri Aç (Engelli)' : 'Bildirimleri Aç'}
-                        </button>
-                    )}
-                    <hr className="my-1 border-gray-100 dark:border-gray-700" />
-                    <button onClick={logout}
- className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center font-bold">
-                      <LogOut className="w-4 h-4 mr-2"/> {t('logout')}
-                    </button>
-                 </div>
-               )}
+        {/* Sidebar */}
+        <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col transition-transform duration-300 lg:translate-x-0 lg:static ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+           <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 shrink-0">
+             <div className="scale-75 origin-left w-full">
+                <CompanyLogo className="bg-transparent shadow-none !p-0" theme={theme} />
              </div>
-          </div>
-        </div>
+             <button onClick={() => setSidebarOpen(false)} className="lg:hidden p-2 -mr-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                <X className="w-6 h-6" />
+             </button>
+           </div>
+
+           <div className="p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/50 shrink-0">
+             <h2 className="font-bold text-gray-800 dark:text-gray-100 truncate">{currentUser.name}</h2>
+             <p className="text-xs text-gray-500 dark:text-gray-400 capitalize truncate mt-0.5">{roleText}</p>
+           </div>
+
+           <nav className="flex-1 overflow-y-auto p-4 space-y-2">
+               <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Ana Menü</div>
+               <button onClick={() => setSidebarOpen(false)} className="w-full flex items-center px-3 py-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-bold rounded-xl transition-colors">
+                   <Activity className="w-5 h-5 mr-3 shrink-0" />
+                   <span>Kontrol Paneli</span>
+               </button>
+           </nav>
+
+           <div className="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 shrink-0">
+               { (currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && (
+                   <button onClick={() => setShowDebug(true)} className="w-full flex items-center px-3 py-2.5 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 font-bold rounded-xl transition-colors text-sm">
+                      <Activity className="w-4 h-4 mr-3 shrink-0" /> Debug Konsolu
+                   </button>
+               )}
+               <button onClick={toggleLang} className="w-full flex items-center px-3 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-xl transition-colors text-sm">
+                   <Globe className="w-5 h-5 mr-3 shrink-0" /> {lang === 'tr' ? 'EN (English)' : 'TR (Türkçe)'}
+               </button>
+               <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center px-3 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-xl transition-colors text-sm">
+                  {darkMode ? <Sun className="w-5 h-5 mr-3 shrink-0" /> : <Moon className="w-5 h-5 mr-3 shrink-0" />}
+                  {darkMode ? 'Açık Tema' : 'Koyu Tema'}
+               </button>
+               {notificationStatus !== 'unsupported' && (
+                   <button onClick={requestNotificationPermission} className={`w-full flex items-center px-3 py-2.5 font-medium rounded-xl transition-colors text-sm ${notificationStatus === 'granted' ? 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20' : 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20'}`}>
+                      <Bell className="w-5 h-5 mr-3 shrink-0" /> {notificationStatus === 'granted' ? 'Bildirimler Açık' : 'Bildirimleri Aç'}
+                   </button>
+               )}
+               <button onClick={logout} className="w-full flex items-center px-3 py-2.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 font-bold rounded-xl transition-colors mt-2 text-sm">
+                 <LogOut className="w-5 h-5 mr-3 shrink-0" /> {t('logout')}
+               </button>
+           </div>
+        </aside>
+
+        {/* Main Content Wrapper */}
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+           {/* Mobile Header */}
+           <header className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
+              <div className="flex items-center">
+                 <button onClick={() => setSidebarOpen(true)} className="p-2 -ml-2 mr-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
+                   <Menu className="w-6 h-6" />
+                 </button>
+                 <div className="scale-75 origin-left">
+                    <CompanyLogo className="bg-transparent shadow-none !p-0" theme={theme} />
+                 </div>
+              </div>
+              <button onClick={logout} className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg">
+                 <LogOut className="w-5 h-5" />
+              </button>
+           </header>
+
+           {/* Main Scrollable Content */}
+           <main className="flex-1 overflow-y-auto w-full relative p-4 md:p-6 lg:p-8">
+              {children}
+           </main>
 
         {showDebug && (
             <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
@@ -675,7 +686,8 @@ const useAppContext = () => React.useContext(AppContext);
             </div>
         )}
 
-      </header>
+      </div>
+    </div>
     );
   };
 
@@ -3204,9 +3216,9 @@ export default function App() {
         <LoginScreen />
       ) : (
         <>
-          <TopBar theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'} />
-          {currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || notificationStatus !== 'granted') && (
-            <div className="bg-red-600 text-white px-4 py-3 flex flex-col sm:flex-row justify-between items-center text-sm font-medium shadow-md">
+          <MainLayout theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'}>
+            {currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || notificationStatus !== 'granted') && (
+              <div className="bg-red-600 text-white px-4 py-3 flex flex-col sm:flex-row justify-between items-center text-sm font-medium shadow-md rounded-2xl mb-4">
               <div className="flex items-start sm:items-center mb-3 sm:mb-0 max-w-4xl">
                 <AlertTriangle className="w-5 h-5 mr-3 shrink-0 mt-0.5 sm:mt-0" />
                 <span>
@@ -3223,12 +3235,13 @@ export default function App() {
               </button>
             </div>
           )}
-          <main className="flex-1 w-full flex">
+          <div className="flex-1 w-full flex">
              {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && <AdminDashboard />}
              {currentUser.role === 'mod' && <ModDashboard />}
              {currentUser.role === 'sef' && <SefDashboard />}
              {currentUser.role === 'yuklemeci' && <YuklemeciDashboard />}
-          </main>
+          </div>
+        </MainLayout>
           
           {showLogoutModal && (
             <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
