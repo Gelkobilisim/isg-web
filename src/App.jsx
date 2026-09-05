@@ -1453,8 +1453,8 @@ const useAppContext = () => React.useContext(AppContext);
                                 {deptTasks.map(task => (
                                     <div key={task.id} className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 p-4 rounded-xl print:break-inside-avoid print:border-gray-300">
                                         <div className="flex justify-between items-start mb-2">
-                                            <span className={`text-xs font-bold px-2 py-1 rounded-md ${PRIORITIES[task.priority].color}`}>
-                                                {t(PRIORITIES[task.priority].label_key)}
+                                            <span className={`text-xs font-bold px-2 py-1 rounded-md ${(PRIORITIES[task.priority] || PRIORITIES['basit']).color}`}>
+                                                {t((PRIORITIES[task.priority] || PRIORITIES['basit']).label_key)}
                                             </span>
                                             <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
                                                 <Clock className="w-3 h-3 mr-1" />
@@ -2125,8 +2125,8 @@ const useAppContext = () => React.useContext(AppContext);
                   return (
                     <TimerWrapper key={task.id}>
                       {(now) => {
-                        const statusDef = STATUS_INFO[task.status];
-                        const Icon = statusDef.icon;
+                        const statusDef = STATUS_INFO[task.status] || STATUS_INFO['acik'];
+                        const Icon = statusDef?.icon || AlertTriangle;
                         
                         let timeDisplay = null;
                         let isGlowing = false;
@@ -2207,7 +2207,7 @@ const useAppContext = () => React.useContext(AppContext);
                                </div>
                             </div>
                             <div className="mt-4 flex justify-between items-center">
-                               <span className={`text-xs px-2 py-1 rounded-lg font-medium ${PRIORITIES[task.priority].color}`}>{t(PRIORITIES[task.priority].label_key)} {t('risk')}</span>
+                               <span className={`text-xs px-2 py-1 rounded-lg font-medium ${(PRIORITIES[task.priority] || PRIORITIES['basit']).color}`}>{t((PRIORITIES[task.priority] || PRIORITIES['basit']).label_key)} {t('risk')}</span>
                                {timeDisplay}
                             </div>
                           </div>
