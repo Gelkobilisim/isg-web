@@ -1,8 +1,8 @@
 
 import { DICT } from "./i18n";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
+import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
+import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit, deleteField, increment } from "firebase/firestore";
@@ -967,14 +967,14 @@ const useAppContext = () => React.useContext(AppContext);
         setModNote('');
     };
     const [imgPreview, setImgPreview] = React.useState(null);
-    const [formState, setFormState] = React.useState({ dept: 'Boyahane', priority: 'yuksek', desc: '' });
+    const [formState, setFormState] = React.useState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
 
     const handleSubmit = (e) => {
         e.preventDefault();
         // Photo is now optional for ISG Mod
         // if (!imgPreview) { ... }
-        createTask(formState.dept, formState.priority, formState.desc, 24, imgPreview);
-        setFormState({ dept: 'Boyahane', priority: 'yuksek', desc: '' });
+        createTask(formState.dept, formState.priority, formState.subject, formState.desc, 24, imgPreview);
+        setFormState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
         setImgPreview(null);
         alert(t('success_created') || "İhlal kaydı oluşturuldu.");
     };
@@ -1006,6 +1006,10 @@ const useAppContext = () => React.useContext(AppContext);
                                 <option value="dusuk">{t('low') || 'Düşük'}</option>
                             </select>
                         </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('subject') || 'Konu'}</label>
+                        <input required type="text" value={formState.subject} onChange={e=>setFormState({...formState, subject: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_subject') || 'İhlal konusu (Örn: KKD Kullanımı)'} />
                     </div>
                     <div>
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('description') || 'Açıklama / İhlal Detayı'}</label>
@@ -1223,6 +1227,9 @@ const useAppContext = () => React.useContext(AppContext);
     const [pointLogsFilter, setPointLogsFilter] = useState('all');
     const [analysisFilter, setAnalysisFilter] = useState('month');
     const [selectedAnalysisDept, setSelectedAnalysisDept] = useState(null);
+    const [expandedAnalysisTaskId, setExpandedAnalysisTaskId] = useState(null);
+    const [adminDeptFilter, setAdminDeptFilter] = useState('all');
+    const [expandedAdminTaskId, setExpandedAdminTaskId] = useState(null);
     useEffect(() => {
         const path = location.pathname;
         if (path.startsWith('/analysis/')) {
@@ -1494,9 +1501,11 @@ const useAppContext = () => React.useContext(AppContext);
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2">
-                                {deptTasks.map(task => (
+                                {deptTasks.map(task => {
+                                    const isExpanded = expandedAnalysisTaskId === task.id;
+                                    return (
                                     <div key={task.id} className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 p-4 rounded-xl print:break-inside-avoid print:border-gray-300">
-                                        <div className="flex justify-between items-start mb-2">
+                                        <div className="flex justify-between items-start mb-2 cursor-pointer" onClick={() => setExpandedAnalysisTaskId(isExpanded ? null : task.id)}>
                                             <span className={`text-xs font-bold px-2 py-1 rounded-md ${(PRIORITIES[task.priority] || PRIORITIES['basit']).color}`}>
                                                 {t((PRIORITIES[task.priority] || PRIORITIES['basit']).label_key)}
                                             </span>
@@ -1505,12 +1514,25 @@ const useAppContext = () => React.useContext(AppContext);
                                                 {new Date(task.timestamp).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-US')}
                                             </span>
                                         </div>
-                                        <p className="text-sm text-gray-800 dark:text-gray-100 font-medium mb-3">{task.desc}</p>
-                                        <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
-                                            <User className="w-3.5 h-3.5 mr-1" /> {task.createdBy}
+                                        <div className="cursor-pointer" onClick={() => setExpandedAnalysisTaskId(isExpanded ? null : task.id)}>
+                                            <h4 className="text-md font-bold text-gray-800 dark:text-gray-100 flex justify-between items-center mb-1">
+                                                {task.subject || (task.desc ? task.desc.substring(0, 40) + '...' : (t('no_subject') || 'Konu Belirtilmedi'))}
+                                                {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400"/> : <ChevronDown className="w-5 h-5 text-gray-400"/>}
+                                            </h4>
                                         </div>
+                                        {isExpanded && (
+                                            <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 animate-fade-in">
+                                                <p className="text-sm text-gray-800 dark:text-gray-100 font-medium mb-3">{task.desc}</p>
+                                                {task.imgUrl && (
+                                                    <img src={task.imgUrl} className="w-full h-40 object-cover rounded-xl mb-3 border border-gray-200 dark:border-gray-700" alt="İhlal Fotoğrafı" />
+                                                )}
+                                                <div className="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-2">
+                                                    <User className="w-3.5 h-3.5 mr-1" /> {task.createdBy}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                ))}
+                                )})}
                             </div>
                         )}
                     </div>
@@ -2145,22 +2167,49 @@ const useAppContext = () => React.useContext(AppContext);
     }
 
       if (selectedAdminDept || selectedAdminDate) {
-        const filterTasks = selectedAdminDept ? tasks.filter(t => t.dept === selectedAdminDept) : tasks.filter(t => t.createdAt === selectedAdminDate);
+        let baseTasks = selectedAdminDept ? tasks.filter(t => t.dept === selectedAdminDept) : tasks.filter(t => t.createdAt === selectedAdminDate);
+        
+        if (selectedAdminDept) {
+            const nowTime = new Date();
+            const startOfDay = new Date(nowTime.getFullYear(), nowTime.getMonth(), nowTime.getDate()).getTime();
+            const startOfWeek = startOfDay - (nowTime.getDay() === 0 ? 6 : nowTime.getDay() - 1) * 24 * 60 * 60 * 1000;
+            const startOfMonth = new Date(nowTime.getFullYear(), nowTime.getMonth(), 1).getTime();
+            const startOfYear = new Date(nowTime.getFullYear(), 0, 1).getTime();
+            
+            if (adminDeptFilter === 'day') baseTasks = baseTasks.filter(t => t.timestamp >= startOfDay);
+            if (adminDeptFilter === 'week') baseTasks = baseTasks.filter(t => t.timestamp >= startOfWeek);
+            if (adminDeptFilter === 'month') baseTasks = baseTasks.filter(t => t.timestamp >= startOfMonth);
+            if (adminDeptFilter === 'year') baseTasks = baseTasks.filter(t => t.timestamp >= startOfYear);
+        }
+        
+        const filterTasks = baseTasks;
+        
         return (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
-            <div className="flex justify-between items-start mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
-              <div>
-                <button onClick={() => { setSelectedAdminDept(null); setSelectedAdminDate(null); }} className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4">
-                  <ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}
-                </button>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedAdminDept || selectedAdminDate} Raporu</h2>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">{t('total_record')} {filterTasks.length}</p>
+            <div className="flex flex-col mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
+              <div className="flex justify-between items-start">
+                  <div>
+                    <button onClick={() => { setSelectedAdminDept(null); setSelectedAdminDate(null); }} className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4">
+                      <ArrowLeft className="w-4 h-4 mr-2" /> {t('return_back')}
+                    </button>
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">{selectedAdminDept ? t(getDeptKey(selectedAdminDept)) : selectedAdminDate} Raporları</h2>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">{t('total_record')} {filterTasks.length}</p>
+                  </div>
+                  {selectedAdminDept && (
+                  <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center ml-4">
+                     <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">{t('current_score')}</p>
+                     <p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p>
+                  </div>)}
               </div>
               {selectedAdminDept && (
-              <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center">
-                 <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">{t('current_score')}</p>
-                 <p className="text-3xl font-extrabold text-green-600">{points[selectedAdminDept]}</p>
-              </div>)}
+                <div className="flex flex-wrap bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl border border-gray-200 dark:border-gray-600 shadow-inner gap-1 mt-4">
+                    <button onClick={() => setAdminDeptFilter('day')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === 'day' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_today') || 'Bugün'}</button>
+                    <button onClick={() => setAdminDeptFilter('week')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === 'week' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_this_week') || 'Bu Hafta'}</button>
+                    <button onClick={() => setAdminDeptFilter('month')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === 'month' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_this_month') || 'Bu Ay'}</button>
+                    <button onClick={() => setAdminDeptFilter('year')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === 'year' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_yearly') || 'Bu Yıl'}</button>
+                    <button onClick={() => setAdminDeptFilter('all')} className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === 'all' ? 'bg-white dark:bg-gray-800 text-blue-700 shadow-sm' : 'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'}`}>{t('filter_all') || 'Tümü'}</button>
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -2171,6 +2220,7 @@ const useAppContext = () => React.useContext(AppContext);
                       {(now) => {
                         const statusDef = STATUS_INFO[task.status] || STATUS_INFO['acik'];
                         const Icon = statusDef?.icon || AlertTriangle;
+                        const isExpanded = expandedAdminTaskId === task.id;
                         
                         let timeDisplay = null;
                         let isGlowing = false;
@@ -2217,16 +2267,30 @@ const useAppContext = () => React.useContext(AppContext);
 
                         return (
                           <div className={`p-5 rounded-2xl border-l-4 bg-gray-50 dark:bg-gray-900 ${statusDef.color.split(' ')[2]} ${isGlowing ? 'shadow-[0_0_15px_rgba(239,68,68,0.5)] ring-1 ring-red-400 animate-[pulse_2s_ease-in-out_infinite]' : 'shadow-sm'}`}>
-                            <div className="flex justify-between items-start mb-3">
-                              <div>
-                                 <span className="font-bold text-gray-800 dark:text-gray-100 block">{t(getDeptKey(task.dept))}</span>
-                                 <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{task.createdAt}</span>
+                            <div className="flex flex-col cursor-pointer" onClick={() => setExpandedAdminTaskId(isExpanded ? null : task.id)}>
+                              <div className="flex justify-between items-start mb-2">
+                                <div>
+                                   <span className="font-bold text-gray-800 dark:text-gray-100 text-lg block">{task.subject || (task.desc ? task.desc.substring(0, 40) + '...' : (t('no_subject') || 'Konu Belirtilmedi'))}</span>
+                                   <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">{task.createdAt}</span>
+                                </div>
+                                <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
+                                  <Icon className="w-3 h-3 mr-1" /> {t(statusDef.label_key)}
+                                </span>
                               </div>
-                              <span className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(' ').slice(0,2).join(' ')}`}>
-                                <Icon className="w-3 h-3 mr-1" /> {t(statusDef.label_key)}
-                              </span>
+                              <div className="flex justify-between items-center mt-1">
+                                 <div className="flex gap-2">
+                                   <span className={`text-[10px] px-2 py-1 rounded-lg font-medium ${(PRIORITIES[task.priority] || PRIORITIES['basit']).color}`}>{t((PRIORITIES[task.priority] || PRIORITIES['basit']).label_key)} {t('risk')}</span>
+                                   <span className="text-[10px] px-2 py-1 rounded-lg font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">{t(getDeptKey(task.dept))}</span>
+                                 </div>
+                                 <div className="flex items-center gap-3">
+                                   {timeDisplay}
+                                   {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400"/> : <ChevronDown className="w-5 h-5 text-gray-400"/>}
+                                 </div>
+                              </div>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            
+                            {isExpanded && (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 animate-fade-in">
                                <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center">
                                  <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 w-full text-left">{t('before')}</span>
                                  {task.imgUrl ? (
@@ -2250,10 +2314,7 @@ const useAppContext = () => React.useContext(AppContext);
                                  ) : <div className="w-full h-full min-h-[8rem] bg-gray-50 dark:bg-gray-900 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">{t('stat_acik')}</div>}
                                </div>
                             </div>
-                            <div className="mt-4 flex justify-between items-center">
-                               <span className={`text-xs px-2 py-1 rounded-lg font-medium ${(PRIORITIES[task.priority] || PRIORITIES['basit']).color}`}>{t((PRIORITIES[task.priority] || PRIORITIES['basit']).label_key)} {t('risk')}</span>
-                               {timeDisplay}
-                            </div>
+                            )}
                           </div>
                         );
                       }}
@@ -2350,7 +2411,7 @@ const useAppContext = () => React.useContext(AppContext);
                   const redCount = getRedTaskCount(dept);
                   const isSelected = selectedAdminDept === dept;
                   return (
-                  <div key={dept} onClick={() => { navigate('/analysis/' + encodeURIComponent(dept)); window.scrollTo(0,0); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
+                  <div key={dept} onClick={() => { setSelectedAdminDept(dept); setAdminDeptFilter('all'); window.scrollTo(0,0); }} className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? 'border-blue-500 bg-blue-50' : 'border-transparent hover:bg-gray-50'}`}>
                     <div className="flex items-center"><span className="w-6 text-center text-sm font-bold mr-3 text-gray-400 dark:text-gray-500">{index + 1}.</span><span className={`font-bold ${isSelected ? 'text-blue-700' : 'text-gray-700 dark:text-gray-200 group-hover:text-blue-600'}`}>{t(getDeptKey(dept))}</span></div>
                     <div className="flex items-center">
                        {redCount > 0 ? <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm"><span className="font-bold text-xs">{redCount} {t('problem')}</span></div> : <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90"><span className="font-bold text-xs">{t('no_problem')}</span></div>}
@@ -2501,6 +2562,12 @@ const getTimeAgo = (timestamp) => {
     if (hours < 24) return `${hours} saat önce`;
     const days = Math.floor(hours / 24);
     return `${days} gün önce`;
+};
+
+const ProtectedRoute = ({ children }) => {
+  const { currentUser } = useAppContext();
+  if (!currentUser) return <Navigate to="/login" replace />;
+  return children;
 };
 
 export default function App() {
@@ -2956,10 +3023,10 @@ export default function App() {
     setShowLogoutModal(false);
   }, []);
 
-  const createTask = useCallback(async (dept, priority, desc, deadlineHours, imgUrl) => {
+  const createTask = useCallback(async (dept, priority, subject, desc, deadlineHours, imgUrl) => {
     const taskId = Date.now().toString();
     const newTask = {
-      id: taskId, dept, priority, desc, status: 'acik', 
+      id: taskId, dept, priority, subject, desc, status: 'acik', 
       createdAt: formatDate(new Date()), timestamp: Date.now(), 
       deadlineHours, imgUrl: imgUrl || '', modNote: ''
     };
@@ -2971,7 +3038,7 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: 'NEW_TASK',
-        payload: { dept, desc, lang: localStorage.getItem('isg_lang') || 'tr' }
+        payload: { dept, subject, desc, lang: localStorage.getItem('isg_lang') || 'tr' }
       })
     })
     .then(res => res.json())
@@ -3247,63 +3314,66 @@ export default function App() {
         </div>
       )}
       
-      {!currentUser ? (
-        <LoginScreen />
-      ) : (
-        <>
-          <MainLayout theme={currentUser.role === 'yuklemeci' ? 'orange' : 'blue'}>
-            {currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || notificationStatus !== 'granted') && (
-              <div className="bg-red-600 text-white px-4 py-3 flex flex-col sm:flex-row justify-between items-center text-sm font-medium shadow-md rounded-2xl mb-4">
-              <div className="flex items-start sm:items-center mb-3 sm:mb-0 max-w-4xl">
-                <AlertTriangle className="w-5 h-5 mr-3 shrink-0 mt-0.5 sm:mt-0" />
-                <span>
-                  <strong>Cihazınız bildirim sistemine kayıtlı değil!</strong> <br className="sm:hidden" />
-                  Bildirimleri (yeni görevler, ihlaller vb.) anında alabilmek için bu cihazı sisteme kaydetmeniz gerekmektedir. <span className="hidden sm:inline">Nasıl kayıt olurum? Yandaki butona tıklayıp tarayıcınızdan izin verin.</span>
-                </span>
-              </div>
-              <button 
-                onClick={requestNotificationPermission} 
-                disabled={isRegisteringDevice}
-                className="bg-white text-red-600 px-4 py-2 sm:py-1.5 rounded-lg font-bold shadow-sm hover:bg-gray-100 transition-colors whitespace-nowrap w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isRegisteringDevice ? 'Kaydediliyor...' : 'Cihazı Şimdi Kaydet'}
-              </button>
-            </div>
-          )}
-          <div className="flex-1 w-full flex">
-             {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && <AdminDashboard />}
-             {currentUser.role === 'mod' && <ModDashboard />}
-             {currentUser.role === 'sef' && <SefDashboard />}
-             {currentUser.role === 'yuklemeci' && <YuklemeciDashboard />}
-          </div>
-        </MainLayout>
-          
-          {showLogoutModal && (
-            <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slide-up">
-                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
-                  <LogOut className="w-6 h-6 mr-2 text-red-500" />
-                  Çıkış Yap
-                </h3>
-                <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
-                  Çıkış yapmak üzeresiniz. Lütfen bildirim tercihinizle birlikte nasıl çıkış yapmak istediğinizi seçin.
-                </p>
-                <div className="flex flex-col space-y-3">
-                  <button onClick={() => executeLogout(false)} disabled={logoutCountdown > 0} className={`w-full py-3 rounded-xl font-bold flex justify-center items-center transition-colors ${logoutCountdown > 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'}`}>
-                    Sadece Çıkış Yap {logoutCountdown > 0 ? `(${logoutCountdown})` : ''}
-                  </button>
-                  <button onClick={() => executeLogout(true)} disabled={logoutCountdown > 0} className={`w-full py-3 rounded-xl font-bold shadow-md flex justify-center items-center transition-colors ${logoutCountdown > 0 ? 'bg-red-300 text-white cursor-not-allowed dark:bg-red-900/50 dark:text-red-300' : 'bg-red-600 text-white hover:bg-red-700'}`}>
-                    Bildirimleri Kapatıp Çıkış Yap {logoutCountdown > 0 ? `(${logoutCountdown})` : ''}
-                  </button>
-                  <button onClick={() => setShowLogoutModal(false)} className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium">
-                    İptal
+      <Routes>
+        <Route path="/login" element={!currentUser ? <LoginScreen /> : <Navigate to="/" replace />} />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <>
+              <MainLayout theme={currentUser?.role === 'yuklemeci' ? 'orange' : 'blue'}>
+                {currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || notificationStatus !== 'granted') && (
+                  <div className="bg-red-600 text-white px-4 py-3 flex flex-col sm:flex-row justify-between items-center text-sm font-medium shadow-md rounded-2xl mb-4">
+                  <div className="flex items-start sm:items-center mb-3 sm:mb-0 max-w-4xl">
+                    <AlertTriangle className="w-5 h-5 mr-3 shrink-0 mt-0.5 sm:mt-0" />
+                    <span>
+                      <strong>Cihazınız bildirim sistemine kayıtlı değil!</strong> <br className="sm:hidden" />
+                      Bildirimleri (yeni görevler, ihlaller vb.) anında alabilmek için bu cihazı sisteme kaydetmeniz gerekmektedir. <span className="hidden sm:inline">Nasıl kayıt olurum? Yandaki butona tıklayıp tarayıcınızdan izin verin.</span>
+                    </span>
+                  </div>
+                  <button 
+                    onClick={requestNotificationPermission} 
+                    disabled={isRegisteringDevice}
+                    className="bg-white text-red-600 px-4 py-2 sm:py-1.5 rounded-lg font-bold shadow-sm hover:bg-gray-100 transition-colors whitespace-nowrap w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    {isRegisteringDevice ? 'Kaydediliyor...' : 'Cihazı Şimdi Kaydet'}
                   </button>
                 </div>
+              )}
+              <div className="flex-1 w-full flex">
+                 {(currentUser?.role === 'admin' || currentUser?.username === 'agiradar' || currentUser?.username === 'agiradarsahin') && <AdminDashboard />}
+                 {currentUser?.role === 'mod' && <ModDashboard />}
+                 {currentUser?.role === 'sef' && <SefDashboard />}
+                 {currentUser?.role === 'yuklemeci' && <YuklemeciDashboard />}
               </div>
-            </div>
-          )}
-        </>
-      )}
+            </MainLayout>
+                
+              {showLogoutModal && (
+                <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slide-up">
+                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
+                      <LogOut className="w-6 h-6 mr-2 text-red-500" />
+                      Çıkış Yap
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
+                      Çıkış yapmak üzeresiniz. Lütfen bildirim tercihinizle birlikte nasıl çıkış yapmak istediğinizi seçin.
+                    </p>
+                    <div className="flex flex-col space-y-3">
+                      <button onClick={() => executeLogout(false)} disabled={logoutCountdown > 0} className={`w-full py-3 rounded-xl font-bold flex justify-center items-center transition-colors ${logoutCountdown > 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600'}`}>
+                        Sadece Çıkış Yap {logoutCountdown > 0 ? `(${logoutCountdown})` : ''}
+                      </button>
+                      <button onClick={() => executeLogout(true)} disabled={logoutCountdown > 0} className={`w-full py-3 rounded-xl font-bold shadow-md flex justify-center items-center transition-colors ${logoutCountdown > 0 ? 'bg-red-300 text-white cursor-not-allowed dark:bg-red-900/50 dark:text-red-300' : 'bg-red-600 text-white hover:bg-red-700'}`}>
+                        Bildirimleri Kapatıp Çıkış Yap {logoutCountdown > 0 ? `(${logoutCountdown})` : ''}
+                      </button>
+                      <button onClick={() => setShowLogoutModal(false)} className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium">
+                        İptal
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          </ProtectedRoute>
+        } />
+      </Routes>
         </>
       )}
     </div>
