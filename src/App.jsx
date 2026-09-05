@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
-import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit, deleteField } from "firebase/firestore";
+import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit, deleteField, increment } from "firebase/firestore";
 import { getMessaging, getToken, onMessage, deleteToken } from "firebase/messaging";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { LoadingSpinner } from "./components/LoadingSpinner";
@@ -1346,8 +1346,7 @@ const useAppContext = () => React.useContext(AppContext);
            
            const finalNum = bonusType === 'add' ? num : -num;
            const pointsRef = doc(db, "system", "points");
-           const currentScore = points[bonusDept] || 100;
-           await updateDoc(pointsRef, { [bonusDept]: currentScore + finalNum });
+           await updateDoc(pointsRef, { [bonusDept]: increment(finalNum) });
            
            const logRef = doc(collection(db, "point_logs"));
            await setDoc(logRef, {
@@ -2833,7 +2832,7 @@ export default function App() {
         
         DEPARTMENTS.forEach(dept => {
           if (!deptsWithTasks.has(dept)) {
-            updates[dept] = (points[dept] || 100) + 20;
+            updates[dept] = increment(20);
             distributed++;
           }
         });
@@ -2965,7 +2964,7 @@ export default function App() {
               if (earnedPoint > 0 && taskData.dept) {
                   const pointsRef = doc(db, "system", "points");
                   const deptKey = taskData.dept;
-                  await updateDoc(pointsRef, { [deptKey]: (points[deptKey] || 100) + earnedPoint });
+                  await updateDoc(pointsRef, { [deptKey]: increment(earnedPoint) });
                   
                   const logRef = doc(collection(db, "point_logs"));
                   await setDoc(logRef, {
