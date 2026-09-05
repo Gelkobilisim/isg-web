@@ -1,3 +1,4 @@
+
 import { DICT } from "./i18n";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -15,6 +16,7 @@ const envCheck = validateEnvVariables();
 if (!envCheck.isValid) {
     console.warn("Lütfen eksik .env ayarlarınızı tamamlayın!");
 }
+
 
 
 const firebaseConfig = {
@@ -517,7 +519,7 @@ const useAppContext = () => React.useContext(AppContext);
            </header>
 
            {/* Main Scrollable Content */}
-           <main className="flex-1 overflow-y-auto w-full relative p-4 md:p-6 lg:p-8">
+           <main className="flex-1 overflow-y-auto w-full relative min-w-0 overflow-x-hidden">
               {children}
            </main>
 
@@ -730,7 +732,7 @@ const useAppContext = () => React.useContext(AppContext);
     };
 
     return (
-      <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 bg-orange-50/30">
+      <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 bg-orange-50/30">
         <div className="bg-gradient-to-r from-orange-600 to-amber-700 p-6 md:p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden mb-8 gap-4">
           <div className="z-10">
             <h1 className="text-3xl font-extrabold mb-2 flex items-center"><Truck className="w-8 h-8 mr-3"/> {t('yuk_title')}</h1>
@@ -1085,7 +1087,7 @@ const useAppContext = () => React.useContext(AppContext);
     };
 
     return (
-        <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 animate-slide-up">
+        <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 animate-slide-up">
             <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
                 <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100"><ShieldAlert className="w-8 h-8 mr-3 text-blue-500"/> {t(getDeptKey(currentUser.dept))} {t('dept_tasks') || 'Birimi Görevleri'}</h2>
                 <div className="mt-4 md:mt-0 flex items-center bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 text-blue-800 font-bold text-sm shadow-sm">
@@ -1566,7 +1568,7 @@ const useAppContext = () => React.useContext(AppContext);
       }
 
       if (adminSystemMode === 'leaderboard') {
-        const sortedDepts = Object.keys(points).filter(key => key !== 'lastDailyBonus').sort((a,b) => points[b] - points[a]);
+        const sortedDepts = Object.keys(points).filter(key => key !== 'lastDailyBonus' && key !== 'lastBonusTimestamp').sort((a,b) => points[b] - points[a]);
         
                 
 
@@ -1576,7 +1578,7 @@ const useAppContext = () => React.useContext(AppContext);
             
             const pointsToSave = {};
             Object.keys(points).forEach(k => {
-               if (k !== 'lastDailyBonus') pointsToSave[k] = points[k];
+               if (k !== 'lastDailyBonus' && k !== 'lastBonusTimestamp') pointsToSave[k] = points[k];
             });
 
             const historyRef = doc(db, "system", "points_history");
@@ -1631,7 +1633,7 @@ const useAppContext = () => React.useContext(AppContext);
                    <div className="space-y-4">
                      {Object.keys(pointsHistory).sort().reverse().map(monthKey => {
                         const mPoints = pointsHistory[monthKey];
-                        const mSorted = Object.keys(mPoints).sort((a,b) => mPoints[b] - mPoints[a]);
+                        const mSorted = Object.keys(mPoints).filter(k => k !== 'lastDailyBonus' && k !== 'lastBonusTimestamp').sort((a,b) => mPoints[b] - mPoints[a]);
                         return (
                           <div key={monthKey} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
                              <h4 className="font-bold text-gray-700 dark:text-gray-200 mb-3">{monthKey}</h4>
@@ -2059,7 +2061,7 @@ const useAppContext = () => React.useContext(AppContext);
                    return (
                      <div key={dayNum} onClick={() => dayLoadings.length > 0 && setSelectedYuklemeDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-100 shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600'}`}>
                        <span className={`text-sm md:text-base font-bold ${isToday ? 'text-orange-700' : 'text-gray-700 dark:text-gray-200'}`}>{dayNum}</span>
-                       {dayLoadings.length > 0 && <span className="text-[9px] font-bold text-white bg-orange-500 px-2 py-0.5 rounded-full mt-1 shadow-sm">{dayLoadings.length} Sevkiyat</span>}
+                       {dayLoadings.length > 0 && <span className="text-[9px] font-bold text-white bg-orange-500 px-2 py-0.5 rounded-full mt-1 shadow-sm text-center truncate w-3/4 sm:w-auto">{dayLoadings.length} <span className="hidden sm:inline">Sevkiyat</span></span>}
                      </div>
                    );
                  })}
@@ -2260,7 +2262,7 @@ const useAppContext = () => React.useContext(AppContext);
                return (
                  <div key={dayNum} onClick={() => dayTasks.length > 0 && setSelectedAdminDate(formattedDateForCell)} className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100 shadow-sm' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600'}`}>
                    <span className={`text-sm md:text-base font-bold ${isToday ? 'text-blue-700' : 'text-gray-700 dark:text-gray-200'}`}>{dayNum}</span>
-                   {dayTasks.length > 0 && <span className="text-[9px] font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full mt-1 shadow-sm">{dayTasks.length} Rapor</span>}
+                   {dayTasks.length > 0 && <span className="text-[9px] font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full mt-1 shadow-sm text-center truncate w-3/4 sm:w-auto">{dayTasks.length} <span className="hidden sm:inline">Rapor</span></span>}
                  </div>
                );
              })}
@@ -2279,7 +2281,7 @@ const useAppContext = () => React.useContext(AppContext);
     }, [getRedTaskCount, currentUser]);
 
     return (
-      <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+      <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
         <div className="print:hidden bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full xl:w-auto">
             <div className="flex justify-between items-center w-full md:w-auto">
@@ -2706,6 +2708,7 @@ export default function App() {
         }
       });
     }
+    const handleSnapErr = (err) => { console.error(err); setIsFirebaseLoading(false); setLoginErr("Veritabanı erişim hatası: " + err.message); };
     const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
       const usersData = snapshot.docs.map(doc => doc.data());
       if (usersData.length === 0) {
@@ -2731,7 +2734,7 @@ export default function App() {
           }
         }
       }
-    });
+    }, handleSnapErr);
 
     const unsubPoints = onSnapshot(doc(db, "system", "points"), (docSnap) => {
       if (docSnap.exists()) { setPoints(docSnap.data()); } 
@@ -2740,13 +2743,13 @@ export default function App() {
         setDoc(doc(db, "system", "points"), initialPoints);
         setPoints(initialPoints);
       }
-    });
+    }, handleSnapErr);
 
     const unsubPointLogs = onSnapshot(collection(db, "point_logs"), (snapshot) => {
       const logsData = snapshot.docs.map(doc => doc.data());
       logsData.sort((a, b) => b.timestamp - a.timestamp);
       setPointLogs(logsData);
-    });
+    }, handleSnapErr);
 
     const unsubTasks = onSnapshot(collection(db, "tasks"), (snapshot) => {
       const tasksData = snapshot.docs.map(doc => doc.data());
@@ -2800,17 +2803,17 @@ export default function App() {
         return tasksData;
       });
       setIsFirebaseLoading(false);
-    });
+    }, handleSnapErr);
 
     const unsubPointsHistory = onSnapshot(doc(db, "system", "points_history"), (docSnap) => {
       if (docSnap.exists()) { setPointsHistory(docSnap.data()); }
-    });
+    }, handleSnapErr);
 
     const unsubLoadings = onSnapshot(collection(db, "loadings"), (snapshot) => {
       const loadingData = snapshot.docs.map(doc => doc.data());
       loadingData.sort((a, b) => b.timestamp - a.timestamp);
       setLoadings(loadingData);
-    });
+    }, handleSnapErr);
 
     return () => { unsubUsers(); unsubPoints(); unsubTasks(); unsubLoadings(); unsubPointsHistory(); unsubPointLogs(); };
   }, []);
