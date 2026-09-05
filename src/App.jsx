@@ -4,8 +4,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
-import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit } from "firebase/firestore";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
+import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit, deleteField } from "firebase/firestore";
+import { getMessaging, getToken, onMessage, deleteToken } from "firebase/messaging";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { LoadingSpinner } from "./components/LoadingSpinner";
 
@@ -469,7 +469,7 @@ const useAppContext = () => React.useContext(AppContext);
              </button>
              
              {notificationStatus !== 'unsupported' && (
-                 <button onClick={requestNotificationPermission} title={notificationStatus === 'granted' ? 'Bildirimler Açık' : notificationStatus === 'denied' ? 'Bildirimler Engellendi' : 'Bildirimleri Aç'} className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${notificationStatus === 'granted' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : notificationStatus === 'denied' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'}`}>
+                 <button onClick={requestNotificationPermission} title={notificationStatus === 'granted' ? 'Bildirimler Açık' : notificationStatus === 'denied' ? 'Bildirimleri Aç (Engelli)' : 'Bildirimleri Aç'} className={`hidden sm:flex items-center justify-center w-8 h-8 rounded-lg transition-colors ${notificationStatus === 'granted' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : notificationStatus === 'denied' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' : 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400'}`}>
                     <Bell className="w-4 h-4" />
                  </button>
              )}
@@ -496,7 +496,7 @@ const useAppContext = () => React.useContext(AppContext);
                     {notificationStatus !== 'unsupported' && (
                         <button onClick={() => { requestNotificationPermission(); setSettingsOpen(false); }} className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center font-bold">
                            <Bell className={`w-4 h-4 mr-2 ${notificationStatus === 'granted' ? 'text-green-500' : notificationStatus === 'denied' ? 'text-red-500' : 'text-orange-500'}`} /> 
-                           {notificationStatus === 'granted' ? 'Bildirimler: Açık' : notificationStatus === 'denied' ? 'Bildirimler: Engellendi' : 'Bildirimleri Aç'}
+                           {notificationStatus === 'granted' ? 'Bildirimler: Açık' : notificationStatus === 'denied' ? 'Bildirimleri Aç (Engelli)' : 'Bildirimleri Aç'}
                         </button>
                     )}
                     <hr className="my-1 border-gray-100 dark:border-gray-700" />
@@ -2484,6 +2484,7 @@ export default function App() {
     ("Notification" in window) ? Notification.permission : 'unsupported'
   );
   const [isRegisteringDevice, setIsRegisteringDevice] = useState(false);
+  const [toastMessage, setToastMessage] = useState(null);
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
@@ -2493,16 +2494,40 @@ export default function App() {
     }
   }, [currentUser]);
 
+  useEffect(() => {
+    if ('permissions' in navigator) {
+        navigator.permissions.query({ name: 'notifications' }).then((status) => {
+            status.onchange = function() {
+                setNotificationStatus(this.state);
+                if (this.state === 'granted') {
+                    setToastMessage({ type: 'success', message: 'Bildirim izni verildi! Lütfen ayarlar menüsünden "Bildirimleri Aç" butonuna tıklayarak cihazınızı kaydedin.'});
+                } else if (this.state === 'denied') {
+                    setToastMessage({ type: 'error', message: 'Bildirim izinleri engellendi.'});
+                }
+            };
+        }).catch(() => {});
+    }
+  }, []);
+
   const requestNotificationPermission = async () => {
+    if (isRegisteringDevice) return;
+
     if (!("Notification" in window)) {
-        alert("Tarayıcınız bildirimleri desteklemiyor.");
+        setToastMessage({ type: 'error', message: "Tarayıcınız bildirimleri desteklemiyor." });
         return;
     }
+
+    if (Notification.permission === 'denied') {
+        setToastMessage({ type: 'error', message: "Bildirimler tarayıcı ayarlarından engellenmiş. Lütfen adres çubuğundaki kilit (🔒) ikonuna tıklayıp bildirimlere izin verin." });
+        return;
+    }
+
     setIsRegisteringDevice(true);
+    setToastMessage(null);
     try {
         // Timeout wrapper for requestPermission to prevent hanging on mobile/iOS
         const requestPermissionWithTimeout = new Promise((resolve, reject) => {
-            const timer = setTimeout(() => reject(new Error("İzin isteği zaman aşımına uğradı. Lütfen tarayıcı ayarlarınızdan bildirim izinlerini manuel kontrol edin.")), 5000);
+            const timer = setTimeout(() => reject(new Error("İzin isteği zaman aşımına uğradı. Lütfen tarayıcı ayarlarınızdan bildirim izinlerini manuel kontrol edin (Özellikle iOS Safari'de).")), 5000);
             
             Notification.requestPermission().then((permission) => {
                 clearTimeout(timer);
@@ -2542,16 +2567,16 @@ export default function App() {
 
             if (currentToken) {
                 await updateDoc(doc(db, "users", currentUser.id), { fcmToken: currentToken, lastActive: new Date() });
-                alert("Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek.");
+                setToastMessage({ type: 'success', message: "Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek." });
             } else {
-                alert("Token alınamadı. Cihazınız desteklemiyor olabilir.");
+                setToastMessage({ type: 'error', message: "Token alınamadı. Cihazınız desteklemiyor olabilir." });
             }
         } else if (permission === 'denied') {
-            alert("Bildirimler reddedildi. Lütfen cihaz/tarayıcı ayarlarınızdan bu site için bildirimlere izin verin.");
+            setToastMessage({ type: 'error', message: "Bildirimler reddedildi. Lütfen cihaz/tarayıcı ayarlarınızdan bu site için bildirimlere izin verin." });
         }
     } catch(err) {
         console.error("Bildirim izni/token alınamadı:", err);
-        alert(`Kayıt sırasında hata oluştu: ${err.message || 'Tarayıcı izinlerini kontrol edin.'}`);
+        setToastMessage({ type: 'error', message: `Kayıt sırasında hata oluştu: ${err.message || 'Tarayıcı izinlerini kontrol edin.'}` });
     } finally {
         setIsRegisteringDevice(false);
     }
@@ -2784,14 +2809,21 @@ export default function App() {
     
     const checkDailyBonus = async () => {
       try {
+        const today = new Date();
+        const formattedToday = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;
+        
+        if (points.lastDailyBonus === formattedToday) return; // Prevent double distribution on same day
+        
+        // Güvenlik: Farklı saat dilimindeki veya cihaz saatleri yanlış olan iki kullanıcının
+        // birbirini tetikleyerek sonsuz bir "puan ekleme" döngüsüne (ping-pong) girmesini engeller.
+        // Eğer son 12 saat içinde herhangi biri tarafından bonus dağıtılmışsa işlemi durdur.
+        const lastTimestamp = points.lastBonusTimestamp || 0;
+        const twelveHours = 12 * 60 * 60 * 1000;
+        if (Date.now() - lastTimestamp < twelveHours) return;
+
         const yesterday = new Date();
         yesterday.setDate(yesterday.getDate() - 1);
         const formattedYesterday = `${yesterday.getDate().toString().padStart(2, '0')}.${(yesterday.getMonth() + 1).toString().padStart(2, '0')}.${yesterday.getFullYear()}`;
-        
-        if (points.lastDailyBonus === formattedYesterday || (points.lastDailyBonus && points.lastDailyBonus.startsWith(formattedYesterday))) return;
-        const today = new Date();
-        const formattedToday = `${today.getDate().toString().padStart(2, '0')}.${(today.getMonth() + 1).toString().padStart(2, '0')}.${today.getFullYear()}`;
-        if (points.lastDailyBonus === formattedToday) return; // Prevent double distribution on same day
         
         const yesterdaysTasks = tasks.filter(t => t.createdAt === formattedYesterday);
         const deptsWithTasks = new Set(yesterdaysTasks.map(t => t.dept));
@@ -2807,6 +2839,7 @@ export default function App() {
         });
         
         updates.lastDailyBonus = formattedToday;
+        updates.lastBonusTimestamp = Date.now();
         
         const pointsRef = doc(db, "system", "points");
         await updateDoc(pointsRef, updates);
@@ -2820,10 +2853,21 @@ export default function App() {
 
 
   const getLastFridayOfCurrentMonth = useCallback(() => {
-    const d = new Date();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const d = new Date(today);
     d.setMonth(d.getMonth() + 1);
     d.setDate(0); 
     while (d.getDay() !== 5) { d.setDate(d.getDate() - 1); }
+    
+    // Eğer bugünün tarihi, bu ayın son Cuma gününü geçmişse; bir sonraki ayın son Cumasını hesapla
+    if (today > d) {
+        d.setMonth(d.getMonth() + 2);
+        d.setDate(0);
+        while (d.getDay() !== 5) { d.setDate(d.getDate() - 1); }
+    }
+
     return d.toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' });
   }, [lang]);
 
@@ -2842,10 +2886,19 @@ export default function App() {
       const loggedInUserId = localStorage.getItem('isg_logged_in_user');
       if (loggedInUserId) {
         try {
-          await updateDoc(doc(db, "users", loggedInUserId), { fcmToken: null });
+          await updateDoc(doc(db, "users", loggedInUserId), { fcmToken: deleteField() });
         } catch (e) {
           console.error("FCM Token silinemedi:", e);
         }
+      }
+      
+      // Tarayıcıdaki tokenı da sil (tekrar girince otomatik eklenmesin)
+      if (messaging) {
+          try {
+              await deleteToken(messaging);
+          } catch(e) {
+              console.error("Browser token silinemedi:", e);
+          }
       }
     }
     setCurrentUser(null); 
@@ -3078,6 +3131,24 @@ export default function App() {
       `}</style>
 
       <ImageLightboxModal />
+
+      {toastMessage && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] animate-slide-up max-w-sm w-full px-4">
+           <div className={`p-4 rounded-xl shadow-2xl flex items-start sm:items-center ${toastMessage.type === 'error' ? 'bg-red-50 dark:bg-red-900/90 border border-red-200 dark:border-red-700' : 'bg-green-50 dark:bg-green-900/90 border border-green-200 dark:border-green-700'}`}>
+              {toastMessage.type === 'error' ? (
+                 <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mr-3 shrink-0 mt-0.5 sm:mt-0" />
+              ) : (
+                 <CheckCircle className="w-5 h-5 text-green-600 dark:text-green-400 mr-3 shrink-0 mt-0.5 sm:mt-0" />
+              )}
+              <p className={`text-sm font-bold flex-1 ${toastMessage.type === 'error' ? 'text-red-800 dark:text-red-200' : 'text-green-800 dark:text-green-200'}`}>
+                 {toastMessage.message}
+              </p>
+              <button onClick={() => setToastMessage(null)} className={`ml-3 shrink-0 p-1 rounded-lg ${toastMessage.type === 'error' ? 'hover:bg-red-100 dark:hover:bg-red-800/50 text-red-500' : 'hover:bg-green-100 dark:hover:bg-green-800/50 text-green-500'}`}>
+                  <X className="w-5 h-5" />
+              </button>
+           </div>
+        </div>
+      )}
       
       {!envCheck.isValid && (
         <div className="bg-red-600 text-white px-4 py-3 shadow-md z-[110] relative text-sm font-medium">
@@ -3147,7 +3218,7 @@ export default function App() {
               <button 
                 onClick={requestNotificationPermission} 
                 disabled={isRegisteringDevice}
-                className="bg-white text-red-600 px-4 py-2 sm:py-1.5 rounded-lg font-bold shadow-sm hover:bg-gray-100 transition-colors whitespace-nowrap w-full sm:w-auto disabled:opacity-50"
+                className="bg-white text-red-600 px-4 py-2 sm:py-1.5 rounded-lg font-bold shadow-sm hover:bg-gray-100 transition-colors whitespace-nowrap w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 {isRegisteringDevice ? 'Kaydediliyor...' : 'Cihazı Şimdi Kaydet'}
               </button>
