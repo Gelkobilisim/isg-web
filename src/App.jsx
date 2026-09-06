@@ -2,10 +2,10 @@
 import { DICT } from "./i18n";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
-import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit } from 'lucide-react';
+import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit, Bug, MessageSquare } from 'lucide-react';
 
 import { initializeApp } from "firebase/app";
-import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit, deleteField, increment } from "firebase/firestore";
+import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit, deleteField, increment, addDoc, serverTimestamp } from "firebase/firestore";
 import { getMessaging, getToken, onMessage, deleteToken } from "firebase/messaging";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { LoadingSpinner } from "./components/LoadingSpinner";
@@ -385,8 +385,37 @@ const useAppContext = () => React.useContext(AppContext);
     if (currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') roleText = `Geliştirici (Developer) Hesabı`;
     else if (currentUser.role === 'sef') roleText = `${t(getDeptKey(currentUser.dept))} Birimi`;
     else if (currentUser.role === 'yuklemeci') roleText = `Yükleme Sorumlusu`;
+    else if (currentUser.role === 'yuklenici' || currentUser.role === 'worker') roleText = `Yüklenici / Personel`;
 
     const [showDebug, setShowDebug] = useState(false);
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+    const [feedbackText, setFeedbackText] = useState('');
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+    
+    const handleFeedbackSubmit = async (e) => {
+        e.preventDefault();
+        if (!feedbackText.trim()) return;
+        setIsSubmittingFeedback(true);
+        try {
+            await addDoc(collection(db, "feedbacks"), {
+                text: feedbackText,
+                userId: currentUser.id,
+                userName: currentUser.name,
+                userRole: currentUser.role,
+                timestamp: serverTimestamp(),
+                status: 'new'
+            });
+            setShowFeedbackModal(false);
+            setFeedbackText('');
+            alert('Geri bildiriminiz için teşekkürler! Başarıyla iletildi.');
+        } catch (error) {
+            console.error("Feedback error", error);
+            alert('Gönderilirken bir hata oluştu.');
+        } finally {
+            setIsSubmittingFeedback(false);
+        }
+    };
+    
     const [debugTab, setDebugTab] = useState('users');
     const [notifLogs, setNotifLogs] = useState([]);
     
@@ -474,30 +503,45 @@ const useAppContext = () => React.useContext(AppContext);
            <nav className="flex-1 overflow-y-auto p-4 space-y-2">
                <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Ana Menü</div>
                
+               {(currentUser.role !== 'yuklemeci') && (
                <button onClick={() => { navigate('/isg'); setAdminSystemMode('isg'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'isg' ? 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                    <ShieldAlert className="w-5 h-5 mr-3 shrink-0" />
                    <span>{t('isg_tab') || 'İSG Takip'}</span>
                </button>
+               )}
 
+               {(currentUser.role === 'admin' || currentUser.role === 'yonetici' || currentUser.role === 'yuklemeci' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && (
                <button onClick={() => { navigate('/yukleme'); setAdminSystemMode('yukleme'); setAdminViewMode('calendar'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'yukleme' ? 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                    <Truck className="w-5 h-5 mr-3 shrink-0" />
                    <span>{t('yukleme_tab') || 'Yükleme İşlemleri'}</span>
                </button>
+               )}
 
-               <button onClick={() => { navigate('/leaderboard'); setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'leaderboard' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                   <TrendingUp className="w-5 h-5 mr-3 shrink-0" />
-                   <span>{t('leaderboard') || 'Liderlik Tablosu'}</span>
-               </button>
+               {(currentUser.role === 'admin' || currentUser.role === 'yonetici' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && (
+               <>
+                   <button onClick={() => { navigate('/leaderboard'); setAdminSystemMode('leaderboard'); setAdminViewMode('leaderboard'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'leaderboard' ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                       <TrendingUp className="w-5 h-5 mr-3 shrink-0" />
+                       <span>{t('leaderboard') || 'Liderlik Tablosu'}</span>
+                   </button>
 
-               <button onClick={() => { navigate('/analysis'); setAdminSystemMode('analysis'); setAdminViewMode('analysis'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'analysis' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
-                   <Activity className="w-5 h-5 mr-3 shrink-0" />
-                   <span>{t('analysis_tab') || 'Analiz & Birimler'}</span>
-               </button>
+                   <button onClick={() => { navigate('/analysis'); setAdminSystemMode('analysis'); setAdminViewMode('analysis'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'analysis' ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/20 dark:text-indigo-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                       <Activity className="w-5 h-5 mr-3 shrink-0" />
+                       <span>{t('analysis_tab') || 'Analiz & Birimler'}</span>
+                   </button>
+               </>
+               )}
 
                {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && (
                    <button onClick={() => { navigate('/users'); setAdminSystemMode('users'); setAdminViewMode('users'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'users' ? 'bg-purple-50 text-purple-700 dark:bg-purple-900/20 dark:text-purple-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
                        <Users className="w-5 h-5 mr-3 shrink-0" />
                        <span>{t('btn_users') || 'Kullanıcı Hesapları'}</span>
+                   </button>
+               )}
+
+               {(currentUser.role === 'admin' || currentUser.username === 'agiradar' || currentUser.username === 'agiradarsahin') && (
+                   <button onClick={() => { navigate('/feedbacks'); setAdminSystemMode('feedbacks'); setAdminViewMode('feedbacks'); setSelectedAdminDept(null); setSidebarOpen(false); }} className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === 'feedbacks' ? 'bg-pink-50 text-pink-700 dark:bg-pink-900/20 dark:text-pink-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+                       <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
+                       <span>Gelen Bildirimler</span>
                    </button>
                )}
            </nav>
@@ -508,6 +552,9 @@ const useAppContext = () => React.useContext(AppContext);
                       <Activity className="w-4 h-4 mr-3 shrink-0" /> Debug Konsolu
                    </button>
                )}
+               <button onClick={() => { setShowFeedbackModal(true); setSidebarOpen(false); }} className="w-full flex items-center px-3 py-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 font-bold rounded-xl transition-colors text-sm">
+                   <MessageSquare className="w-5 h-5 mr-3 shrink-0" /> Sorun Bildir / Feedback
+               </button>
                <button onClick={toggleLang} className="w-full flex items-center px-3 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-xl transition-colors text-sm">
                    <Globe className="w-5 h-5 mr-3 shrink-0" /> {lang === 'tr' ? 'EN (English)' : 'TR (Türkçe)'}
                </button>
@@ -710,6 +757,29 @@ const useAppContext = () => React.useContext(AppContext);
                     )}
                 </div>
               </div>
+            </div>
+        )}
+
+        {showFeedbackModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 animate-fade-in">
+                <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+                    <div className="p-6 bg-blue-600 text-white flex justify-between items-center">
+                        <h3 className="font-bold text-xl flex items-center"><Bug className="w-6 h-6 mr-3"/> Sorun Bildir / Geri Bildirim</h3>
+                        <button onClick={() => setShowFeedbackModal(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+                    </div>
+                    <form onSubmit={handleFeedbackSubmit} className="p-6 md:p-8 space-y-6">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Karşılaştığınız sorunu veya önerinizi yazın:</label>
+                            <textarea required rows="5" value={feedbackText} onChange={e=>setFeedbackText(e.target.value)} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100" placeholder="Uygulamada bir hata mı aldınız veya bir öneriniz mi var? Buraya detaylıca yazabilirsiniz..."></textarea>
+                        </div>
+                        <div className="flex space-x-3 pt-4 border-t border-gray-100 dark:border-gray-700">
+                            <button type="button" onClick={() => setShowFeedbackModal(false)} className="flex-1 py-4 font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">İptal</button>
+                            <button type="submit" disabled={isSubmittingFeedback} className="flex-1 py-4 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg transition-colors disabled:opacity-50 flex items-center justify-center">
+                                {isSubmittingFeedback ? 'Gönderiliyor...' : 'Gönder'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         )}
 
@@ -945,6 +1015,85 @@ const useAppContext = () => React.useContext(AppContext);
   };
 
 
+
+  const YukleniciDashboard = () => {
+    const ctx = useAppContext();
+    const { t, createTask } = ctx;
+    
+    const [imgPreview, setImgPreview] = React.useState(null);
+    const [formState, setFormState] = React.useState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        createTask(formState.dept, formState.priority, formState.subject, formState.desc, 24, imgPreview);
+        setFormState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
+        setImgPreview(null);
+        alert(t('success_created') || "İhlal kaydı oluşturuldu.");
+    };
+
+    return (
+        <div className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 lg:p-8 animate-slide-up">
+             <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
+                <h2 className="text-2xl font-extrabold mb-8 flex items-center text-gray-800 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700 pb-4"><ShieldAlert className="w-8 h-8 mr-3 text-red-500"/> {t('create_violation') || 'İhlal Kaydı Oluştur'}</h2>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('department') || 'İlgili Birim'}</label>
+                            <select required value={formState.dept} onChange={e=>setFormState({...formState, dept: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                                <option value="Boyahane">{t('dept_boyahane') || 'Boyahane'}</option>
+                                <option value="Altyapı">{t('dept_altyapi') || 'Altyapı'}</option>
+                                <option value="Dalgaduvar">{t('dept_dalgaduvar') || 'Dalgaduvar'}</option>
+                                <option value="Lazer">{t('dept_lazer') || 'Lazer'}</option>
+                                <option value="Güç">{t('dept_guc') || 'Güç'}</option>
+                                <option value="Kaynaklı imalat">{t('dept_kaynakli') || 'Kaynaklı imalat'}</option>
+                                <option value="Dış alan">{t('dept_dis') || 'Dış alan'}</option>
+                                <option value="Bakım & Onarım">{t('dept_bakim') || 'Bakım & Onarım'}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('priority') || 'Öncelik Seviyesi'}</label>
+                            <select required value={formState.priority} onChange={e=>setFormState({...formState, priority: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                                <option value="yuksek">{t('high') || 'Yüksek'}</option>
+                                <option value="orta">{t('medium') || 'Orta'}</option>
+                                <option value="dusuk">{t('low') || 'Düşük'}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('subject') || 'Konu'}</label>
+                        <input required type="text" value={formState.subject} onChange={e=>setFormState({...formState, subject: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_subject') || 'İhlal konusu (Örn: KKD Kullanımı)'} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('description') || 'Açıklama / İhlal Detayı'}</label>
+                        <textarea required rows="4" value={formState.desc} onChange={e=>setFormState({...formState, desc: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_desc') || 'İhlal detayı...'}></textarea>
+                    </div>
+                    <div>
+                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo_evidence') || 'Fotoğraf (İsteğe Bağlı)'}</label>
+                         <input type="file" id="yukleniciCameraInput" accept="image/*" capture="environment" className="hidden" onChange={(e) => { 
+                             const file = e.target.files[0];
+                             if (file) {
+                                 const reader = new FileReader();
+                                 reader.onloadend = () => setImgPreview(reader.result);
+                                 reader.readAsDataURL(file);
+                             }
+                             e.target.value = null; 
+                         }} />
+                         <label htmlFor="yukleniciCameraInput" className="w-full h-32 md:h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
+                             {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
+                                <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-400 group-hover:text-blue-500" /></div>
+                                <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('cam_open') || 'Kamerayı Aç / Fotoğraf Seç'}</span></>
+                             )}
+                         </label>
+                    </div>
+                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-4 rounded-xl shadow-lg transition-all text-lg flex items-center justify-center group">
+                        <Upload className="w-5 h-5 mr-2 group-hover:-translate-y-1 transition-transform" />
+                        {t('submit_btn') || 'İhlali Bildir'}
+                    </button>
+                </form>
+             </div>
+        </div>
+    );
+  };
   const ModDashboard = () => {
     const ctx = useAppContext();
     const { t, tasks, createTask, updateTaskStatus, DEPARTMENTS } = ctx;
@@ -1125,7 +1274,15 @@ const useAppContext = () => React.useContext(AppContext);
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myTasks.length === 0 && <div className="col-span-full text-center text-gray-500 dark:text-gray-400 p-12 bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700">{t('no_tasks') || 'Henüz bir görev bulunmamaktadır.'}</div>}
+                {myTasks.length === 0 && (
+                    <div className="col-span-full bg-white dark:bg-gray-800 p-10 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-center mt-2">
+                        <div className="bg-green-100 dark:bg-green-900/30 p-6 rounded-full mb-6">
+                            <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400" />
+                        </div>
+                        <h3 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">Harika! Biriminizde hiç ihlal yok.</h3>
+                        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">Şu an için her şey yolunda görünüyor. İş sağlığı ve güvenliği kurallarına gösterdiğiniz özen için teşekkür ederiz. Güvenli çalışmalar dileriz!</p>
+                    </div>
+                )}
                 {myTasks.map(task => {
                     const statusObj = STATUS_INFO[task.status] || STATUS_INFO['acik'];
                     const StatusIcon = statusObj.icon;
@@ -1186,6 +1343,74 @@ const useAppContext = () => React.useContext(AppContext);
     );
   };
 
+
+  const FeedbacksAdmin = () => {
+    const ctx = useAppContext();
+    const { db } = ctx;
+    const [feedbacks, setFeedbacks] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setFeedbacks(data);
+            setLoading(false);
+        }, (error) => {
+            console.error("Error fetching feedbacks:", error);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+    }, [db]);
+
+    const markAsRead = async (id, currentStatus) => {
+        if (currentStatus === 'read') return;
+        try {
+            await updateDoc(doc(db, "feedbacks", id), { status: 'read' });
+        } catch(e) {
+            console.error("Update error", e);
+        }
+    }
+
+    if (loading) {
+        return <div className="flex-1 w-full flex items-center justify-center p-8"><LoadingSpinner /></div>;
+    }
+
+    return (
+        <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 animate-slide-up">
+             <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex items-center">
+                <MessageSquare className="w-8 h-8 text-pink-500 mr-4" />
+                <h2 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">Gelen Bildirimler & Hatalar</h2>
+             </div>
+             
+             {feedbacks.length === 0 ? (
+                 <div className="bg-white dark:bg-gray-800 p-10 rounded-3xl text-center text-gray-500 shadow-sm">
+                    Henüz hiç geri bildirim veya hata raporu bulunmuyor.
+                 </div>
+             ) : (
+                 <div className="grid grid-cols-1 gap-4">
+                     {feedbacks.map(f => (
+                         <div key={f.id} onClick={() => markAsRead(f.id, f.status)} className={`p-5 rounded-2xl border transition-colors cursor-pointer ${f.status === 'new' ? 'bg-pink-50 border-pink-200 dark:bg-pink-900/10 dark:border-pink-900/30' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'}`}>
+                            <div className="flex justify-between items-start mb-2">
+                                <div>
+                                    <span className="font-bold text-gray-800 dark:text-gray-100">{f.userName}</span>
+                                    <span className="ml-2 text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-md uppercase">{f.userRole}</span>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <span className="text-xs text-gray-500">
+                                        {f.timestamp?.toDate ? f.timestamp.toDate().toLocaleString('tr-TR') : 'Şimdi'}
+                                    </span>
+                                    {f.status === 'new' && <span className="bg-pink-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Yeni</span>}
+                                </div>
+                            </div>
+                            <p className="text-gray-700 dark:text-gray-300 mt-2 whitespace-pre-wrap">{f.text}</p>
+                         </div>
+                     ))}
+                 </div>
+             )}
+        </div>
+    );
+  };
   const AdminDashboard = () => {
     const ctx = useAppContext();
 
@@ -3339,10 +3564,11 @@ export default function App() {
                 </div>
               )}
               <div className="flex-1 w-full flex">
-                 {(currentUser?.role === 'admin' || currentUser?.username === 'agiradar' || currentUser?.username === 'agiradarsahin') && <AdminDashboard />}
+                 {(currentUser?.role === 'admin' || currentUser?.role === 'yonetici' || currentUser?.username === 'agiradar' || currentUser?.username === 'agiradarsahin') && adminSystemMode === 'feedbacks' ? <FeedbacksAdmin /> : (currentUser?.role === 'admin' || currentUser?.role === 'yonetici' || currentUser?.username === 'agiradar' || currentUser?.username === 'agiradarsahin') ? <AdminDashboard /> : null}
                  {currentUser?.role === 'mod' && <ModDashboard />}
                  {currentUser?.role === 'sef' && <SefDashboard />}
                  {currentUser?.role === 'yuklemeci' && <YuklemeciDashboard />}
+                 {(currentUser?.role === 'yuklenici' || currentUser?.role === 'worker') && <YukleniciDashboard />}
               </div>
             </MainLayout>
                 

@@ -1,0 +1,70 @@
+  const YukleniciDashboard = () => {
+    const ctx = useAppContext();
+    const { t, createTask } = ctx;
+    
+    const [imgPreview, setImgPreview] = React.useState(null);
+    const [formState, setFormState] = React.useState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        createTask(formState.dept, formState.priority, formState.subject, formState.desc, 24, imgPreview);
+        setFormState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
+        setImgPreview(null);
+        alert(t('success_created') || "İhlal kaydı oluşturuldu.");
+    };
+
+    return (
+        <div className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 lg:p-8 animate-slide-up">
+             <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
+                <h2 className="text-2xl font-extrabold mb-8 flex items-center text-gray-800 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700 pb-4"><ShieldAlert className="w-8 h-8 mr-3 text-red-500"/> {t('create_violation') || 'İhlal Kaydı Oluştur'}</h2>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('department') || 'İlgili Birim'}</label>
+                            <select required value={formState.dept} onChange={e=>setFormState({...formState, dept: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                                <option value="Boyahane">{t('dept_boyahane') || 'Boyahane'}</option>
+                                <option value="Altyapı">{t('dept_altyapi') || 'Altyapı'}</option>
+                                <option value="Dalgaduvar">{t('dept_dalgaduvar') || 'Dalgaduvar'}</option>
+                                <option value="Lazer">{t('dept_lazer') || 'Lazer'}</option>
+                                <option value="Güç">{t('dept_guc') || 'Güç'}</option>
+                                <option value="Kaynaklı imalat">{t('dept_kaynakli') || 'Kaynaklı imalat'}</option>
+                                <option value="Dış alan">{t('dept_dis') || 'Dış alan'}</option>
+                                <option value="Bakım & Onarım">{t('dept_bakim') || 'Bakım & Onarım'}</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('priority') || 'Öncelik Seviyesi'}</label>
+                            <select required value={formState.priority} onChange={e=>setFormState({...formState, priority: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                                <option value="yuksek">{t('high') || 'Yüksek'}</option>
+                                <option value="orta">{t('medium') || 'Orta'}</option>
+                                <option value="dusuk">{t('low') || 'Düşük'}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('subject') || 'Konu'}</label>
+                        <input required type="text" value={formState.subject} onChange={e=>setFormState({...formState, subject: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_subject') || 'İhlal konusu (Örn: KKD Kullanımı)'} />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('description') || 'Açıklama / İhlal Detayı'}</label>
+                        <textarea required rows="4" value={formState.desc} onChange={e=>setFormState({...formState, desc: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_desc') || 'İhlal detayı...'}></textarea>
+                    </div>
+                    <div>
+                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo_evidence') || 'Fotoğraf (İsteğe Bağlı)'}</label>
+                         <input type="file" id="yukleniciCameraInput" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setImgPreview); e.target.value = null; }} />
+                         <label htmlFor="yukleniciCameraInput" className="w-full h-32 md:h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
+                             {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
+                                <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-400 group-hover:text-blue-500" /></div>
+                                <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('cam_open') || 'Kamerayı Aç / Fotoğraf Seç'}</span></>
+                             )}
+                         </label>
+                    </div>
+                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-extrabold py-4 rounded-xl shadow-lg transition-all text-lg flex items-center justify-center group">
+                        <Upload className="w-5 h-5 mr-2 group-hover:-translate-y-1 transition-transform" />
+                        {t('submit_btn') || 'İhlali Bildir'}
+                    </button>
+                </form>
+             </div>
+        </div>
+    );
+  };
