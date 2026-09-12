@@ -1,5 +1,6 @@
 
 import { DICT } from "./i18n";
+import { Toaster, toast } from "react-hot-toast";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit, Bug, MessageSquare, Upload } from 'lucide-react';
@@ -1205,125 +1206,189 @@ const AnimatedView = ({ children, className }) => (
     const ctx = useAppContext();
     const { t, tasks, createTask, updateTaskStatus, DEPARTMENTS } = ctx;
     
+    const [activeTab, setActiveTab] = React.useState('create'); // 'create' or 'review'
     const [actionModal, setActionModal] = React.useState({ isOpen: false, taskId: null, action: null });
     const [modNote, setModNote] = React.useState('');
-    
+    const [imgPreview, setImgPreview] = React.useState(null);
+    const [formState, setFormState] = React.useState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
+
     const reviewTasks = React.useMemo(() => {
-        return tasks.filter(task => task.status === 'onay_bekliyor' || task.status === 'itiraz_edildi').sort((a,b) => b.timestamp - a.timestamp);
+        return tasks.filter(t => t.status === 'onay_bekliyor' || t.status === 'itiraz_edildi').sort((a,b) => b.timestamp - a.timestamp);
     }, [tasks]);
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        createTask(formState.dept, formState.priority, formState.subject, formState.desc, 24, imgPreview);
+        setFormState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
+        setImgPreview(null);
+        toast.success(t('success_created') || "İhlal kaydı başarıyla oluşturuldu.", {
+            style: { borderRadius: '12px', background: '#333', color: '#fff' }
+        });
+        setActiveTab('review');
+    };
 
     const handleActionSubmit = (e) => {
         e.preventDefault();
-        if (actionModal.action === 'approve') {
-             updateTaskStatus(actionModal.taskId, 'cozuldu', '', '', modNote);
-        } else if (actionModal.action === 'reject') {
-             updateTaskStatus(actionModal.taskId, 'acik', '', '', modNote);
+        if (actionModal.action === 'approve') { 
+            updateTaskStatus(actionModal.taskId, 'kapatildi', modNote, '', '');
+            toast.success("İşlem onaylandı ve kapatıldı.", {
+                style: { borderRadius: '12px', background: '#333', color: '#fff' }
+            });
+        } else if (actionModal.action === 'reject') { 
+            updateTaskStatus(actionModal.taskId, 'acik', modNote, '', '');
+            toast.error("Yanıt reddedildi ve geri gönderildi.", {
+                style: { borderRadius: '12px', background: '#333', color: '#fff' }
+            });
         }
         setActionModal({ isOpen: false, taskId: null, action: null });
         setModNote('');
     };
-    const [imgPreview, setImgPreview] = React.useState(null);
-    const [formState, setFormState] = React.useState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        // Photo is now optional for ISG Mod
-        // if (!imgPreview) { ... }
-        createTask(formState.dept, formState.priority, formState.subject, formState.desc, 24, imgPreview);
-        setFormState({ dept: 'Boyahane', priority: 'yuksek', subject: '', desc: '' });
-        setImgPreview(null);
-        alert(t('success_created') || "İhlal kaydı oluşturuldu.");
+    const handleImageUpload = (file, setter) => {
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setter(reader.result);
+        };
+        reader.readAsDataURL(file);
     };
 
     return (
-        <div className="flex-1 w-full max-w-4xl mx-auto p-4 md:p-6 lg:p-8 animate-slide-up">
-             <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700">
-                <h2 className="text-2xl font-extrabold mb-8 flex items-center text-gray-800 dark:text-gray-100 border-b border-gray-100 dark:border-gray-700 pb-4"><ShieldAlert className="w-8 h-8 mr-3 text-red-500"/> {t('create_violation') || 'İhlal Kaydı Oluştur'}</h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('department') || 'İlgili Birim'}</label>
-                            <select required value={formState.dept} onChange={e=>setFormState({...formState, dept: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
-                                <option value="Boyahane">{t('dept_boyahane') || 'Boyahane'}</option>
-                                <option value="Altyapı">{t('dept_altyapi') || 'Altyapı'}</option>
-                                <option value="Dalgaduvar">{t('dept_dalgaduvar') || 'Dalgaduvar'}</option>
-                                <option value="Lazer">{t('dept_lazer') || 'Lazer'}</option>
-                                <option value="Güç">{t('dept_guc') || 'Güç'}</option>
-                                <option value="Kaynaklı imalat">{t('dept_kaynakli') || 'Kaynaklı imalat'}</option>
-                                <option value="Dış alan">{t('dept_dis') || 'Dış alan'}</option>
-                                <option value="Bakım & Onarım">{t('dept_bakim') || 'Bakım & Onarım'}</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('priority') || 'Öncelik Seviyesi'}</label>
-                            <select required value={formState.priority} onChange={e=>setFormState({...formState, priority: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
-                                <option value="yuksek">{t('high') || 'Yüksek'}</option>
-                                <option value="orta">{t('medium') || 'Orta'}</option>
-                                <option value="dusuk">{t('low') || 'Düşük'}</option>
-                            </select>
-                        </div>
+        <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 animate-slide-up">
+            
+            <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100">
+                        <ShieldAlert className="w-8 h-8 mr-3 text-blue-500"/> 
+                        İSG Uzmanı Paneli
+                    </h2>
+                    
+                    <div className="hidden md:flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-full md:w-auto">
+                        <button 
+                            onClick={() => setActiveTab('create')} 
+                            className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'create' ? 'bg-white dark:bg-gray-800 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                        >
+                            <span className="flex items-center justify-center"><Plus className="w-4 h-4 mr-2" /> İhlal Oluştur</span>
+                        </button>
+                        <button 
+                            onClick={() => setActiveTab('review')} 
+                            className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'review' ? 'bg-white dark:bg-gray-800 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                        >
+                            <span className="flex items-center justify-center">
+                                <CheckSquare className="w-4 h-4 mr-2" /> 
+                                Yanıtları Kontrol Et 
+                                {reviewTasks.length > 0 && <span className="ml-2 bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">{reviewTasks.length}</span>}
+                            </span>
+                        </button>
                     </div>
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('subject') || 'Konu'}</label>
-                        <input required type="text" value={formState.subject} onChange={e=>setFormState({...formState, subject: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_subject') || 'İhlal konusu (Örn: KKD Kullanımı)'} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('description') || 'Açıklama / İhlal Detayı'}</label>
-                        <textarea required rows="4" value={formState.desc} onChange={e=>setFormState({...formState, desc: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_desc') || 'İhlal detayı...'}></textarea>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} <span className="text-gray-400 dark:text-gray-500">({t('optional') || 'İsteğe Bağlı'})</span></label>
-                        <input type="file" id="modCamera" accept="image/*" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setImgPreview); e.target.value = null; }} />
-                        <label htmlFor="modCamera" className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
-                            {imgPreview ? ( <img loading="lazy" decoding="async" src={imgPreview} className="w-full h-full object-cover" /> ) : (
-                                <><div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-8 h-8 text-gray-500 group-hover:text-blue-500" /></div>
-                                <span className="text-sm font-bold">{t('cam_open') || 'Kamerayı Aç / Fotoğraf Yükle'}</span></>
-                            )}
-                        </label>
-                    </div>
-                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center transition-colors"><Send className="w-5 h-5 mr-2"/> {t('send') || 'Kaydı Gönder'}</button>
-                </form>
-             </div>
-             
-             {reviewTasks.length > 0 && (
-             <div className="mt-8 bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 animate-slide-up">
-                <h2 className="text-2xl font-extrabold mb-6 flex items-center text-gray-800 dark:text-gray-100"><CheckCircle className="w-6 h-6 mr-3 text-green-500"/> {t('pending_reviews') || 'İnceleme Bekleyen Kayıtlar'}</h2>
-                <div className="grid grid-cols-1 gap-6">
-                    {reviewTasks.map(task => {
-                        const isObjection = task.status === 'itiraz_edildi';
-                        return (
-                            <div key={task.id} className="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 flex flex-col md:flex-row gap-5">
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-3 mb-2">
-                                        <span className="font-bold text-gray-800 dark:text-gray-100">{t(getDeptKey(task.dept))}</span>
-                                        <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${task.priority === 'yuksek' ? 'bg-red-100 text-red-700' : task.priority === 'orta' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{task.priority}</span>
-                                        <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${isObjection ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{isObjection ? (t('stat_itiraz') || 'İtiraz Edildi') : (t('stat_onay') || 'Onay Bekliyor')}</span>
-                                    </div>
-                                    <p className="text-sm text-gray-700 dark:text-gray-200 mb-3"><span className="font-bold">{t('initial_note') || 'İlk İhlal Notu'}:</span> {task.desc}</p>
-                                    
-                                    <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                                        <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-1">{isObjection ? (t('chief_obj_note') || 'Birim Şefi İtiraz Notu') + ':' : (t('chief_fix_note') || 'Birim Şefi Çözüm Notu') + ':'}</p>
-                                        <p className="text-sm text-gray-700 dark:text-gray-200">{task.chiefNote || (t('no_note') || 'Not girilmemiş.')}</p>
-                                    </div>
-                                </div>
-                                
-                                {task.afterImgUrl && (
-                                    <div className="w-full md:w-48 h-32 flex-shrink-0">
-                                        <img loading="lazy" decoding="async" src={task.afterImgUrl} className="w-full h-full object-cover rounded-xl border border-gray-200 dark:border-gray-700" />
-                                    </div>
-                                )}
-                                
-                                <div className="flex flex-col gap-3 justify-center md:min-w-[140px]">
-                                    <button onClick={() => setActionModal({ isOpen: true, taskId: task.id, action: 'approve' })} className="bg-green-100 hover:bg-green-200 text-green-700 font-bold py-2 px-4 rounded-xl text-sm transition-colors shadow-sm">{isObjection ? (t('accept_obj') || 'İtirazı Kabul Et') : (t('approve_close') || 'Onayla (Kapat)')}</button>
-                                    <button onClick={() => setActionModal({ isOpen: true, taskId: task.id, action: 'reject' })} className="bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 px-4 rounded-xl text-sm transition-colors shadow-sm">{isObjection ? (t('reject_obj') || 'İtirazı Reddet') : (t('reject_return') || 'Reddet (Geri Gönder)')}</button>
-                                </div>
-                            </div>
-                        )
-                    })}
                 </div>
-             </div>
-             )}
-             
+            </div>
+
+            {activeTab === 'create' && (
+                <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 animate-slide-up">
+                    <h2 className="text-xl md:text-2xl font-extrabold mb-6 flex items-center text-gray-800 dark:text-gray-100"><AlertTriangle className="w-6 h-6 mr-3 text-blue-500"/> {t('create_violation') || 'İhlal Kaydı Oluştur'}</h2>
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('department') || 'Departman'}</label>
+                                <select required value={formState.dept} onChange={e=>setFormState({...formState, dept: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                                    {DEPARTMENTS.map(d => <option key={d.id} value={d.name}>{t(d.key)}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('priority') || 'Öncelik Seviyesi'}</label>
+                                <select required value={formState.priority} onChange={e=>setFormState({...formState, priority: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100">
+                                    <option value="kritik">{t('pri_kritik') || 'Kritik'}</option>
+                                    <option value="yuksek">{t('high') || 'Yüksek'}</option>
+                                    <option value="orta">{t('medium') || 'Orta'}</option>
+                                    <option value="dusuk">{t('low') || 'Düşük'}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">Konu / Başlık</label>
+                            <input type="text" required value={formState.subject} onChange={e=>setFormState({...formState, subject: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder="Örn: Baret Kullanımı" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('description') || 'Açıklama / İhlal Detayı'}</label>
+                            <textarea required rows="4" value={formState.desc} onChange={e=>setFormState({...formState, desc: e.target.value})} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_desc') || 'İhlal detayı...'}></textarea>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} <span className="text-gray-400 dark:text-gray-500">({t('optional') || 'İsteğe Bağlı'})</span></label>
+                            <input type="file" id="modCamera" accept="image/*" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setImgPreview); e.target.value = null; }} />
+                            <label htmlFor="modCamera" className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
+                                {imgPreview ? ( <img loading="lazy" decoding="async" src={imgPreview} className="w-full h-full object-cover" /> ) : (
+                                    <><div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-8 h-8 text-gray-500 group-hover:text-blue-500" /></div>
+                                    <span className="text-sm font-bold">{t('cam_open') || 'Kamerayı Aç / Fotoğraf Yükle'}</span></>
+                                )}
+                            </label>
+                        </div>
+                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center transition-colors"><Send className="w-5 h-5 mr-2"/> {t('send') || 'Kaydı Gönder'}</button>
+                    </form>
+                </div>
+            )}
+
+            {activeTab === 'review' && (
+                <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 animate-slide-up">
+                    <h2 className="text-xl md:text-2xl font-extrabold mb-6 flex items-center text-gray-800 dark:text-gray-100"><CheckCircle className="w-6 h-6 mr-3 text-green-500"/> {t('pending_reviews') || 'İnceleme Bekleyen Kayıtlar'}</h2>
+                    
+                    {reviewTasks.length === 0 ? (
+                        <div className="text-center py-12">
+                            <div className="bg-green-100 dark:bg-green-900/30 p-6 rounded-full inline-block mb-4">
+                                <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">Harika! Bekleyen yanıt yok.</h3>
+                            <p className="text-gray-500 dark:text-gray-400 mt-2">Şefler tarafından gönderilen çözümler veya itirazlar burada görünecektir.</p>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 gap-6">
+                            {reviewTasks.map(task => {
+                                const isObjection = task.status === 'itiraz_edildi';
+                                return (
+                                    <div key={task.id} className="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 flex flex-col md:flex-row gap-5 hover:shadow-md transition-shadow">
+                                        <div className="flex-1">
+                                            <div className="flex flex-wrap items-center gap-3 mb-3">
+                                                <span className="font-bold text-gray-800 dark:text-gray-100 text-lg">{task.subject || "İhlal Bildirimi"}</span>
+                                                <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">({t(ctx.getDeptKey(task.dept))})</span>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${task.priority === 'yuksek' || task.priority === 'kritik' ? 'bg-red-100 text-red-700' : task.priority === 'orta' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{t(task.priority)}</span>
+                                                <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${isObjection ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>{isObjection ? (t('stat_itiraz') || 'İtiraz Edildi') : (t('stat_onay') || 'Onay Bekliyor')}</span>
+                                            </div>
+                                            <p className="text-sm text-gray-700 dark:text-gray-200 mb-4"><span className="font-bold">{t('initial_note') || 'İlk İhlal Notu'}:</span> {task.desc}</p>
+                                            
+                                            <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
+                                                <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2">{isObjection ? (t('chief_obj_note') || 'Birim Şefi İtiraz Notu') + ':' : (t('chief_fix_note') || 'Birim Şefi Çözüm Notu') + ':'}</p>
+                                                <p className="text-sm text-gray-700 dark:text-gray-200">{task.chiefNote || (t('no_note') || 'Not girilmemiş.')}</p>
+                                            </div>
+                                        </div>
+                                        
+                                        {task.afterImgUrl && (
+                                            <div className="w-full md:w-48 h-32 flex-shrink-0 mt-2 md:mt-0">
+                                                <img 
+                                                    loading="lazy" 
+                                                    decoding="async" 
+                                                    src={task.afterImgUrl} 
+                                                    onClick={() => {
+                                                        ctx.setPreviewModalImg(task.afterImgUrl);
+                                                        ctx.setPreviewModalTitle(isObjection ? "İtiraz Fotoğrafı" : "Çözüm Fotoğrafı");
+                                                    }}
+                                                    className="w-full h-full object-cover rounded-xl border border-gray-200 dark:border-gray-700 cursor-zoom-in hover:opacity-90" 
+                                                    alt="Çözüm" 
+                                                />
+                                            </div>
+                                        )}
+                                        
+                                        <div className="flex flex-col gap-3 justify-center md:min-w-[150px]">
+                                            <button onClick={() => setActionModal({ isOpen: true, taskId: task.id, action: 'approve' })} className="bg-green-100 hover:bg-green-200 text-green-700 font-bold py-2.5 px-4 rounded-xl text-sm transition-colors shadow-sm">{isObjection ? (t('accept_obj') || 'İtirazı Kabul Et') : (t('approve_close') || 'Onayla (Kapat)')}</button>
+                                            <button onClick={() => setActionModal({ isOpen: true, taskId: task.id, action: 'reject' })} className="bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2.5 px-4 rounded-xl text-sm transition-colors shadow-sm">{isObjection ? (t('reject_obj') || 'İtirazı Reddet') : (t('reject_return') || 'Reddet (Geri Gönder)')}</button>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {actionModal.isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
                     <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
@@ -1333,7 +1398,7 @@ const AnimatedView = ({ children, className }) => (
                         </div>
                         <form onSubmit={handleActionSubmit} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('mod_note') || 'Moderatör Notu / Geri Bildirim'}</label>
+                                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('mod_note') || 'İSG Uzmanı Notu / Geri Bildirim'}</label>
                                 <textarea rows="3" value={modNote} onChange={e=>setModNote(e.target.value)} className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100" placeholder={t('ph_mod_note') || 'İsteğe bağlı açıklama...'}></textarea>
                             </div>
                             <button type="submit" className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all ${actionModal.action === 'approve' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
@@ -1343,21 +1408,84 @@ const AnimatedView = ({ children, className }) => (
                     </div>
                 </div>
             )}
-             
+            
+            {/* Mobile Bottom Navigation */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2 px-4 flex justify-around pb-4">
+                <button 
+                    onClick={() => setActiveTab('create')} 
+                    className={`flex flex-col items-center justify-center py-2 px-4 rounded-xl transition-all ${activeTab === 'create' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                >
+                    <Plus className={`w-6 h-6 mb-1 ${activeTab === 'create' ? 'animate-pulse' : ''}`} /> 
+                    <span className="text-xs font-bold">Oluştur</span>
+                </button>
+                
+                <button 
+                    onClick={() => setActiveTab('review')} 
+                    className={`flex flex-col items-center justify-center py-2 px-4 rounded-xl transition-all relative ${activeTab === 'review' ? 'text-blue-600 bg-blue-50 dark:bg-blue-900/30' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                >
+                    <div className="relative">
+                        <CheckSquare className={`w-6 h-6 mb-1 ${activeTab === 'review' ? 'animate-pulse' : ''}`} /> 
+                        {reviewTasks.length > 0 && (
+                            <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white dark:border-gray-800">
+                                {reviewTasks.length}
+                            </span>
+                        )}
+                    </div>
+                    <span className="text-xs font-bold">Kontrol Et</span>
+                </button>
+            </div>
+            {/* Pad the bottom of the container to prevent content from hiding under mobile nav */}
+            <div className="h-20 md:hidden"></div>
         </div>
     );
-  };
+};;
 
   const SefDashboard = () => {
     const ctx = useAppContext();
-    const { t, tasks, currentUser, updateTaskStatus } = ctx;
+    const { t, tasks, currentUser, updateTaskStatus, setPreviewModalImg, setPreviewModalTitle } = ctx;
     const [actionModal, setActionModal] = React.useState({ isOpen: false, taskId: null, type: null });
+    const [expandedTasks, setExpandedTasks] = React.useState({});
+    const [activeTab, setActiveTab] = React.useState('open');
+    
+    const toggleTask = (id) => {
+        setExpandedTasks(prev => ({ ...prev, [id]: !prev[id] }));
+    };
     const [note, setNote] = React.useState('');
     const [afterImgPreview, setAfterImgPreview] = React.useState(null);
 
-    const myTasks = React.useMemo(() => {
-        return tasks.filter(task => task.dept === currentUser.dept).sort((a,b) => b.timestamp - a.timestamp);
+    const { openTasks, completedTasks, openCount } = React.useMemo(() => {
+        const my = tasks.filter(task => task.dept === currentUser.dept).sort((a,b) => b.timestamp - a.timestamp);
+        const opens = my.filter(t => t.status === 'acik' || t.status === 'itiraz_edildi');
+        return {
+            openTasks: opens,
+            completedTasks: my.filter(t => t.status !== 'acik' && t.status !== 'itiraz_edildi'),
+            openCount: opens.length
+        };
     }, [tasks, currentUser]);
+
+    const displayTasks = activeTab === 'open' ? openTasks : completedTasks;
+
+    const formatTimeRemaining = (timestamp, deadlineHours) => {
+        if (!timestamp || !deadlineHours) return null;
+        const deadline = timestamp + (deadlineHours * 60 * 60 * 1000);
+        const now = Date.now();
+        const diff = deadline - now;
+        
+        if (diff < 0) {
+            const h = Math.floor(Math.abs(diff) / (1000 * 60 * 60));
+            return <span className="text-red-600 dark:text-red-400 font-bold">{h > 0 ? `${h} saat` : 'Süresi'} gecikti</span>;
+        } else {
+            const h = Math.floor(diff / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            return <span className="text-orange-600 dark:text-orange-400 font-bold">{h}s {m}d kaldı</span>;
+        }
+    };
+    
+    const formatDateStr = (timestamp) => {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    };
 
     const handleActionSubmit = (e) => {
         e.preventDefault();
@@ -1375,34 +1503,97 @@ const AnimatedView = ({ children, className }) => (
         <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 animate-slide-up">
             <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
                 <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100"><ShieldAlert className="w-8 h-8 mr-3 text-blue-500"/> {t(getDeptKey(currentUser.dept))} {t('dept_tasks') || 'Birimi Görevleri'}</h2>
-                <div className="mt-4 md:mt-0 flex items-center bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 text-blue-800 font-bold text-sm shadow-sm">
-                   {t('open_tasks') || 'Açık Görevler'}: {myTasks.filter(t => t.status === 'acik' || t.status === 'itiraz_edildi').length}
+                <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
+                   <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
+                       <button onClick={() => setActiveTab('open')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'open' ? 'bg-white dark:bg-gray-800 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>Açık İhlaller ({openCount})</button>
+                       <button onClick={() => setActiveTab('completed')} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'completed' ? 'bg-white dark:bg-gray-800 text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}>Düzeltilenler</button>
+                   </div>
                 </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {myTasks.length === 0 && (
+                {displayTasks.length === 0 && (
                     <div className="col-span-full bg-white dark:bg-gray-800 p-10 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-center mt-2">
-                        <div className="bg-green-100 dark:bg-green-900/30 p-6 rounded-full mb-6">
-                            <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400" />
-                        </div>
-                        <h3 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">Harika! Biriminizde hiç ihlal yok.</h3>
-                        <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">Şu an için her şey yolunda görünüyor. İş sağlığı ve güvenliği kurallarına gösterdiğiniz özen için teşekkür ederiz. Güvenli çalışmalar dileriz!</p>
+                        {activeTab === 'open' ? (
+                            <>
+                                <div className="bg-green-100 dark:bg-green-900/30 p-6 rounded-full mb-6">
+                                    <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400" />
+                                </div>
+                                <h3 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">Harika! Biriminizde açık ihlal yok.</h3>
+                                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">Şu an için her şey yolunda görünüyor. İş sağlığı ve güvenliği kurallarına gösterdiğiniz özen için teşekkür ederiz. Güvenli çalışmalar dileriz!</p>
+                            </>
+                        ) : (
+                            <>
+                                <div className="bg-gray-100 dark:bg-gray-700 p-6 rounded-full mb-6">
+                                    <List className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+                                </div>
+                                <h3 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">Henüz geçmiş bir ihlal kaydı yok.</h3>
+                                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">Tamamlanan veya düzeltilen ihlalleriniz burada listelenecektir.</p>
+                            </>
+                        )}
                     </div>
                 )}
-                {myTasks.map(task => {
+                {displayTasks.map(task => {
                     const statusObj = STATUS_INFO[task.status] || STATUS_INFO['acik'];
                     const StatusIcon = statusObj.icon;
                     return (
                         <div key={task.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col transition-all hover:shadow-md">
-                            <div className="flex justify-between items-start mb-4 pb-3 border-b border-gray-100 dark:border-gray-700">
-                                <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${task.priority === 'yuksek' ? 'bg-red-100 text-red-700' : task.priority === 'orta' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{task.priority}</span>
-                                <div className={`flex items-center px-2 py-1 rounded-md border ${statusObj.color}`}><StatusIcon className="w-3.5 h-3.5 mr-1.5" /><span className="text-[10px] font-bold uppercase">{t(statusObj.label_key)}</span></div>
+                            <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-100 dark:border-gray-700">
+                                <div className="flex flex-col gap-1.5">
+                                    <span className={`text-xs font-bold px-2 py-1 rounded-md uppercase self-start ${task.priority === 'yuksek' ? 'bg-red-100 text-red-700' : task.priority === 'orta' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>{task.priority}</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center font-medium"><Calendar className="w-3.5 h-3.5 mr-1"/> {formatDateStr(task.timestamp)}</span>
+                                </div>
+                                <div className="flex flex-col items-end gap-1.5">
+                                    <div className={`flex items-center px-2 py-1 rounded-md border ${statusObj.color}`}><StatusIcon className="w-3.5 h-3.5 mr-1.5" /><span className="text-[10px] font-bold uppercase">{t(statusObj.label_key)}</span></div>
+                                    {(task.status === 'acik' || task.status === 'itiraz_edildi') && (
+                                        <div className="text-xs flex items-center bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-md">
+                                            <Clock className="w-3.5 h-3.5 mr-1 text-gray-400"/>
+                                            {formatTimeRemaining(task.timestamp, task.deadlineHours)}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-4 whitespace-pre-wrap">{task.desc}</p>
-                            {task.imgUrl && (
-                                <img loading="lazy" decoding="async" src={task.imgUrl} className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-200 dark:border-gray-700" />
-                            )}
+                            
+                            <div 
+                                className="cursor-pointer group mb-2"
+                                onClick={() => toggleTask(task.id)}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                                        {task.subject || "İhlal Bildirimi"}
+                                    </h3>
+                                    <span className="text-gray-400 dark:text-gray-500">
+                                        {expandedTasks[task.id] ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <AnimatePresence>
+                                {expandedTasks[task.id] && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="overflow-hidden"
+                                    >
+                                        <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-4 mt-2 whitespace-pre-wrap">{task.desc}</p>
+                                        {task.imgUrl && (
+                                            <img 
+                                                loading="lazy" 
+                                                decoding="async" 
+                                                src={task.imgUrl} 
+                                                alt={task.subject}
+                                                onClick={() => {
+                                                    setPreviewModalImg(task.imgUrl);
+                                                    setPreviewModalTitle(task.subject || "İhlal Fotoğrafı");
+                                                }}
+                                                className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-200 dark:border-gray-700 cursor-zoom-in hover:opacity-90 transition-opacity" 
+                                            />
+                                        )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
                             <div className="mt-auto pt-4 flex gap-3">
                                 {(task.status === 'acik' || task.status === 'itiraz_edildi') && (
                                     <>
@@ -3618,6 +3809,7 @@ export default function App() {
 
   return (
     <AppContext.Provider value={contextValue}>
+      <Toaster position="top-center" />
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col font-sans text-gray-900 dark:text-gray-100 w-full">
       <style>{`
         @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }

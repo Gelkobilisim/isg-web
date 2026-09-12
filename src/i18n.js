@@ -1,5 +1,10 @@
 export const DICT = {
   tr: {
+    kritik: "Kritik",
+    yuksek: "Yüksek",
+    orta: "Orta",
+    dusuk: "Düşük",
+
     isg_tab: "İSG & Tertip",
     yukleme_tab: "Yükleme Takip",
     sys_isg_title: "İSG & Tertip",
@@ -199,6 +204,11 @@ export const DICT = {
     analysis_desc: "Günlük, haftalık, aylık ve yıllık bazda departmanların sorun/ihlal sayılarını detaylı olarak inceleyebilirsiniz."
   },
   en: {
+    kritik: "Critical",
+    yuksek: "High",
+    orta: "Medium",
+    dusuk: "Low",
+
     isg_tab: "OHS & Cleanliness",
     yukleme_tab: "Loading Tracking",
     sys_isg_title: "OHS & Cleanliness",
