@@ -2,13 +2,16 @@
 import { DICT } from "./i18n";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useLocation, Routes, Route, Navigate } from 'react-router-dom';
-import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit, Bug, MessageSquare } from 'lucide-react';
+import { Bell, Moon, Sun, Send, Camera, AlertTriangle, CheckCircle, XCircle, LogOut, Clock, ShieldAlert, Calendar, Image as ImageIcon, X, ArrowDownRight, ChevronRight, ChevronUp, ChevronDown, ArrowLeft, Activity, AlertCircle, List, CalendarDays, Lock, User, Users, Plus, Trash2, Truck, Package, Save, CheckSquare, Globe, Eye, EyeOff, Menu, Maximize2, MapPin, Building2, Hash, Scale, TrendingUp, Printer, Edit, Bug, MessageSquare, Upload } from 'lucide-react';
 
+import { motion, AnimatePresence } from 'motion/react';
 import { initializeApp } from "firebase/app";
-import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit, deleteField, increment, addDoc, serverTimestamp } from "firebase/firestore";
+import { initializeFirestore, collection, doc, setDoc, updateDoc, deleteDoc, onSnapshot, getDoc, query, orderBy, limit, deleteField, increment, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { getMessaging, getToken, onMessage, deleteToken } from "firebase/messaging";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend } from 'recharts';
 import { LoadingSpinner } from "./components/LoadingSpinner";
+import { PWAInstallButton } from "./components/PWAInstallButton";
+import { OfflineIndicator } from "./components/OfflineIndicator";
 
 import { validateEnvVariables } from "./utils/envValidator";
 
@@ -176,7 +179,7 @@ const useAppContext = () => React.useContext(AppContext);
               {previewModalTitle}
             </div>
           )}
-          <img src={previewModalImg} alt="Büyütülmüş Fotoğraf" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/20" />
+          <img loading="lazy" decoding="async" src={previewModalImg} alt="Büyütülmüş Fotoğraf" className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/20" />
           <p className="text-white/70 text-xs mt-3 flex items-center">
             <Maximize2 className="w-3.5 h-3.5 mr-1" /> Kapatmak için görsele veya boşluğa tıklayabilirsiniz
           </p>
@@ -270,7 +273,8 @@ const useAppContext = () => React.useContext(AppContext);
       >
         <div className="absolute inset-0 bg-black/60 z-0"></div>
 
-        <div className="w-full max-w-4xl flex justify-end items-center gap-3 z-40 mb-6 mt-2 px-2 md:px-0 md:absolute md:top-8 md:right-8 md:mt-0">
+        <div className="w-full max-w-4xl flex justify-end items-center gap-3 z-40 mb-6 mt-2 px-2 md:px-0 md:absolute md:top-8 md:right-8 md:mt-0 flex-wrap">
+            <PWAInstallButton variant="rounded" />
             <button 
                 onClick={() => setDarkMode(!darkMode)} 
                 className="group flex items-center justify-center gap-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-4 py-2.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-gray-800 dark:text-gray-100 hover:scale-105 transition-all duration-300 border border-white/50 dark:border-gray-700/50" 
@@ -360,6 +364,18 @@ const useAppContext = () => React.useContext(AppContext);
     );
   };
 
+
+const AnimatedView = ({ children, className }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10, scale: 0.98 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.98 }}
+    transition={{ type: "spring", stiffness: 300, damping: 25, duration: 0.3 }}
+    className={className}
+  >
+    {children}
+  </motion.div>
+);
   const MainLayout = ({ theme = 'blue', children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -388,6 +404,34 @@ const useAppContext = () => React.useContext(AppContext);
     else if (currentUser.role === 'yuklenici' || currentUser.role === 'worker') roleText = `Yüklenici / Personel`;
 
     const [showDebug, setShowDebug] = useState(false);
+    const [showNotifHistoryModal, setShowNotifHistoryModal] = useState(false);
+    const [notifHistoryData, setNotifHistoryData] = useState([]);
+    const [isLoadingNotifs, setIsLoadingNotifs] = useState(true);
+
+    useEffect(() => {
+        if (showNotifHistoryModal && currentUser) {
+            setIsLoadingNotifs(true);
+            const unsub = onSnapshot(
+                query(collection(db, "user_notifications"), where("userId", "==", currentUser.id), orderBy("timestamp", "desc"), limit(50)),
+                (snapshot) => {
+                    setNotifHistoryData(snapshot.docs.map(doc => ({id: doc.id, ...doc.data()})));
+                    setIsLoadingNotifs(false);
+                },
+                (err) => {
+                    console.error("Notif history error", err);
+                    setIsLoadingNotifs(false);
+                }
+            );
+            return () => unsub();
+        }
+    }, [showNotifHistoryModal, currentUser, db]);
+
+    const toggleNotifReadStatus = async (id, currentReadStatus, e) => {
+        if (e) e.stopPropagation();
+        try {
+            await updateDoc(doc(db, "user_notifications", id), { read: !currentReadStatus });
+        } catch(e) { console.error(e); }
+    };
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
     const [feedbackText, setFeedbackText] = useState('');
     const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
@@ -555,6 +599,9 @@ const useAppContext = () => React.useContext(AppContext);
                <button onClick={() => { setShowFeedbackModal(true); setSidebarOpen(false); }} className="w-full flex items-center px-3 py-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 font-bold rounded-xl transition-colors text-sm">
                    <MessageSquare className="w-5 h-5 mr-3 shrink-0" /> Sorun Bildir / Feedback
                </button>
+               <button onClick={() => { setShowNotifHistoryModal(true); setSidebarOpen(false); }} className="w-full flex items-center px-3 py-2.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-400 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 font-bold rounded-xl transition-colors text-sm mt-2">
+                   <Bell className="w-5 h-5 mr-3 shrink-0" /> Bildirim Geçmişi
+               </button>
                <button onClick={toggleLang} className="w-full flex items-center px-3 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-xl transition-colors text-sm">
                    <Globe className="w-5 h-5 mr-3 shrink-0" /> {lang === 'tr' ? 'EN (English)' : 'TR (Türkçe)'}
                </button>
@@ -567,6 +614,9 @@ const useAppContext = () => React.useContext(AppContext);
                       <Bell className="w-5 h-5 mr-3 shrink-0" /> {notificationStatus === 'granted' ? 'Bildirimler Açık' : 'Bildirimleri Aç'}
                    </button>
                )}
+               <div className="mt-2 w-full">
+                  <PWAInstallButton />
+               </div>
                <button onClick={logout} className="w-full flex items-center px-3 py-2.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 font-bold rounded-xl transition-colors mt-2 text-sm">
                  <LogOut className="w-5 h-5 mr-3 shrink-0" /> {t('logout')}
                </button>
@@ -691,6 +741,7 @@ const useAppContext = () => React.useContext(AppContext);
                             })()}
                             
                             <div className="space-y-3">
+                                <div className="text-xs text-center text-gray-400 dark:text-gray-500 mb-2">Silmek için sağa veya sola kaydırın</div>
                                 {users.map(u => (
                             <div key={u.id} className="flex justify-between items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
                                 <div>
@@ -760,6 +811,62 @@ const useAppContext = () => React.useContext(AppContext);
             </div>
         )}
 
+        {showNotifHistoryModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 animate-fade-in">
+                <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[85vh]">
+                    <div className="p-5 bg-indigo-600 text-white flex justify-between items-center shrink-0">
+                        <h3 className="font-bold text-xl flex items-center"><Bell className="w-6 h-6 mr-3"/> Bildirim Geçmişi</h3>
+                        <button onClick={() => setShowNotifHistoryModal(false)} className="p-2 hover:bg-white/20 rounded-full transition-colors"><X className="w-6 h-6" /></button>
+                    </div>
+                    <div className="p-4 md:p-6 overflow-y-auto flex-1 bg-gray-50 dark:bg-gray-900">
+                        {isLoadingNotifs ? (
+                            <div className="flex justify-center p-8"><LoadingSpinner /></div>
+                        ) : notifHistoryData.length === 0 ? (
+                            <div className="text-center text-gray-500 dark:text-gray-400 p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">Henüz hiç bildiriminiz yok.</div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="text-xs text-center text-gray-400 dark:text-gray-500 mb-2">Silmek için sağa veya sola kaydırın</div>
+                                <AnimatePresence mode="popLayout">
+                                {notifHistoryData.map(notif => (
+                                    <motion.div 
+                                        key={notif.id} 
+                                        layout
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                                        drag="x"
+                                        dragConstraints={{ left: 0, right: 0 }}
+                                        dragElastic={0.8}
+                                        onDragEnd={async (event, info) => {
+                                            if (info.offset.x > 100 || info.offset.x < -100) {
+                                                try {
+                                                    await deleteDoc(doc(db, "user_notifications", notif.id));
+                                                } catch(err) { console.error(err); }
+                                            }
+                                        }}
+                                        onClick={(e) => toggleNotifReadStatus(notif.id, notif.read, e)} 
+                                        className={`p-4 rounded-2xl border transition-colors cursor-pointer shadow-sm group ${notif.read ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' : 'bg-indigo-50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800/50'}`}>
+                                        <div className="flex justify-between items-start mb-1">
+                                            <div className="flex items-start">
+                                                <button onClick={(e) => toggleNotifReadStatus(notif.id, notif.read, e)} className={`mr-3 mt-0.5 flex-shrink-0 transition-colors ${notif.read ? 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300' : 'text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300'}`} title={notif.read ? "Okunmadı olarak işaretle" : "Okundu olarak işaretle"}>
+                                                    {notif.read ? <CheckCircle className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full bg-indigo-600 dark:bg-indigo-500 shadow-sm border border-indigo-200 dark:border-indigo-800 animate-pulse"></div>}
+                                                </button>
+                                                <h4 className={`font-bold ${notif.read ? 'text-gray-700 dark:text-gray-300' : 'text-indigo-800 dark:text-indigo-300'}`}>{notif.title}</h4>
+                                            </div>
+                                            <span className="text-xs text-gray-400 shrink-0 ml-3 mt-1 whitespace-nowrap">
+                                                {notif.timestamp?.toDate ? notif.timestamp.toDate().toLocaleString('tr-TR', {hour: '2-digit', minute:'2-digit', day:'numeric', month:'short'}) : 'Şimdi'}
+                                            </span>
+                                        </div>
+                                        <p className={`text-sm ml-8 ${notif.read ? 'text-gray-500 dark:text-gray-400' : 'text-gray-700 dark:text-gray-200 font-medium'} leading-relaxed`}>{notif.body}</p>
+                                    </motion.div>
+                                ))}
+                                </AnimatePresence>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        )}
         {showFeedbackModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 animate-fade-in">
                 <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
@@ -908,7 +1015,7 @@ const useAppContext = () => React.useContext(AppContext);
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('cam_pre')}</label>
                 <input type="file" id="preLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setImgPreview); e.target.value = null; }} />
                 <label htmlFor="preLoadCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
-                  {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
+                  {imgPreview ? ( <img loading="lazy" decoding="async" src={imgPreview} className="w-full h-full object-cover" /> ) : (
                     <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-orange-500" /></div>
                     <span className="text-sm font-bold">{t('cam_open')}</span><span className="text-xs text-gray-400 dark:text-gray-500 mt-1">{t('optional')}</span></>
                   )}
@@ -955,7 +1062,7 @@ const useAppContext = () => React.useContext(AppContext);
                     <div className="w-16 h-16 bg-gray-200 rounded-lg flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 shrink-0 overflow-hidden relative group cursor-pointer" onClick={() => load.preImgUrl && setPreviewModalImg(load.preImgUrl)}>
                        {load.preImgUrl ? (
                           <>
-                            <img src={load.preImgUrl} className="w-full h-full object-cover" />
+                            <img loading="lazy" decoding="async" src={load.preImgUrl} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-4 h-4" /></div>
                           </>
                        ) : <><ImageIcon className="w-5 h-5 mb-1"/><span className="text-[8px] font-bold">{t('no_photo')}</span></>}
@@ -992,7 +1099,7 @@ const useAppContext = () => React.useContext(AppContext);
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('cam_post')}</label>
                   <input type="file" id="postLoadCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], (img) => setFinishModal({...finishModal, imgPreview: img})); e.target.value = null; }} />
                   <label htmlFor="postLoadCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
-                    {finishModal.imgPreview ? ( <img src={finishModal.imgPreview} className="w-full h-full object-cover" /> ) : (
+                    {finishModal.imgPreview ? ( <img loading="lazy" decoding="async" src={finishModal.imgPreview} className="w-full h-full object-cover" /> ) : (
                       <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-green-500" /></div>
                       <span className="text-sm font-bold">{t('cam_open')}</span></>
                     )}
@@ -1079,7 +1186,7 @@ const useAppContext = () => React.useContext(AppContext);
                              e.target.value = null; 
                          }} />
                          <label htmlFor="yukleniciCameraInput" className="w-full h-32 md:h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
-                             {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
+                             {imgPreview ? ( <img loading="lazy" decoding="async" src={imgPreview} className="w-full h-full object-cover" /> ) : (
                                 <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110"><Camera className="w-6 h-6 text-gray-400 group-hover:text-blue-500" /></div>
                                 <span className="text-sm font-bold text-gray-500 dark:text-gray-400">{t('cam_open') || 'Kamerayı Aç / Fotoğraf Seç'}</span></>
                              )}
@@ -1168,7 +1275,7 @@ const useAppContext = () => React.useContext(AppContext);
                         <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('photo') || 'Fotoğraf'} <span className="text-gray-400 dark:text-gray-500">({t('optional') || 'İsteğe Bağlı'})</span></label>
                         <input type="file" id="modCamera" accept="image/*" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setImgPreview); e.target.value = null; }} />
                         <label htmlFor="modCamera" className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden">
-                            {imgPreview ? ( <img src={imgPreview} className="w-full h-full object-cover" /> ) : (
+                            {imgPreview ? ( <img loading="lazy" decoding="async" src={imgPreview} className="w-full h-full object-cover" /> ) : (
                                 <><div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-8 h-8 text-gray-500 group-hover:text-blue-500" /></div>
                                 <span className="text-sm font-bold">{t('cam_open') || 'Kamerayı Aç / Fotoğraf Yükle'}</span></>
                             )}
@@ -1202,7 +1309,7 @@ const useAppContext = () => React.useContext(AppContext);
                                 
                                 {task.afterImgUrl && (
                                     <div className="w-full md:w-48 h-32 flex-shrink-0">
-                                        <img src={task.afterImgUrl} className="w-full h-full object-cover rounded-xl border border-gray-200 dark:border-gray-700" />
+                                        <img loading="lazy" decoding="async" src={task.afterImgUrl} className="w-full h-full object-cover rounded-xl border border-gray-200 dark:border-gray-700" />
                                     </div>
                                 )}
                                 
@@ -1294,7 +1401,7 @@ const useAppContext = () => React.useContext(AppContext);
                             </div>
                             <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-4 whitespace-pre-wrap">{task.desc}</p>
                             {task.imgUrl && (
-                                <img src={task.imgUrl} className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-200 dark:border-gray-700" />
+                                <img loading="lazy" decoding="async" src={task.imgUrl} className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-200 dark:border-gray-700" />
                             )}
                             <div className="mt-auto pt-4 flex gap-3">
                                 {(task.status === 'acik' || task.status === 'itiraz_edildi') && (
@@ -1322,7 +1429,7 @@ const useAppContext = () => React.useContext(AppContext);
                                     <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">{t('fix_photo') || 'Çözüm Fotoğrafı (Zorunlu)'}</label>
                                     <input type="file" id="sefCamera" accept="image/*" capture="environment" className="hidden" onChange={(e) => { handleImageUpload(e.target.files[0], setAfterImgPreview); e.target.value = null; }} />
                                     <label htmlFor="sefCamera" className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden">
-                                        {afterImgPreview ? ( <img src={afterImgPreview} className="w-full h-full object-cover" /> ) : (
+                                        {afterImgPreview ? ( <img loading="lazy" decoding="async" src={afterImgPreview} className="w-full h-full object-cover" /> ) : (
                                             <><div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform"><Camera className="w-6 h-6 text-gray-500 group-hover:text-green-500" /></div><span className="text-sm font-bold">{t('open_camera') || 'Kamerayı Aç'}</span></>
                                         )}
                                     </label>
@@ -1389,8 +1496,27 @@ const useAppContext = () => React.useContext(AppContext);
                  </div>
              ) : (
                  <div className="grid grid-cols-1 gap-4">
+                     <div className="text-xs text-center text-gray-400 dark:text-gray-500 mb-2">Silmek için sağa veya sola kaydırın</div>
+                     <AnimatePresence mode="popLayout">
                      {feedbacks.map(f => (
-                         <div key={f.id} onClick={() => markAsRead(f.id, f.status)} className={`p-5 rounded-2xl border transition-colors cursor-pointer ${f.status === 'new' ? 'bg-pink-50 border-pink-200 dark:bg-pink-900/10 dark:border-pink-900/30' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'}`}>
+                         <motion.div 
+                            key={f.id} 
+                            layout
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                            drag="x"
+                            dragConstraints={{ left: 0, right: 0 }}
+                            dragElastic={0.8}
+                            onDragEnd={async (event, info) => {
+                                if (info.offset.x > 100 || info.offset.x < -100) {
+                                    try {
+                                        await deleteDoc(doc(db, "feedbacks", f.id));
+                                    } catch(err) { console.error(err); }
+                                }
+                            }}
+                            onClick={() => markAsRead(f.id, f.status)} 
+                            className={`p-5 rounded-2xl border transition-colors cursor-pointer ${f.status === 'new' ? 'bg-pink-50 border-pink-200 dark:bg-pink-900/10 dark:border-pink-900/30' : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750'}`}>
                             <div className="flex justify-between items-start mb-2">
                                 <div>
                                     <span className="font-bold text-gray-800 dark:text-gray-100">{f.userName}</span>
@@ -1404,8 +1530,9 @@ const useAppContext = () => React.useContext(AppContext);
                                 </div>
                             </div>
                             <p className="text-gray-700 dark:text-gray-300 mt-2 whitespace-pre-wrap">{f.text}</p>
-                         </div>
+                         </motion.div>
                      ))}
+                     </AnimatePresence>
                  </div>
              )}
         </div>
@@ -1749,7 +1876,7 @@ const useAppContext = () => React.useContext(AppContext);
                                             <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 animate-fade-in">
                                                 <p className="text-sm text-gray-800 dark:text-gray-100 font-medium mb-3">{task.desc}</p>
                                                 {task.imgUrl && (
-                                                    <img src={task.imgUrl} className="w-full h-40 object-cover rounded-xl mb-3 border border-gray-200 dark:border-gray-700" alt="İhlal Fotoğrafı" />
+                                                    <img loading="lazy" decoding="async" src={task.imgUrl} className="w-full h-40 object-cover rounded-xl mb-3 border border-gray-200 dark:border-gray-700" alt="İhlal Fotoğrafı" />
                                                 )}
                                                 <div className="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-2">
                                                     <User className="w-3.5 h-3.5 mr-1" /> {task.createdBy}
@@ -2171,7 +2298,7 @@ const useAppContext = () => React.useContext(AppContext);
                         <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">{t('before')}</span>
                         {load.preImgUrl ? (
                           <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.preImgUrl)}>
-                             <img src={load.preImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
+                             <img loading="lazy" decoding="async" src={load.preImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
                           </div>
                         ) : <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs mb-2">{t('no_photo')}</div>}
@@ -2183,7 +2310,7 @@ const useAppContext = () => React.useContext(AppContext);
                          load.status === 'yukleniyor' ? <div className="w-full h-44 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-orange-400 text-sm font-medium mb-2">{t('status_yukleniyor')}</div> : (
                           <>{load.postImgUrl ? (
                             <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2" onClick={() => setPreviewModalImg(load.postImgUrl)}>
-                               <img src={load.postImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
+                               <img loading="lazy" decoding="async" src={load.postImgUrl} className="w-full h-44 object-cover group-hover:scale-105 transition-transform" />
                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
                             </div>
                           ) : <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs mb-2">{t('no_photo')}</div>}
@@ -2520,7 +2647,7 @@ const useAppContext = () => React.useContext(AppContext);
                                  <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 w-full text-left">{t('before')}</span>
                                  {task.imgUrl ? (
                                     <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full" onClick={() => setPreviewModalImg(task.imgUrl)}>
-                                      <img src={task.imgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
+                                      <img loading="lazy" decoding="async" src={task.imgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
                                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
                                     </div>
                                  ) : <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs mb-2">{t('no_photo')}</div>}
@@ -2531,7 +2658,7 @@ const useAppContext = () => React.useContext(AppContext);
                                  {task.status === 'cozuldu' || task.status === 'onay_bekliyor' ? (
                                    <>{task.afterImgUrl ? (
                                       <div className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full" onClick={() => setPreviewModalImg(task.afterImgUrl)}>
-                                        <img src={task.afterImgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
+                                        <img loading="lazy" decoding="async" src={task.afterImgUrl} className="w-full h-40 object-cover group-hover:scale-105 transition-transform" />
                                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white"><Maximize2 className="w-5 h-5" /></div>
                                       </div>
                                    ) : <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs mb-2">{t('no_photo')}</div>}
@@ -2611,8 +2738,9 @@ const useAppContext = () => React.useContext(AppContext);
     }, [getRedTaskCount, currentUser]);
 
     return (
-      <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
-        <div className="print:hidden bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+      
+        <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
+          <div className="print:hidden bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
           <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full xl:w-auto">
             <div className="flex justify-between items-center w-full md:w-auto">
               <div><h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-1">{t('admin_panel')}</h1><p className="text-gray-500 dark:text-gray-400 text-sm">{t('admin_desc')}</p></div>
@@ -2795,6 +2923,12 @@ const ProtectedRoute = ({ children }) => {
   return children;
 };
 
+const MemoFeedbacksAdmin = React.memo(FeedbacksAdmin);
+const MemoAdminDashboard = React.memo(AdminDashboard);
+const MemoModDashboard = React.memo(ModDashboard);
+const MemoSefDashboard = React.memo(SefDashboard);
+const MemoYuklemeciDashboard = React.memo(YuklemeciDashboard);
+const MemoYukleniciDashboard = React.memo(YukleniciDashboard);
 export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isFirebaseLoading, setIsFirebaseLoading] = useState(true);
@@ -3021,16 +3155,21 @@ export default function App() {
   }, [lang]);
 
   useEffect(() => {
+    let unsubMessage = () => {};
     if (messaging) {
-      onMessage(messaging, (payload) => {
-        console.log("Ön planda mesaj alındı: ", payload);
-        if ("Notification" in window && Notification.permission === "granted") {
-          new Notification(payload.notification.title, {
-            body: payload.notification.body,
-            icon: '/adsmetal_logo.jpg'
-          });
-        }
-      });
+      try {
+        unsubMessage = onMessage(messaging, (payload) => {
+          console.log("Ön planda mesaj alındı: ", payload);
+          if ("Notification" in window && Notification.permission === "granted") {
+            new Notification(payload.notification.title, {
+              body: payload.notification.body,
+              icon: '/adsmetal_logo.jpg'
+            });
+          }
+        });
+      } catch (err) {
+        console.error("onMessage init error", err);
+      }
     }
     const handleSnapErr = (err) => { console.error(err); setIsFirebaseLoading(false); setLoginErr("Veritabanı erişim hatası: " + err.message); };
     const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
@@ -3139,7 +3278,7 @@ export default function App() {
       setLoadings(loadingData);
     }, handleSnapErr);
 
-    return () => { unsubUsers(); unsubPoints(); unsubTasks(); unsubLoadings(); unsubPointsHistory(); unsubPointLogs(); };
+    return () => { unsubMessage(); unsubUsers(); unsubPoints(); unsubTasks(); unsubLoadings(); unsubPointsHistory(); unsubPointLogs(); };
   }, []);
 
   useEffect(() => {
@@ -3181,6 +3320,23 @@ export default function App() {
         
         const pointsRef = doc(db, "system", "points");
         await updateDoc(pointsRef, updates);
+        
+        DEPARTMENTS.forEach(async (dept) => {
+          if (!deptsWithTasks.has(dept)) {
+            try {
+              await addDoc(collection(db, "point_logs"), {
+                id: Date.now().toString() + Math.random().toString(36).substring(7),
+                dept: dept,
+                points: 20,
+                reason: 'Günlük İhlalsizlik Bonusu (Otomatik)',
+                adminName: 'Sistem',
+                dateStr: formattedToday,
+                timestamp: Date.now()
+              });
+            } catch(e) { console.error(e); }
+          }
+        });
+        
         console.log(`Otomatik Günlük Bonus Dağıtıldı: ${distributed} birime 20 puan eklendi.`);
       } catch (err) {
         console.error("Otomatik bonus dağıtımı hatası:", err);
@@ -3469,6 +3625,7 @@ export default function App() {
       `}</style>
 
       <ImageLightboxModal />
+      <OfflineIndicator />
 
       {toastMessage && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[9999] animate-slide-up max-w-sm w-full px-4">
@@ -3539,6 +3696,8 @@ export default function App() {
         </div>
       )}
       
+      
+
       <Routes>
         <Route path="/login" element={!currentUser ? <LoginScreen /> : <Navigate to="/" replace />} />
         <Route path="/*" element={
@@ -3564,11 +3723,11 @@ export default function App() {
                 </div>
               )}
               <div className="flex-1 w-full flex">
-                 {(currentUser?.role === 'admin' || currentUser?.role === 'yonetici' || currentUser?.username === 'agiradar' || currentUser?.username === 'agiradarsahin') && adminSystemMode === 'feedbacks' ? <FeedbacksAdmin /> : (currentUser?.role === 'admin' || currentUser?.role === 'yonetici' || currentUser?.username === 'agiradar' || currentUser?.username === 'agiradarsahin') ? <AdminDashboard /> : null}
-                 {currentUser?.role === 'mod' && <ModDashboard />}
-                 {currentUser?.role === 'sef' && <SefDashboard />}
-                 {currentUser?.role === 'yuklemeci' && <YuklemeciDashboard />}
-                 {(currentUser?.role === 'yuklenici' || currentUser?.role === 'worker') && <YukleniciDashboard />}
+                 {(currentUser?.role === 'admin' || currentUser?.role === 'yonetici' || currentUser?.username === 'agiradar' || currentUser?.username === 'agiradarsahin') && adminSystemMode === 'feedbacks' ? <MemoFeedbacksAdmin /> : (currentUser?.role === 'admin' || currentUser?.role === 'yonetici' || currentUser?.username === 'agiradar' || currentUser?.username === 'agiradarsahin') ? <MemoAdminDashboard /> : null}
+                 {currentUser?.role === 'mod' && <MemoModDashboard />}
+                 {currentUser?.role === 'sef' && <MemoSefDashboard />}
+                 {currentUser?.role === 'yuklemeci' && <MemoYuklemeciDashboard />}
+                 {(currentUser?.role === 'yuklenici' || currentUser?.role === 'worker') && <MemoYukleniciDashboard />}
               </div>
             </MainLayout>
                 

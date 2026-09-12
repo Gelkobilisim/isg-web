@@ -47,7 +47,8 @@ app.post('/api/notify', async (req, res) => {
         const usersSnapshot = await getFirestore().collection('users').get();
         const users = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const tokensToNotify = [];
+        const tokensToNotify: string[] = [];
+        const targetUsers: string[] = [];
         let notificationTitle = "";
         let notificationBody = "";
 
@@ -60,7 +61,7 @@ app.post('/api/notify', async (req, res) => {
             users.forEach(u => {
                 if (u.fcmToken) {
                     if (u.role === 'admin' || u.role === 'mod' || (u.role === 'sef' && u.dept === dept)) {
-                        tokensToNotify.push(u.fcmToken);
+                        tokensToNotify.push(u.fcmToken); targetUsers.push(u.id);
                     }
                 }
             });
@@ -72,7 +73,7 @@ app.post('/api/notify', async (req, res) => {
                 notificationBody = `${dept} departmanı bir ihlali çözdü ve onay bekliyor.`;
                 users.forEach(u => {
                     if (u.fcmToken && (u.role === 'admin' || u.role === 'mod')) {
-                        tokensToNotify.push(u.fcmToken);
+                        tokensToNotify.push(u.fcmToken); targetUsers.push(u.id);
                     }
                 });
             } else if (newStatus === 'itiraz_edildi') {
@@ -80,7 +81,7 @@ app.post('/api/notify', async (req, res) => {
                 notificationBody = `${dept} departmanı bir ihlale itiraz etti.`;
                 users.forEach(u => {
                     if (u.fcmToken && (u.role === 'admin' || u.role === 'mod')) {
-                        tokensToNotify.push(u.fcmToken);
+                        tokensToNotify.push(u.fcmToken); targetUsers.push(u.id);
                     }
                 });
             } else if (newStatus === 'kapatildi') {
@@ -88,7 +89,7 @@ app.post('/api/notify', async (req, res) => {
                 notificationBody = `${dept} departmanındaki bir ihlal kaydı onaylandı ve kapatıldı.`;
                 users.forEach(u => {
                     if (u.fcmToken && u.role === 'sef' && u.dept === dept) {
-                        tokensToNotify.push(u.fcmToken);
+                        tokensToNotify.push(u.fcmToken); targetUsers.push(u.id);
                     }
                 });
             } else if (newStatus === 'acik' && oldStatus === 'cozuldu') {
@@ -96,7 +97,7 @@ app.post('/api/notify', async (req, res) => {
                 notificationBody = `İSG Uzmanı çözümünüzü reddetti, ihlal tekrar açıldı.`;
                 users.forEach(u => {
                     if (u.fcmToken && u.role === 'sef' && u.dept === dept) {
-                        tokensToNotify.push(u.fcmToken);
+                        tokensToNotify.push(u.fcmToken); targetUsers.push(u.id);
                     }
                 });
             }
@@ -110,9 +111,9 @@ app.post('/api/notify', async (req, res) => {
             users.forEach(u => {
                 if (u.fcmToken) {
                     if (dept === 'all') {
-                        tokensToNotify.push(u.fcmToken);
+                        tokensToNotify.push(u.fcmToken); targetUsers.push(u.id);
                     } else if (u.role === 'sef' && u.dept === dept) {
-                        tokensToNotify.push(u.fcmToken);
+                        tokensToNotify.push(u.fcmToken); targetUsers.push(u.id);
                     }
                 }
             });
@@ -161,6 +162,29 @@ app.post('/api/notify', async (req, res) => {
                 }
             }
 
+            // Bildirimleri kullanici bazinda history'e kaydet (user_notifications)
+            const uniqueUsers = Array.from(new Set(targetUsers));
+            if (uniqueUsers.length > 0) {
+                try {
+                    const histBatch = getFirestore().batch();
+                    uniqueUsers.forEach(uid => {
+                        const notifRef = getFirestore().collection('user_notifications').doc();
+                        histBatch.set(notifRef, {
+                            userId: uid,
+                            title: notificationTitle,
+                            body: notificationBody,
+                            type: type,
+                            dept: payload.dept || null,
+                            timestamp: new Date(),
+                            read: false
+                        });
+                    });
+                    await histBatch.commit();
+                } catch (histErr) {
+                    console.error("Failed to save user notifications history:", histErr);
+                }
+            }
+            
             try {
                 await getFirestore().collection('notification_logs').add({
                     timestamp: new Date(),
