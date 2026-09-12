@@ -1,4 +1,5 @@
 
+import { triggerHaptic } from "./utils/haptics";
 import { DICT } from "./i18n";
 import { Toaster, toast } from "react-hot-toast";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
@@ -256,8 +257,10 @@ const useAppContext = () => React.useContext(AppContext);
         }
         setCurrentUser(account);
         setLoginErr('');
+        triggerHaptic('success');
       } else {
         setLoginErr(t('err_wrong_cred'));
+        triggerHaptic('error');
       }
     };
 
@@ -3229,7 +3232,11 @@ export default function App() {
 
             if (currentToken) {
                 await updateDoc(doc(db, "users", currentUser.id), { fcmToken: currentToken, lastActive: new Date() });
+                localStorage.setItem('isg_notification_device_owner', currentUser.id);
+                localStorage.setItem('isg_notification_role', currentUser.role);
+                localStorage.setItem('isg_notification_dept', currentUser.dept || '');
                 setToastMessage({ type: 'success', message: "Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek." });
+                setShowNotifPrompt(false);
             } else {
                 setToastMessage({ type: 'error', message: "Token alınamadı. Cihazınız desteklemiyor olabilir." });
             }
@@ -3268,10 +3275,16 @@ export default function App() {
 
         const currentToken = await getTokenWithTimeout;
         
-        if (currentToken && userObj.fcmToken !== currentToken) {
-            console.log("Token mismatch detected, updating Firestore...");
-            await updateDoc(doc(db, "users", userObj.id), { fcmToken: currentToken });
-            console.log("Token updated successfully for user:", userObj.username);
+        if (currentToken) {
+            localStorage.setItem('isg_notification_device_owner', userObj.id);
+            localStorage.setItem('isg_notification_role', userObj.role);
+            localStorage.setItem('isg_notification_dept', userObj.dept || '');
+            
+            if (userObj.fcmToken !== currentToken) {
+                console.log("Token mismatch detected, updating Firestore...");
+                await updateDoc(doc(db, "users", userObj.id), { fcmToken: currentToken });
+                console.log("Token updated successfully for user:", userObj.username);
+            }
         }
     } catch (error) {
         console.error("Token verification failed:", error);
@@ -3603,6 +3616,7 @@ export default function App() {
       deadlineHours, imgUrl: imgUrl || '', modNote: ''
     };
     await setDoc(doc(db, "tasks", taskId), newTask);
+    triggerHaptic('success');
     
     // API Notification trigger
     fetch('/api/notify', {
@@ -3682,6 +3696,7 @@ export default function App() {
         if (newStatus === 'cozuldu') updates.resolvedTimestamp = Date.now();
         
         await updateDoc(taskRef, updates);
+        triggerHaptic('success');
         
         // Notification trigger
         if (dept && (newStatus === 'cozuldu' || newStatus === 'itiraz_edildi' || newStatus === 'kapatildi' || newStatus === 'acik')) {
@@ -3728,6 +3743,7 @@ export default function App() {
       finishedAtTime: ''
     };
     await setDoc(doc(db, "loadings", loadId), newLoad);
+    triggerHaptic('success');
   }, [currentUser]);
 
   const startLoadingProcess = useCallback(async (loadId) => {
