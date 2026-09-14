@@ -44,7 +44,7 @@ export class ErrorBoundary extends React.Component {
       
       const savedUserId = localStorage.getItem('isg_logged_in_user') || 'Bilinmiyor';
 
-      await addDoc(collection(db, "feedbacks"), {
+      const addPromise = addDoc(collection(db, "feedbacks"), {
           text: "[SİSTEM ÇÖKME RAPORU]\n" + this.state.feedbackText + "\n\nHata Detayı: " + this.state.error?.message,
           userId: savedUserId,
           userRole: localStorage.getItem('isg_notification_role') || 'Bilinmiyor',
@@ -52,6 +52,12 @@ export class ErrorBoundary extends React.Component {
           timestamp: Date.now(),
           status: 'new'
       });
+      
+      await Promise.race([
+          addPromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Bağlantı zaman aşımı. İnternetinizi kontrol edin.")), 8000))
+      ]);
+      
       this.setState({ submitted: true, isSubmitting: false });
     } catch (err) {
       console.error("Geri bildirim gönderilemedi:", err);
