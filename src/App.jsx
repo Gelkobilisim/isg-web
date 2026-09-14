@@ -3583,9 +3583,15 @@ export default function App() {
 
   const executeLogout = useCallback(async (disableNotifications) => {
     if (disableNotifications) {
-      localStorage.removeItem('isg_notification_device_owner');
-      localStorage.removeItem('isg_notification_role');
-      localStorage.removeItem('isg_notification_dept');
+      const loggedInUserId = localStorage.getItem('isg_logged_in_user');
+      const isNotificationActive = ("Notification" in window && Notification.permission === "granted") && localStorage.getItem('isg_notification_device_owner') === loggedInUserId;
+      
+      if (!isNotificationActive) {
+          alert('Bu cihazda zaten bildirimleriniz açık değil. Sadece çıkış yapılıyor.');
+      } else {
+          localStorage.removeItem('isg_notification_device_owner');
+          localStorage.removeItem('isg_notification_role');
+          localStorage.removeItem('isg_notification_dept');
       
       // Remove FCM Token from database to stop background push notifications
       const loggedInUserId = localStorage.getItem('isg_logged_in_user');
@@ -3604,6 +3610,7 @@ export default function App() {
           } catch(e) {
               console.error("Browser token silinemedi:", e);
           }
+      }
       }
     }
     setCurrentUser(null); 
