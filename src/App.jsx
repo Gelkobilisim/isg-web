@@ -621,8 +621,8 @@ const AnimatedView = ({ children, className }) => (
                   {darkMode ? 'Açık Tema' : 'Koyu Tema'}
                </button>
                {notificationStatus !== 'unsupported' && (
-                   <button onClick={requestNotificationPermission} className={`w-full flex items-center px-3 py-2.5 font-medium rounded-xl transition-colors text-sm ${notificationStatus === 'granted' ? 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20' : 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20'}`}>
-                      <Bell className="w-5 h-5 mr-3 shrink-0" /> {notificationStatus === 'granted' ? 'Bildirimler Açık' : 'Bildirimleri Aç'}
+                   <button onClick={requestNotificationPermission} className={`w-full flex items-center px-3 py-2.5 font-medium rounded-xl transition-colors text-sm ${(notificationStatus === 'granted' && localStorage.getItem('isg_notification_device_owner') === currentUser?.id) ? 'text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20' : 'text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20'}`}>
+                      <Bell className="w-5 h-5 mr-3 shrink-0" /> {(notificationStatus === 'granted' && localStorage.getItem('isg_notification_device_owner') === currentUser?.id) ? 'Bildirimler Açık' : 'Bildirimleri Aç'}
                    </button>
                )}
                <div className="mt-2 w-full">
@@ -3800,7 +3800,8 @@ export default function App() {
   const [showNotifPrompt, setShowNotifPrompt] = useState(false);
 
   useEffect(() => {
-    if (currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || notificationStatus !== 'granted')) {
+    const isNotificationActiveForUser = notificationStatus === 'granted' && localStorage.getItem('isg_notification_device_owner') === currentUser?.id;
+    if (currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || !isNotificationActiveForUser)) {
         const dismissed = sessionStorage.getItem('isg_notif_prompt_dismissed');
         if (!dismissed) {
             const timer = setTimeout(() => setShowNotifPrompt(true), 1500);
@@ -3926,7 +3927,7 @@ export default function App() {
           <ProtectedRoute>
             <>
               <MainLayout theme={currentUser?.role === 'yuklemeci' ? 'orange' : 'blue'}>
-                {currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || notificationStatus !== 'granted') && (
+                {currentUser && currentUser.role !== 'yuklemeci' && (!currentUser.fcmToken || !(notificationStatus === 'granted' && localStorage.getItem('isg_notification_device_owner') === currentUser?.id)) && (
                   <div className="bg-red-600 text-white px-4 py-3 flex flex-col sm:flex-row justify-between items-center text-sm font-medium shadow-md rounded-2xl mb-4">
                   <div className="flex items-start sm:items-center mb-3 sm:mb-0 max-w-4xl">
                     <AlertTriangle className="w-5 h-5 mr-3 shrink-0 mt-0.5 sm:mt-0" />
