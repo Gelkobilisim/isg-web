@@ -476,21 +476,23 @@ const LoginScreen = () => {
     setLoginErr("");
     
     try {
-      const response = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok || !data.success) {
-        setLoginErr(data.error || t("err_wrong_cred"));
+      const account = users.find(
+        (u) => u.username === username.toLowerCase().trim()
+      );
+
+      if (!account) {
+        setLoginErr(t("err_wrong_cred") || "Geçersiz kullanıcı adı veya şifre");
         triggerHaptic("error");
         return;
       }
-      
-      const account = data.user;
+
+      // Check password from user_secrets collection
+      const secretDoc = await getDoc(doc(db, "user_secrets", account.id));
+      if (!secretDoc.exists() || secretDoc.data().password !== password) {
+        setLoginErr(t("err_wrong_cred") || "Geçersiz kullanıcı adı veya şifre");
+        triggerHaptic("error");
+        return;
+      }
       
       if (loginTheme === "isg" && account.role === "yuklemeci") {
         setLoginErr(t("err_isg_module"));
