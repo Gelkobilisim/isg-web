@@ -686,16 +686,9 @@ const AnimatedView = ({ children, className }) => (
                                     <select className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none" value={testDept} onChange={e => setTestDept(e.target.value)}>
                                         <option value="">Departman Seçin...</option>
                                         <option value="all">Tüm Departmanlar (Herkes)</option>
-                                        <option value="imalat_kaynak">İmalat - Kaynaklı İmalat</option>
-                                        <option value="imalat_talasli">İmalat - Talaşlı İmalat</option>
-                                        <option value="imalat_montaj">İmalat - Montaj</option>
-                                        <option value="kalite">Kalite</option>
-                                        <option value="depo_sevkiyat">Depo & Sevkiyat</option>
-                                        <option value="bakim_onarim">Bakım & Onarım</option>
-                                        <option value="boyahane">Boyahane</option>
-                                        <option value="ik">İnsan Kaynakları</option>
-                                        <option value="idari_isler">İdari İşler</option>
-                                        <option value="satin_alma">Satın Alma</option>
+                                        {DEPARTMENTS.map(d => (
+                                            <option key={d} value={d}>{t(getDeptKey(d))}</option>
+                                        ))}
                                     </select>
                                     <button 
                                         onClick={handleTestNotification} 
