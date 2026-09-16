@@ -506,9 +506,6 @@ const LoginScreen = () => {
 
       if (rememberMe) {
         localStorage.setItem("isg_logged_in_user", account.id);
-        localStorage.setItem("isg_token", data.token); // Save API token
-      } else {
-        sessionStorage.setItem("isg_token", data.token); // Save temporarily if not remember
       }
       
       if (account.role === "admin") {
