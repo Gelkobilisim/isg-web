@@ -161,7 +161,16 @@ app.post(["/api/login", "/login"], async (req, res) => {
   }
 });
 
-app.post("/api/verify-session", async (req, res) => {
+app.get(["/api/health", "/health", "/api"], (req, res) => {
+  return res.json({
+    status: "ok",
+    service: "ads-takip-api",
+    firebaseAdminInitialized: isFirebaseAdminInitialized,
+    timestamp: new Date().toISOString()
+  });
+});
+
+app.post(["/api/verify-session", "/verify-session"], async (req, res) => {
   try {
     const { token, userId } = req.body;
     if (!token || !userId) {

@@ -7,14 +7,10 @@ import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
-import { createServer as createViteServer } from "vite";
 
 dotenv.config();
 
-// CommonJS environment globals are available when compiled by esbuild
-
 const app = express();
-const PORT = 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -39,6 +35,16 @@ try {
 } catch (error) {
   console.error("❌ Failed to initialize Firebase Admin SDK:", error);
 }
+
+// Health check endpoint for testing Vercel serverless deployment
+app.get(["/api/health", "/health", "/api"], (req, res) => {
+  return res.json({
+    status: "ok",
+    service: "ads-takip-api",
+    firebaseAdminInitialized: isFirebaseAdminInitialized,
+    timestamp: new Date().toISOString()
+  });
+});
 
 interface CachedUser {
   user: any;
@@ -161,7 +167,7 @@ app.post(["/api/login", "/login"], async (req, res) => {
   }
 });
 
-app.post("/api/verify-session", async (req, res) => {
+app.post(["/api/verify-session", "/verify-session"], async (req, res) => {
   try {
     const { token, userId } = req.body;
     if (!token || !userId) {

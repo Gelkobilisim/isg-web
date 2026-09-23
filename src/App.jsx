@@ -492,10 +492,21 @@ const LoginScreen = () => {
         body: JSON.stringify({ username: cleanUsername, password }),
       });
 
-      const data = await res.json();
+      let data;
+      const contentType = res.headers.get("content-type") || "";
+      if (contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error("Non-JSON API response from server:", res.status, text.slice(0, 200));
+        if (!res.ok) {
+          throw new Error(`Sunucu hatası (${res.status}): Vercel backend API yanıt veremedi.`);
+        }
+        throw new Error("Sunucudan beklenmeyen yanıt alındı (Vercel API yerine statik sayfa döndü).");
+      }
 
       if (!res.ok || !data.success) {
-        setLoginErr(data.error || t("err_wrong_cred") || "Geçersiz kullanıcı adı veya şifre");
+        setLoginErr(data?.error || t("err_wrong_cred") || "Geçersiz kullanıcı adı veya şifre");
         triggerHaptic("error");
         return;
       }
@@ -586,7 +597,7 @@ const LoginScreen = () => {
       triggerHaptic("success");
     } catch (err) {
       console.error("Login failed:", err);
-      setLoginErr("Giriş yapılırken sunucuya ulaşılamadı. Lütfen tekrar deneyin.");
+      setLoginErr(err?.message || "Giriş yapılırken sunucuya ulaşılamadı. Lütfen tekrar deneyin.");
       triggerHaptic("error");
     }
   };
