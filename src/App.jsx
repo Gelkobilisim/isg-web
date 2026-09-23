@@ -27,6 +27,7 @@ import {
   LogOut,
   Clock,
   ShieldAlert,
+  ShieldCheck,
   Calendar,
   Image as ImageIcon,
   X,
@@ -51,6 +52,7 @@ import {
   Globe,
   Eye,
   EyeOff,
+  Loader2,
   Menu,
   Maximize2,
   MapPin,
@@ -77,6 +79,8 @@ import {
 } from "firebase/auth";
 import {
   initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection,
   doc,
   setDoc,
@@ -113,6 +117,11 @@ import {
 import { LoadingSpinner } from "./components/LoadingSpinner";
 import { PWAInstallButton } from "./components/PWAInstallButton";
 import { OfflineIndicator } from "./components/OfflineIndicator";
+import {
+  TaskCardSkeleton,
+  ShipmentCardSkeleton,
+  PaginationControl,
+} from "./components/SkeletonLoader";
 
 import { validateEnvVariables } from "./utils/envValidator";
 
@@ -132,7 +141,11 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = initializeFirestore(app, {});
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager(),
+  }),
+});
 
 let messaging = null;
 if (import.meta.env.VITE_FIREBASE_VAPID_KEY) {
@@ -475,6 +488,7 @@ const LoginScreen = () => {
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loginErr, setLoginErr] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [registerDevice, setRegisterDevice] = useState(false);
@@ -707,6 +721,9 @@ const LoginScreen = () => {
                 <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                 <input
                   type="text"
+                  autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? "focus:ring-blue-500" : "focus:ring-orange-500"}`}
@@ -722,12 +739,25 @@ const LoginScreen = () => {
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? "focus:ring-blue-500" : "focus:ring-orange-500"}`}
+                  className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-12 py-3.5 outline-none focus:ring-2 bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? "focus:ring-blue-500" : "focus:ring-orange-500"}`}
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1.5 rounded-lg transition-colors focus:outline-none"
+                  aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
               </div>
             </div>
 
@@ -2117,9 +2147,22 @@ const YuklemeciDashboard = () => {
                   <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-1">
                     {t("plate")}
                   </span>
-                  <span className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
-                    {load.plaka}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
+                      {load.plaka}
+                    </span>
+                    {load.status === "yukleniyor" ? (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        Yükleniyor
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                        <Clock className="w-3 h-3 text-amber-600" />
+                        Beklemede
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-1">
@@ -2243,8 +2286,8 @@ const YuklemeciDashboard = () => {
       )}
 
       {finishModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
-          <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4 max-sm:p-0 max-sm:items-end">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl max-sm:rounded-b-none max-sm:rounded-t-3xl shadow-2xl overflow-hidden animate-slide-up max-h-[92vh] flex flex-col">
             <div className="p-6 bg-green-600 text-white flex justify-between items-center">
               <h3 className="font-bold text-xl flex items-center">
                 <Save className="w-6 h-6 mr-3" /> {t("finish_form_title")}
@@ -2540,6 +2583,16 @@ const ModDashboard = () => {
     subject: "",
     desc: "",
   });
+  const [reviewLimit, setReviewLimit] = React.useState(10);
+  const [isReviewPaginating, setIsReviewPaginating] = React.useState(false);
+
+  const handleLoadMoreReview = () => {
+    setIsReviewPaginating(true);
+    setTimeout(() => {
+      setReviewLimit((prev) => prev + 10);
+      setIsReviewPaginating(false);
+    }, 400);
+  };
 
   const reviewTasks = React.useMemo(() => {
     return tasks
@@ -2785,7 +2838,7 @@ const ModDashboard = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-6">
-              {reviewTasks.map((task) => {
+              {reviewTasks.slice(0, reviewLimit).map((task) => {
                 const isObjection = task.status === "itiraz_edildi";
                 return (
                   <div
@@ -2834,25 +2887,65 @@ const ModDashboard = () => {
                       </div>
                     </div>
 
-                    {task.afterImgUrl && (
-                      <div className="w-full md:w-48 h-32 flex-shrink-0 mt-2 md:mt-0">
-                        <img
-                          loading="lazy"
-                          decoding="async"
-                          src={task.afterImgUrl}
-                          onClick={() => {
-                            ctx.setPreviewModalImg(task.afterImgUrl);
-                            ctx.setPreviewModalTitle(
-                              isObjection
-                                ? "İtiraz Fotoğrafı"
-                                : "Çözüm Fotoğrafı",
-                            );
-                          }}
-                          className="w-full h-full object-cover rounded-xl border border-gray-200 dark:border-gray-700 cursor-zoom-in hover:opacity-90"
-                          alt="Çözüm"
-                        />
-                      </div>
-                    )}
+                    <div className="flex flex-col sm:flex-row gap-3 mt-3 w-full md:w-auto shrink-0">
+                      {task.imgUrl && (
+                        <div className="w-full sm:w-40 flex flex-col">
+                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 mb-1 inline-block self-start">
+                            {t("stat_oncesi") || "Öncesi (İhlal)"}
+                          </span>
+                          <div
+                            onClick={() => {
+                              ctx.setPreviewModalImg(task.imgUrl);
+                              ctx.setPreviewModalTitle("Öncesi - İhlal Kaydı");
+                            }}
+                            className="relative group h-28 w-full rounded-xl overflow-hidden border border-red-200 dark:border-red-900/40 cursor-zoom-in bg-gray-100 dark:bg-gray-800"
+                          >
+                            <img
+                              loading="lazy"
+                              decoding="async"
+                              src={task.imgUrl}
+                              alt="İhlal Öncesi"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <Maximize2 className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {task.afterImgUrl && (
+                        <div className="w-full sm:w-40 flex flex-col">
+                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded mb-1 inline-block self-start ${isObjection ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300" : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"}`}>
+                            {isObjection
+                              ? t("stat_itiraz_foto") || "İtiraz Fotoğrafı"
+                              : t("stat_sonrasi") || "Sonrası (Çözüm)"}
+                          </span>
+                          <div
+                            onClick={() => {
+                              ctx.setPreviewModalImg(task.afterImgUrl);
+                              ctx.setPreviewModalTitle(
+                                isObjection
+                                  ? "İtiraz Fotoğrafı"
+                                  : "Sonrası - Çözüm Fotoğrafı",
+                              );
+                            }}
+                            className={`relative group h-28 w-full rounded-xl overflow-hidden border cursor-zoom-in bg-gray-100 dark:bg-gray-800 ${isObjection ? "border-amber-200 dark:border-amber-900/40" : "border-emerald-200 dark:border-emerald-900/40"}`}
+                          >
+                            <img
+                              loading="lazy"
+                              decoding="async"
+                              src={task.afterImgUrl}
+                              alt="Çözüm Sonrası"
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                              <Maximize2 className="w-4 h-4" />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
 
                     <div className="flex flex-col gap-3 justify-center md:min-w-[150px]">
                       <button
@@ -2887,14 +2980,23 @@ const ModDashboard = () => {
                   </div>
                 );
               })}
+              {isReviewPaginating && <TaskCardSkeleton count={2} />}
+              <PaginationControl
+                currentCount={reviewLimit}
+                totalCount={reviewTasks.length}
+                pageSize={10}
+                isLoading={isReviewPaginating}
+                onLoadMore={handleLoadMoreReview}
+                label={t("load_more_reviews") || "Daha Fazla Kayıt Göster"}
+              />
             </div>
           )}
         </div>
       )}
 
       {actionModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 max-sm:items-end bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:max-w-full p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
                 {actionModal.action === "approve"
@@ -3015,6 +3117,21 @@ const SefDashboard = () => {
 
   const displayTasks = activeTab === "open" ? openTasks : completedTasks;
 
+  const [sefiTasksLimit, setSefiTasksLimit] = React.useState(12);
+  const [isSefiPaginating, setIsSefiPaginating] = React.useState(false);
+
+  React.useEffect(() => {
+    setSefiTasksLimit(12);
+  }, [activeTab]);
+
+  const handleLoadMoreSefiTasks = () => {
+    setIsSefiPaginating(true);
+    setTimeout(() => {
+      setSefiTasksLimit((prev) => prev + 12);
+      setIsSefiPaginating(false);
+    }, 400);
+  };
+
   const formatTimeRemaining = (timestamp, deadlineHours) => {
     if (!timestamp || !deadlineHours) return null;
     const deadline = timestamp + deadlineHours * 60 * 60 * 1000;
@@ -3127,7 +3244,7 @@ const SefDashboard = () => {
             )}
           </div>
         )}
-        {displayTasks.map((task) => {
+        {displayTasks.slice(0, sefiTasksLimit).map((task) => {
           const statusObj = STATUS_INFO[task.status] || STATUS_INFO["acik"];
           const StatusIcon = statusObj.icon;
           return (
@@ -3248,11 +3365,21 @@ const SefDashboard = () => {
             </div>
           );
         })}
+        {isSefiPaginating && <TaskCardSkeleton count={2} />}
       </div>
 
+      <PaginationControl
+        currentCount={sefiTasksLimit}
+        totalCount={displayTasks.length}
+        pageSize={12}
+        isLoading={isSefiPaginating}
+        onLoadMore={handleLoadMoreSefiTasks}
+        label={t("load_more_tasks") || "Daha Fazla İhlal Göster"}
+      />
+
       {actionModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 max-sm:items-end bg-black/60 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:max-w-full p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
             <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
               <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
                 {actionModal.type === "fix"
@@ -3546,6 +3673,35 @@ const AdminDashboard = () => {
   const [expandedAnalysisTaskId, setExpandedAnalysisTaskId] = useState(null);
   const [adminDeptFilter, setAdminDeptFilter] = useState("all");
   const [expandedAdminTaskId, setExpandedAdminTaskId] = useState(null);
+
+  const [adminTasksLimit, setAdminTasksLimit] = useState(12);
+  const [isAdminTasksPaginating, setIsAdminTasksPaginating] = useState(false);
+  const [adminLoadingsLimit, setAdminLoadingsLimit] = useState(15);
+  const [isAdminLoadingsPaginating, setIsAdminLoadingsPaginating] = useState(false);
+
+  useEffect(() => {
+    setAdminTasksLimit(12);
+  }, [adminDeptFilter, selectedAdminDept, selectedAdminDate]);
+
+  useEffect(() => {
+    setAdminLoadingsLimit(15);
+  }, [selectedYuklemeDate]);
+
+  const handleLoadMoreAdminTasks = () => {
+    setIsAdminTasksPaginating(true);
+    setTimeout(() => {
+      setAdminTasksLimit((prev) => prev + 12);
+      setIsAdminTasksPaginating(false);
+    }, 400);
+  };
+
+  const handleLoadMoreAdminLoadings = () => {
+    setIsAdminLoadingsPaginating(true);
+    setTimeout(() => {
+      setAdminLoadingsLimit((prev) => prev + 15);
+      setIsAdminLoadingsPaginating(false);
+    }, 400);
+  };
   useEffect(() => {
     const path = location.pathname;
     if (path.startsWith("/analysis/")) {
@@ -4058,152 +4214,172 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-            <div className="bg-red-50 dark:bg-red-900/20 p-5 rounded-2xl border border-red-100 dark:border-red-800/30 print:break-inside-avoid print:bg-transparent print:border-gray-300">
-              <h4 className="text-sm font-bold text-red-800 dark:text-red-400 mb-2">
-                {t("dept_most_issues") || "En Çok Sorun Çıkan Birim"}
-              </h4>
-              <p className="text-xl font-extrabold text-red-900 dark:text-red-300">
-                {mostIssues.length > 0
-                  ? mostIssues.map((d) => t(getDeptKey(d.name))).join(", ")
-                  : "-"}
+          {filteredTasks.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center py-16 px-4 text-center bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/40 my-4">
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/60 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 shadow-sm">
+                <ShieldCheck className="w-9 h-9" />
+              </div>
+              <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">
+                Tebrikler! Sıfır İhlal Kaydı
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 text-sm max-w-md">
+                Seçilen dönemde ({analysisFilter === "day" ? "Bugün" : analysisFilter === "week" ? "Bu Hafta" : analysisFilter === "month" ? "Bu Ay" : analysisFilter === "year" ? "Bu Yıl" : "Tüm Zamanlar"}) herhangi bir iş güvenliği ihlali bulunmamaktadır.
               </p>
-              <p className="text-xs text-red-700 dark:text-red-500 mt-1">
-                {maxCount} {t("issues") || "İhlal"}
-              </p>
-            </div>
-            <div className="bg-green-50 dark:bg-green-900/20 p-5 rounded-2xl border border-green-100 dark:border-green-800/30 print:break-inside-avoid print:bg-transparent print:border-gray-300">
-              <h4 className="text-sm font-bold text-green-800 dark:text-green-400 mb-2">
-                {t("dept_least_issues") || "En Az Sorun Çıkan Birim"}
-              </h4>
-              <p className="text-xl font-extrabold text-green-900 dark:text-green-300">
-                {leastIssues.length > 0
-                  ? leastIssues.map((d) => t(getDeptKey(d.name))).join(", ")
-                  : "-"}
-              </p>
-              <p className="text-xs text-green-700 dark:text-green-500 mt-1">
-                {minCount} {t("issues") || "İhlal"}
-              </p>
-            </div>
-          </div>
-
-          <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 print:break-inside-avoid">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
-              {t("chart_violations") || "İhlal Dağılım Grafiği"}
-            </h3>
-            <div className="w-full overflow-x-auto pb-2">
-              <div className="h-80 min-w-[500px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={sortedAnalysis.map((item) => ({
-                      name: t(getDeptKey(item.name)),
-                      issues: item.count,
-                    }))}
-                    margin={{ top: 10, right: 10, left: -20, bottom: 80 }}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      vertical={false}
-                      stroke={darkMode ? "#374151" : "#E5E7EB"}
-                    />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{
-                        fill: darkMode ? "#9CA3AF" : "#6B7280",
-                        fontSize: 11,
-                      }}
-                      angle={-45}
-                      textAnchor="end"
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{
-                        fill: darkMode ? "#9CA3AF" : "#6B7280",
-                        fontSize: 11,
-                      }}
-                    />
-                    <Tooltip
-                      cursor={{ fill: darkMode ? "#1F2937" : "#F3F4F6" }}
-                      contentStyle={{
-                        backgroundColor: darkMode ? "#1F2937" : "#FFFFFF",
-                        borderRadius: "12px",
-                        border: "none",
-                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                      }}
-                      itemStyle={{ color: "#6366F1", fontWeight: "bold" }}
-                      labelStyle={{
-                        color: darkMode ? "#D1D5DB" : "#374151",
-                        fontWeight: "bold",
-                        marginBottom: "4px",
-                      }}
-                      formatter={(value) => [value, t("issues") || "İhlal"]}
-                    />
-                    <Bar
-                      dataKey="issues"
-                      name={t("issues") || "İhlal"}
-                      radius={[4, 4, 0, 0]}
-                    >
-                      {sortedAnalysis.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            entry.count > 0
-                              ? index === 0
-                                ? "#EF4444"
-                                : "#6366F1"
-                              : "#9CA3AF"
-                          }
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                Fabrika genelinde tüm birimler kurallara tam uyumlu
               </div>
             </div>
-          </div>
-          <div className="flex-1 overflow-y-auto pr-2 print:overflow-visible">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
-              {t("total_issues") || "Toplam Sorun (İhlal)"}
-            </h3>
-            <div className="space-y-4">
-              {sortedAnalysis.map((item, index) => (
-                <div
-                  key={item.name}
-                  className="flex items-center group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 p-2 rounded-xl transition-colors print:break-inside-avoid print:p-0 print:mb-4"
-                  onClick={() => setSelectedAnalysisDept(item.name)}
-                >
-                  <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-xs mr-3 print:border print:border-gray-300">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex justify-between mb-1">
-                      <span className="font-bold text-sm text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 transition-colors">
-                        {t(getDeptKey(item.name))}
-                      </span>
-                      <span className="font-bold text-sm text-gray-600 dark:text-gray-400">
-                        {item.count}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 print:border print:border-gray-200">
-                      <div
-                        className="bg-indigo-500 h-2 rounded-full transition-all duration-500 print:bg-gray-400"
-                        style={{
-                          width:
-                            maxCount > 0
-                              ? `${(item.count / maxCount) * 100}%`
-                              : "0%",
-                        }}
-                      ></div>
-                    </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                <div className="bg-red-50 dark:bg-red-900/20 p-5 rounded-2xl border border-red-100 dark:border-red-800/30 print:break-inside-avoid print:bg-transparent print:border-gray-300">
+                  <h4 className="text-sm font-bold text-red-800 dark:text-red-400 mb-2">
+                    {t("dept_most_issues") || "En Çok Sorun Çıkan Birim"}
+                  </h4>
+                  <p className="text-xl font-extrabold text-red-900 dark:text-red-300">
+                    {mostIssues.length > 0
+                      ? mostIssues.map((d) => t(getDeptKey(d.name))).join(", ")
+                      : "-"}
+                  </p>
+                  <p className="text-xs text-red-700 dark:text-red-500 mt-1">
+                    {maxCount} {t("issues") || "İhlal"}
+                  </p>
+                </div>
+                <div className="bg-green-50 dark:bg-green-900/20 p-5 rounded-2xl border border-green-100 dark:border-green-800/30 print:break-inside-avoid print:bg-transparent print:border-gray-300">
+                  <h4 className="text-sm font-bold text-green-800 dark:text-green-400 mb-2">
+                    {t("dept_least_issues") || "En Az Sorun Çıkan Birim"}
+                  </h4>
+                  <p className="text-xl font-extrabold text-green-900 dark:text-green-300">
+                    {leastIssues.length > 0
+                      ? leastIssues.map((d) => t(getDeptKey(d.name))).join(", ")
+                      : "-"}
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-500 mt-1">
+                    {minCount} {t("issues") || "İhlal"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 print:break-inside-avoid">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
+                  {t("chart_violations") || "İhlal Dağılım Grafiği"}
+                </h3>
+                <div className="w-full overflow-x-auto pb-2">
+                  <div className="h-80 min-w-[500px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={sortedAnalysis.map((item) => ({
+                          name: t(getDeptKey(item.name)),
+                          issues: item.count,
+                        }))}
+                        margin={{ top: 10, right: 10, left: -20, bottom: 80 }}
+                      >
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          vertical={false}
+                          stroke={darkMode ? "#374151" : "#E5E7EB"}
+                        />
+                        <XAxis
+                          dataKey="name"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: darkMode ? "#9CA3AF" : "#6B7280",
+                            fontSize: 11,
+                          }}
+                          angle={-45}
+                          textAnchor="end"
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fill: darkMode ? "#9CA3AF" : "#6B7280",
+                            fontSize: 11,
+                          }}
+                        />
+                        <Tooltip
+                          cursor={{ fill: darkMode ? "#1F2937" : "#F3F4F6" }}
+                          contentStyle={{
+                            backgroundColor: darkMode ? "#1F2937" : "#FFFFFF",
+                            borderRadius: "12px",
+                            border: "none",
+                            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
+                          }}
+                          itemStyle={{ color: "#6366F1", fontWeight: "bold" }}
+                          labelStyle={{
+                            color: darkMode ? "#D1D5DB" : "#374151",
+                            fontWeight: "bold",
+                            marginBottom: "4px",
+                          }}
+                          formatter={(value) => [value, t("issues") || "İhlal"]}
+                        />
+                        <Bar
+                          dataKey="issues"
+                          name={t("issues") || "İhlal"}
+                          radius={[4, 4, 0, 0]}
+                        >
+                          {sortedAnalysis.map((entry, index) => (
+                            <Cell
+                              key={`cell-${index}`}
+                              fill={
+                                entry.count > 0
+                                  ? index === 0
+                                    ? "#EF4444"
+                                    : "#6366F1"
+                                  : "#9CA3AF"
+                              }
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
+              <div className="flex-1 overflow-y-auto pr-2 print:overflow-visible">
+                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
+                  {t("total_issues") || "Toplam Sorun (İhlal)"}
+                </h3>
+                <div className="space-y-4">
+                  {sortedAnalysis.map((item, index) => (
+                    <div
+                      key={item.name}
+                      className="flex items-center group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 p-2 rounded-xl transition-colors print:break-inside-avoid print:p-0 print:mb-4"
+                      onClick={() => setSelectedAnalysisDept(item.name)}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-xs mr-3 print:border print:border-gray-300">
+                        {index + 1}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-bold text-sm text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 transition-colors">
+                            {t(getDeptKey(item.name))}
+                          </span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.count === 0 ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : item.count <= 2 ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300" : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"}`}>
+                            {item.count} {t("issues") || "İhlal"}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 print:border print:border-gray-200">
+                          <div
+                            className={`h-2 rounded-full transition-all duration-500 print:bg-gray-400 ${item.count === 0 ? "bg-emerald-500" : item.count <= 2 ? "bg-amber-500" : "bg-rose-500"}`}
+                            style={{
+                              width:
+                                maxCount > 0
+                                  ? `${(item.count / maxCount) * 100}%`
+                                  : "0%",
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       );
     }
@@ -4292,8 +4468,8 @@ const AdminDashboard = () => {
                     {t("custom_bonus") || "Özel Puan"}
                   </button>
                   <div>
-                    <span className="text-3xl font-extrabold text-green-600">
-                      {points[dept] || 100}
+                    <span className={`text-3xl font-extrabold ${(points[dept] ?? 100) >= 90 ? "text-emerald-600 dark:text-emerald-400" : (points[dept] ?? 100) >= 70 ? "text-amber-500 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"}`}>
+                      {points[dept] ?? 100}
                     </span>
                     <span className="text-sm text-gray-500 dark:text-gray-400 font-normal ml-1 tracking-wider uppercase">
                       {t("risk") || "Puan"}
@@ -4764,6 +4940,7 @@ const AdminDashboard = () => {
     }
 
     const renderLoadingList = (listToRender) => {
+      const paginatedLoads = listToRender.slice(0, adminLoadingsLimit);
       return (
         <div className="space-y-4">
           {listToRender.length === 0 ? (
@@ -4771,7 +4948,8 @@ const AdminDashboard = () => {
               {t("no_records")}
             </p>
           ) : (
-            listToRender.map((load) => {
+            <>
+              {paginatedLoads.map((load) => {
               const isExpanded = expandedLoadId === load.id;
               const statusColor =
                 load.status === "tamamlandi"
@@ -4825,10 +5003,26 @@ const AdminDashboard = () => {
                     <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 bg-gray-50/50 animate-slide-up">
                       <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-3 border-b border-gray-100 dark:border-gray-700 gap-3">
                         <div>
-                          <div className="flex items-center space-x-3 mb-1">
+                          <div className="flex items-center space-x-3 mb-1 flex-wrap gap-2">
                             <span className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
                               {load.plaka}
                             </span>
+                            {load.status === "yukleniyor" ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                {t("status_yukleniyor") || "Yükleniyor"}
+                              </span>
+                            ) : load.status === "tamamlandi" ? (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                                <CheckCircle className="w-3 h-3 text-blue-600" />
+                                {t("status_tamamlandi") || "Tamamlandı"}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                <Clock className="w-3 h-3 text-amber-600" />
+                                {t("status_beklemede") || "Beklemede"}
+                              </span>
+                            )}
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                             <Calendar className="w-3 h-3 inline mr-1" />{" "}
@@ -4954,10 +5148,22 @@ const AdminDashboard = () => {
                   )}
                 </div>
               );
-            })
-          )}
-        </div>
-      );
+            })}
+            {isAdminLoadingsPaginating && (
+              <ShipmentCardSkeleton count={2} />
+            )}
+            <PaginationControl
+              currentCount={adminLoadingsLimit}
+              totalCount={listToRender.length}
+              pageSize={15}
+              isLoading={isAdminLoadingsPaginating}
+              onLoadMore={handleLoadMoreAdminLoadings}
+              label={t("load_more_shipments") || "Daha Fazla Sevkiyat Göster"}
+            />
+          </>
+        )}
+      </div>
+    );
     };
 
     if (adminSystemMode === "yukleme") {
@@ -5475,7 +5681,8 @@ const AdminDashboard = () => {
                 {t("no_records")}
               </p>
             ) : (
-              filterTasks.map((task) => {
+              <>
+                {filterTasks.slice(0, adminTasksLimit).map((task) => {
                 return (
                   <TimerWrapper key={task.id}>
                     {(now) => {
@@ -5673,8 +5880,20 @@ const AdminDashboard = () => {
                     }}
                   </TimerWrapper>
                 );
-              })
-            )}
+              })}
+              {isAdminTasksPaginating && (
+                <TaskCardSkeleton count={2} />
+              )}
+              <PaginationControl
+                currentCount={adminTasksLimit}
+                totalCount={filterTasks.length}
+                pageSize={12}
+                isLoading={isAdminTasksPaginating}
+                onLoadMore={handleLoadMoreAdminTasks}
+                label={t("load_more_tasks") || "Daha Fazla İhlal Göster"}
+              />
+            </>
+          )}
           </div>
         </div>
       );
@@ -6237,6 +6456,11 @@ export default function App() {
 
   const lastActiveRecordedRef = useRef(0);
   const sessionVerifiedRef = useRef(false);
+
+  const handleSnapErr = useCallback((err) => {
+    console.error("Firestore snapshot error:", err);
+    setIsFirebaseLoading(false);
+  }, []);
   useEffect(() => {
     if (currentUser && currentUser.id) {
       const now = Date.now();
@@ -6539,11 +6763,6 @@ export default function App() {
         console.error("onMessage init error", err);
       }
     }
-    const handleSnapErr = (err) => {
-      console.error(err);
-      setIsFirebaseLoading(false);
-      setLoginErr("Veritabanı erişim hatası: " + err.message);
-    };
 
     // Firebase Auth session persistence listener specifically for admin roles
     const unsubAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -6578,18 +6797,9 @@ export default function App() {
             name: "Ağır Adar",
             dept: null,
           };
-          setDoc(doc(db, "user_secrets", "1"), { password: "agiradar123" });
-          setDoc(doc(db, "users", "1"), defaultAdmin);
+          setDoc(doc(db, "users", "1"), defaultAdmin).catch(() => {});
           setUsers([defaultAdmin]);
         } else {
-          const adminAcc = usersData.find((u) => u.id === "1");
-          if (adminAcc && adminAcc.username === "admin") {
-            setDoc(doc(db, "user_secrets", "1"), { password: "agiradar123" }, { merge: true });
-            updateDoc(doc(db, "users", "1"), {
-              username: "agiradar",
-              name: "Ağır Adar",
-            });
-          }
           setUsers(usersData);
 
           const savedUserId = localStorage.getItem("isg_logged_in_user");
@@ -6644,9 +6854,30 @@ export default function App() {
             }
           }
         }
+        setIsFirebaseLoading(false);
       },
-      handleSnapErr,
+      (err) => {
+        setIsFirebaseLoading(false);
+        handleSnapErr(err);
+      },
     );
+
+    return () => {
+      unsubAuth();
+      unsubMessage();
+      unsubUsers();
+    };
+  }, []);
+
+  // Heavy data collections (tasks, loadings, points) are only subscribed when an authenticated user is active.
+  // Full historical data is maintained for complete analytics and reports, while Firestore's persistent
+  // IndexedDB cache serves cached records with 0 reads upon reload.
+  useEffect(() => {
+    if (!currentUser) {
+      setTasks([]);
+      setLoadings([]);
+      return;
+    }
 
     const unsubPoints = onSnapshot(
       doc(db, "system", "points"),
@@ -6658,15 +6889,20 @@ export default function App() {
             acc[dept] = 100;
             return acc;
           }, {});
-          setDoc(doc(db, "system", "points"), initialPoints);
+          setDoc(doc(db, "system", "points"), initialPoints).catch(() => {});
           setPoints(initialPoints);
         }
       },
       handleSnapErr,
     );
 
+    // Limit personal point log records to recent 50 to conserve reads (not used in analytics)
     const unsubPointLogs = onSnapshot(
-      collection(db, "point_logs"),
+      query(
+        collection(db, "point_logs"),
+        orderBy("timestamp", "desc"),
+        limit(50),
+      ),
       (snapshot) => {
         const logsData = snapshot.docs.map((doc) => doc.data());
         logsData.sort((a, b) => b.timestamp - a.timestamp);
@@ -6675,6 +6911,7 @@ export default function App() {
       handleSnapErr,
     );
 
+    // All tasks are retained in full without pagination so all analytics, charts, and reports remain 100% accurate
     const unsubTasks = onSnapshot(
       collection(db, "tasks"),
       (snapshot) => {
@@ -6762,7 +6999,6 @@ export default function App() {
           }
           return tasksData;
         });
-        setIsFirebaseLoading(false);
       },
       handleSnapErr,
     );
@@ -6777,6 +7013,7 @@ export default function App() {
       handleSnapErr,
     );
 
+    // All shipments/loadings are retained in full so daily, 24-hr tonnage, and all shipment reports remain 100% accurate
     const unsubLoadings = onSnapshot(
       collection(db, "loadings"),
       (snapshot) => {
@@ -6788,16 +7025,13 @@ export default function App() {
     );
 
     return () => {
-      unsubAuth();
-      unsubMessage();
-      unsubUsers();
       unsubPoints();
       unsubTasks();
       unsubLoadings();
       unsubPointsHistory();
       unsubPointLogs();
     };
-  }, []);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if (isFirebaseLoading || !points || Object.keys(points).length === 0)
