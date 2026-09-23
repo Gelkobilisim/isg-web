@@ -1,0 +1,57 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System users including admins, department chiefs, and inspectors",
+      "type": "object",
+      "properties": {
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "sef", "mod", "yuklemeci"] },
+        "dept": { "type": "string" },
+        "fcmToken": { "type": "string" },
+        "lastActive": { "type": "string" }
+      },
+      "required": ["username", "role", "name"]
+    },
+    "UserSecret": {
+      "title": "UserSecret",
+      "description": "User credentials stored securely",
+      "type": "object",
+      "properties": {
+        "password": { "type": "string" }
+      },
+      "required": ["password"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "ISG Tasks and issues",
+      "type": "object",
+      "properties": {
+        "dept": { "type": "string" },
+        "priority": { "type": "string" },
+        "subject": { "type": "string" },
+        "desc": { "type": "string" },
+        "status": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "deadlineHours": { "type": "number" },
+        "imgUrl": { "type": "string" }
+      },
+      "required": ["dept", "subject", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile collection"
+    },
+    "/user_secrets/{userId}": {
+      "schema": "UserSecret",
+      "description": "User password collection"
+    },
+    "/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "ISG Task issues collection"
+    }
+  }
+}

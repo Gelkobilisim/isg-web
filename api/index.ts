@@ -3,9 +3,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
 
-import { initializeApp, cert } from "firebase-admin/app";
+import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
+import { getAuth } from "firebase-admin/auth";
 import { createServer as createViteServer } from "vite";
 
 dotenv.config();
@@ -22,11 +23,12 @@ app.use(express.json());
 let isFirebaseAdminInitialized = false;
 try {
   if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    // Parse the JSON string from the environment variable
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    initializeApp({
-      credential: cert(serviceAccount),
-    });
+    if (getApps().length === 0) {
+      initializeApp({
+        credential: cert(serviceAccount),
+      });
+    }
     isFirebaseAdminInitialized = true;
     console.log("✅ Firebase Admin SDK successfully initialized.");
   } else {
@@ -38,20 +40,23 @@ try {
   console.error("❌ Failed to initialize Firebase Admin SDK:", error);
 }
 
-app.post("/api/login", async (req, res) => {
+app.post(["/api/login", "/login"], async (req, res) => {
   if (!isFirebaseAdminInitialized) {
     return res.status(500).json({ error: "Firebase Admin is not configured." });
   }
 
   const { username, password } = req.body;
   if (!username || !password) {
-    return res.status(400).json({ error: "Username and password required" });
+    return res.status(400).json({ error: "Kullanıcı adı ve şifre gereklidir." });
   }
 
   try {
+    const cleanUsername = String(username).toLowerCase().trim();
+    const cleanPassword = String(password).trim();
+
     const usersSnapshot = await getFirestore()
       .collection("users")
-      .where("username", "==", username.toLowerCase().trim())
+      .where("username", "==", cleanUsername)
       .limit(1)
       .get();
       
@@ -63,25 +68,46 @@ app.post("/api/login", async (req, res) => {
     const userId = userDoc.id;
 
     const secretDoc = await getFirestore().collection("user_secrets").doc(userId).get();
-    if (!secretDoc.exists || secretDoc.data().password !== password) {
+    
+    let storedPassword = null;
+    if (secretDoc.exists && secretDoc.data()?.password) {
+      storedPassword = secretDoc.data()?.password;
+    } else if (userDoc.data()?.password) {
+      storedPassword = userDoc.data()?.password;
+      await getFirestore().collection("user_secrets").doc(userId).set({ password: storedPassword }, { merge: true });
+    }
+
+    if (!storedPassword || storedPassword !== cleanPassword) {
       return res.status(401).json({ error: "Geçersiz kullanıcı adı veya şifre" });
     }
 
-    // Basit bir token uretimi (production'da JWT onerilir)
     const token = Buffer.from(`${userId}:${Date.now()}`).toString('base64');
     
+    let firebaseToken = null;
+    if (userDoc.data()?.role === "admin") {
+      try {
+        firebaseToken = await getAuth().createCustomToken(userId, { role: "admin" });
+      } catch (authErr) {
+        console.error("Firebase custom token generation error:", authErr);
+      }
+    }
+
+    const userData = { ...userDoc.data() };
+    delete userData.password;
+
     return res.json({
       success: true,
-      user: { id: userId, ...userDoc.data() },
-      token: token
+      user: { id: userId, ...userData },
+      token: token,
+      firebaseToken: firebaseToken
     });
   } catch (error) {
     console.error("Login error:", error);
-    return res.status(500).json({ error: "Internal server error" });
+    return res.status(500).json({ error: "Sunucu hatası: " + (error as Error).message });
   }
 });
 
-app.post("/api/notify", async (req, res) => {
+app.post(["/api/notify", "/notify"], async (req, res) => {
   if (!isFirebaseAdminInitialized) {
     return res.status(500).json({ error: "Firebase Admin is not configured." });
   }
@@ -321,7 +347,7 @@ app.post("/api/notify", async (req, res) => {
   }
 });
 
-app.post("/api/cleanup-tokens", async (req, res) => {
+app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
   if (!isFirebaseAdminInitialized)
     return res.status(500).json({ error: "Firebase Admin is not configured." });
 
