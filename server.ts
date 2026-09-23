@@ -107,6 +107,36 @@ app.post(["/api/login", "/login"], async (req, res) => {
   }
 });
 
+app.post("/api/verify-session", async (req, res) => {
+  try {
+    const { token, userId } = req.body;
+    if (!token || !userId) {
+      return res.status(400).json({ valid: false, error: "Token ve kullanıcı ID gereklidir." });
+    }
+
+    const decoded = Buffer.from(token, "base64").toString("utf-8");
+    const [tokenUserId] = decoded.split(":");
+    if (tokenUserId !== userId) {
+      return res.status(401).json({ valid: false, error: "Geçersiz oturum anahtarı." });
+    }
+
+    const userDoc = await getFirestore().collection("users").doc(userId).get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ valid: false, error: "Kullanıcı bulunamadı." });
+    }
+
+    const userData = { ...userDoc.data() };
+    delete userData.password;
+
+    return res.json({
+      valid: true,
+      user: { id: userId, ...userData }
+    });
+  } catch (error) {
+    return res.status(500).json({ valid: false, error: (error as Error).message });
+  }
+});
+
 app.post(["/api/notify", "/notify"], async (req, res) => {
   if (!isFirebaseAdminInitialized) {
     return res.status(500).json({ error: "Firebase Admin is not configured." });

@@ -522,7 +522,11 @@ const LoginScreen = () => {
           await setPersistence(auth, browserLocalPersistence);
           await signInWithCustomToken(auth, data.firebaseToken);
         } catch (authErr) {
-          console.error("Firebase Auth persistence error for admin:", authErr);
+          // If Identity Platform (Firebase Auth) is not initialized in the Firebase console for this project,
+          // ignore configuration-not-found to prevent uncaught console errors while maintaining server-backed session
+          if (authErr?.code !== "auth/configuration-not-found") {
+            console.warn("Firebase Auth notice:", authErr?.message || authErr);
+          }
         }
       } else if (account.role !== "admin") {
         try {
@@ -6571,11 +6575,29 @@ export default function App() {
           setUsers(usersData);
 
           const savedUserId = localStorage.getItem("isg_logged_in_user");
+          const savedAuthToken = localStorage.getItem("isg_auth_token");
           const authUser = auth.currentUser;
           const targetUserId = (authUser && authUser.uid) || savedUserId;
           if (targetUserId) {
             const autoUser = usersData.find((u) => u.id === targetUserId);
             if (autoUser) {
+              // For admin users, verify session security with backend if token exists
+              if (autoUser.role === "admin" && savedAuthToken) {
+                fetch("/api/verify-session", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ userId: autoUser.id, token: savedAuthToken }),
+                })
+                  .then((res) => res.json())
+                  .then((verifyData) => {
+                    if (verifyData && verifyData.valid === false) {
+                      localStorage.removeItem("isg_logged_in_user");
+                      localStorage.removeItem("isg_auth_token");
+                      setCurrentUser(null);
+                    }
+                  })
+                  .catch(() => {});
+              }
               setCurrentUser(autoUser);
               if (
                 localStorage.getItem("isg_notification_device_owner") ===
