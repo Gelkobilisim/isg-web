@@ -6224,13 +6224,20 @@ export default function App() {
   const [isRegisteringDevice, setIsRegisteringDevice] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
 
+  const lastActiveRecordedRef = useRef(0);
+  const sessionVerifiedRef = useRef(false);
   useEffect(() => {
     if (currentUser && currentUser.id) {
-      try {
-        updateDoc(doc(db, "users", currentUser.id), { lastActive: new Date() });
-      } catch (e) {}
+      const now = Date.now();
+      // Throttle: only update Firestore at most once every 15 minutes to prevent burning Firestore write quota
+      if (now - lastActiveRecordedRef.current > 15 * 60 * 1000) {
+        lastActiveRecordedRef.current = now;
+        try {
+          updateDoc(doc(db, "users", currentUser.id), { lastActive: new Date() }).catch(() => {});
+        } catch (e) {}
+      }
     }
-  }, [currentUser]);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     if ("permissions" in navigator) {
@@ -6581,8 +6588,9 @@ export default function App() {
           if (targetUserId) {
             const autoUser = usersData.find((u) => u.id === targetUserId);
             if (autoUser) {
-              // For admin users, verify session security with backend if token exists
-              if (autoUser.role === "admin" && savedAuthToken) {
+              // For admin users, verify session security with backend once if token exists
+              if (!sessionVerifiedRef.current && autoUser.role === "admin" && savedAuthToken) {
+                sessionVerifiedRef.current = true;
                 fetch("/api/verify-session", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
@@ -6598,7 +6606,20 @@ export default function App() {
                   })
                   .catch(() => {});
               }
-              setCurrentUser(autoUser);
+              setCurrentUser((prev) => {
+                if (prev && prev.id === autoUser.id) {
+                  if (
+                    prev.name === autoUser.name &&
+                    prev.username === autoUser.username &&
+                    prev.role === autoUser.role &&
+                    prev.dept === autoUser.dept &&
+                    prev.fcmToken === autoUser.fcmToken
+                  ) {
+                    return prev;
+                  }
+                }
+                return autoUser;
+              });
               if (
                 localStorage.getItem("isg_notification_device_owner") ===
                 autoUser.id
