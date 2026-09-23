@@ -18,9 +18,28 @@ app.use(express.json());
 // Initialize Firebase Admin
 let isFirebaseAdminInitialized = false;
 try {
-  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-    if (getApps().length === 0) {
+  let keyRaw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+  if (keyRaw) {
+    keyRaw = keyRaw.trim();
+    if (
+      (keyRaw.startsWith('"') && keyRaw.endsWith('"')) ||
+      (keyRaw.startsWith("'") && keyRaw.endsWith("'"))
+    ) {
+      keyRaw = keyRaw.slice(1, -1);
+    }
+    let serviceAccount: any;
+    try {
+      serviceAccount = JSON.parse(keyRaw);
+    } catch {
+      try {
+        const decoded = Buffer.from(keyRaw, "base64").toString("utf-8");
+        serviceAccount = JSON.parse(decoded);
+      } catch {
+        const unescaped = keyRaw.replace(/\\n/g, "\n");
+        serviceAccount = JSON.parse(unescaped);
+      }
+    }
+    if (serviceAccount && getApps().length === 0) {
       initializeApp({
         credential: cert(serviceAccount),
       });
@@ -54,17 +73,19 @@ interface CachedUser {
 const userCache = new Map<string, CachedUser>();
 
 app.post(["/api/login", "/login"], async (req, res) => {
-  if (!isFirebaseAdminInitialized) {
-    return res.status(500).json({ error: "Firebase Admin is not configured." });
-  }
-
-  const { username, password } = req.body;
+  const { username, password } = req.body || {};
   if (!username || !password) {
     return res.status(400).json({ error: "Kullanıcı adı ve şifre gereklidir." });
   }
 
   const cleanUsername = String(username).toLowerCase().trim();
   const cleanPassword = String(password).trim();
+
+  if (!isFirebaseAdminInitialized) {
+    return res.status(500).json({
+      error: "Firebase Admin SDK başlatılamadı. Lütfen sunucu yapılandırmasını (FIREBASE_SERVICE_ACCOUNT_KEY) kontrol edin."
+    });
+  }
 
   try {
     const usersSnapshot = await getFirestore()
@@ -127,31 +148,13 @@ app.post(["/api/login", "/login"], async (req, res) => {
   } catch (error: any) {
     console.warn("Firestore login operation note:", error?.message || error);
 
-    // Fallback 1: Authenticate from memory cache if quota is exhausted
+    // Fallback: Authenticate from memory cache if quota is temporarily exhausted
     const cached = userCache.get(cleanUsername);
     if (cached && cached.password === cleanPassword) {
       const token = Buffer.from(`${cached.user.id}:${Date.now()}`).toString('base64');
       return res.json({
         success: true,
         user: cached.user,
-        token: token,
-        firebaseToken: null
-      });
-    }
-
-    // Fallback 2: Built-in emergency admin fallback if quota is completely exhausted
-    if (cleanUsername === "agiradar" && cleanPassword === "agiradar123") {
-      const defaultAdmin = {
-        id: "1",
-        username: "agiradar",
-        role: "admin",
-        name: "Ağır Adar",
-        dept: null
-      };
-      const token = Buffer.from(`1:${Date.now()}`).toString('base64');
-      return res.json({
-        success: true,
-        user: defaultAdmin,
         token: token,
         firebaseToken: null
       });
@@ -506,4 +509,8 @@ app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
   }
 });
 
-export default app;
+export default function handler(req: any, res: any) {
+  return app(req, res);
+}
+export { app };
+
