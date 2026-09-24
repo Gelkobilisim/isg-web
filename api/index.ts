@@ -7,7 +7,7 @@ import jwt from "jsonwebtoken";
 import helmet from "helmet";
 
 import { initializeApp, cert, getApps } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
 import { getAuth } from "firebase-admin/auth";
 
@@ -690,23 +690,43 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
     let notificationTitle = "";
     let notificationBody = "";
 
+    const getUserFcmTokens = (u: any): string[] => {
+      const list: string[] = [];
+      if (Array.isArray(u.fcmTokens)) {
+        for (const t of u.fcmTokens) {
+          if (typeof t === "string" && t.trim() && !list.includes(t.trim())) {
+            list.push(t.trim());
+          }
+        }
+      }
+      if (u.fcmToken && typeof u.fcmToken === "string" && !list.includes(u.fcmToken.trim())) {
+        list.push(u.fcmToken.trim());
+      }
+      return list;
+    };
+
+    const addTokensForUser = (u: any) => {
+      const userTokens = getUserFcmTokens(u);
+      if (userTokens.length > 0) {
+        tokensToNotify.push(...userTokens);
+        targetUsers.push(u.id);
+      }
+    };
+
     if (type === "NEW_TASK") {
       const { dept, desc, lang } = payload;
       notificationTitle =
         lang === "tr" ? "Yeni İSG İhlali" : "New OHS Violation";
       notificationBody = desc;
 
-      // Notify Şef of that department, and Admin
+      // Notify Şef of that department, and Admin / Mod
       users.forEach((u) => {
-        if (u.fcmToken) {
-          if (
-            u.role === "admin" ||
-            u.role === "mod" ||
-            (u.role === "sef" && u.dept === dept)
-          ) {
-            tokensToNotify.push(u.fcmToken);
-            targetUsers.push(u.id);
-          }
+        if (
+          u.role === "admin" ||
+          u.role === "mod" ||
+          (u.role === "sef" && u.dept === dept)
+        ) {
+          addTokensForUser(u);
         }
       });
     } else if (type === "STATUS_CHANGE") {
@@ -717,9 +737,8 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           lang === "tr" ? "İhlal Çözüldü" : "Violation Resolved";
         notificationBody = `${dept} departmanı bir ihlali çözdü ve onay bekliyor.`;
         users.forEach((u) => {
-          if (u.fcmToken && (u.role === "admin" || u.role === "mod")) {
-            tokensToNotify.push(u.fcmToken);
-            targetUsers.push(u.id);
+          if (u.role === "admin" || u.role === "mod") {
+            addTokensForUser(u);
           }
         });
       } else if (newStatus === "itiraz_edildi") {
@@ -727,9 +746,8 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           lang === "tr" ? "İhlale İtiraz Edildi" : "Violation Objected";
         notificationBody = `${dept} departmanı bir ihlale itiraz etti.`;
         users.forEach((u) => {
-          if (u.fcmToken && (u.role === "admin" || u.role === "mod")) {
-            tokensToNotify.push(u.fcmToken);
-            targetUsers.push(u.id);
+          if (u.role === "admin" || u.role === "mod") {
+            addTokensForUser(u);
           }
         });
       } else if (newStatus === "kapatildi") {
@@ -737,9 +755,8 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           lang === "tr" ? "İhlal Kapatıldı" : "Violation Closed";
         notificationBody = `${dept} departmanındaki bir ihlal kaydı onaylandı ve kapatıldı.`;
         users.forEach((u) => {
-          if (u.fcmToken && u.role === "sef" && u.dept === dept) {
-            tokensToNotify.push(u.fcmToken);
-            targetUsers.push(u.id);
+          if (u.role === "sef" && u.dept === dept) {
+            addTokensForUser(u);
           }
         });
       } else if (newStatus === "acik" && oldStatus === "cozuldu") {
@@ -747,9 +764,8 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           lang === "tr" ? "Çözüm Reddedildi" : "Solution Rejected";
         notificationBody = `İSG Uzmanı çözümünüzü reddetti, ihlal tekrar açıldı.`;
         users.forEach((u) => {
-          if (u.fcmToken && u.role === "sef" && u.dept === dept) {
-            tokensToNotify.push(u.fcmToken);
-            targetUsers.push(u.id);
+          if (u.role === "sef" && u.dept === dept) {
+            addTokensForUser(u);
           }
         });
       }
@@ -762,14 +778,8 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           : `${dept} birimi için test bildirimi başarıyla alındı.`;
 
       users.forEach((u) => {
-        if (u.fcmToken) {
-          if (dept === "all") {
-            tokensToNotify.push(u.fcmToken);
-            targetUsers.push(u.id);
-          } else if (u.role === "sef" && u.dept === dept) {
-            tokensToNotify.push(u.fcmToken);
-            targetUsers.push(u.id);
-          }
+        if (dept === "all" || (u.role === "sef" && u.dept === dept)) {
+          addTokensForUser(u);
         }
       });
     }
@@ -837,9 +847,15 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         try {
           const batch = getFirestore().batch();
           users.forEach((u) => {
-            if (u.fcmToken && tokensToRemove.includes(u.fcmToken)) {
+            const userTokens = getUserFcmTokens(u);
+            const deadForUser = userTokens.filter((t) => tokensToRemove.includes(t));
+            if (deadForUser.length > 0) {
               const userRef = getFirestore().collection("users").doc(u.id);
-              batch.update(userRef, { fcmToken: null });
+              const remaining = userTokens.filter((t) => !tokensToRemove.includes(t));
+              batch.update(userRef, {
+                fcmTokens: FieldValue.arrayRemove(...deadForUser),
+                fcmToken: remaining.length > 0 ? remaining[0] : null
+              });
             }
           });
           await batch.commit();
@@ -854,7 +870,8 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         try {
           const batch = getFirestore().batch();
           users.forEach((u) => {
-            if (u.fcmToken && successfulTokens.includes(u.fcmToken)) {
+            const userTokens = getUserFcmTokens(u);
+            if (userTokens.some((t) => successfulTokens.includes(t))) {
               const userRef = getFirestore().collection("users").doc(u.id);
               batch.update(userRef, { lastPing: new Date() });
             }
@@ -938,17 +955,31 @@ app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
 
   try {
     const usersSnapshot = await getFirestore().collection("users").get();
-    const usersWithTokens = usersSnapshot.docs
-      .map((doc) => ({ id: doc.id, ...doc.data() }))
-      .filter((u) => u.fcmToken);
+    const users = usersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    if (usersWithTokens.length === 0) {
+    const tokenToUserMap = new Map<string, any>();
+    users.forEach((u: any) => {
+      const uTokens: string[] = [];
+      if (Array.isArray(u.fcmTokens)) {
+        u.fcmTokens.forEach((t: string) => {
+          if (t && typeof t === "string") uTokens.push(t.trim());
+        });
+      }
+      if (u.fcmToken && typeof u.fcmToken === "string") {
+        uTokens.push(u.fcmToken.trim());
+      }
+      uTokens.forEach((t) => {
+        tokenToUserMap.set(t, u);
+      });
+    });
+
+    const uniqueTokens = Array.from(tokenToUserMap.keys());
+    if (uniqueTokens.length === 0) {
       return res.json({ success: true, removedCount: 0, totalTested: 0 });
     }
 
-    const tokens = usersWithTokens.map((u) => u.fcmToken);
     const message = {
-      tokens,
+      tokens: uniqueTokens,
       data: { test: "true" },
     };
 
@@ -957,6 +988,7 @@ app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
 
     let removedCount = 0;
     const batch = getFirestore().batch();
+    const deadTokensByUser = new Map<string, string[]>();
 
     response.responses.forEach((resp, idx) => {
       if (!resp.success) {
@@ -965,13 +997,23 @@ app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
           errCode === "messaging/invalid-registration-token" ||
           errCode === "messaging/registration-token-not-registered"
         ) {
-          const userRef = getFirestore()
-            .collection("users")
-            .doc(usersWithTokens[idx].id);
-          batch.update(userRef, { fcmToken: null });
-          removedCount++;
+          const badToken = uniqueTokens[idx];
+          const ownerUser = tokenToUserMap.get(badToken);
+          if (ownerUser) {
+            const list = deadTokensByUser.get(ownerUser.id) || [];
+            list.push(badToken);
+            deadTokensByUser.set(ownerUser.id, list);
+            removedCount++;
+          }
         }
       }
+    });
+
+    deadTokensByUser.forEach((deadTokens, userId) => {
+      const userRef = getFirestore().collection("users").doc(userId);
+      batch.update(userRef, {
+        fcmTokens: FieldValue.arrayRemove(...deadTokens),
+      });
     });
 
     if (removedCount > 0) {

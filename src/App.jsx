@@ -96,6 +96,8 @@ import {
   where,
   addDoc,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import {
   getMessaging,
@@ -631,8 +633,10 @@ const LoginScreen = () => {
                   serviceWorkerRegistration: registration,
                 });
                 if (currentToken) {
+                  localStorage.setItem("isg_device_fcm_token", currentToken);
                   await updateDoc(doc(db, "users", account.id), {
                     fcmToken: currentToken,
+                    fcmTokens: arrayUnion(currentToken),
                     lastActive: new Date(),
                   });
                 }
@@ -1484,7 +1488,15 @@ const MainLayout = ({ theme = "blue", children }) => {
 
                     {(() => {
                       const total = users.length;
-                      const active = users.filter((u) => u.fcmToken).length;
+                      const hasUserToken = (u) =>
+                        (Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0) || !!u.fcmToken;
+                      const active = users.filter(hasUserToken).length;
+                      const totalDeviceTokens = users.reduce((acc, u) => {
+                        if (Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0) {
+                          return acc + u.fcmTokens.length;
+                        }
+                        return acc + (u.fcmToken ? 1 : 0);
+                      }, 0);
                       const ratio =
                         total > 0 ? Math.round((active / total) * 100) : 0;
                       return (
@@ -1499,10 +1511,10 @@ const MainLayout = ({ theme = "blue", children }) => {
                           </div>
                           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-2 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm text-center">
                             <span className="text-[10px] sm:text-xs md:text-sm text-green-600 dark:text-green-400 font-medium leading-tight truncate w-full">
-                              Aktif Cihaz
+                              Aktif Kullanıcı / Cihaz
                             </span>
                             <span className="text-base sm:text-2xl font-bold text-green-700 dark:text-green-300 mt-0.5">
-                              {active}
+                              {active} <span className="text-xs font-normal text-green-600">({totalDeviceTokens} Cihaz)</span>
                             </span>
                           </div>
                           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm relative overflow-hidden text-center">
@@ -1522,7 +1534,11 @@ const MainLayout = ({ theme = "blue", children }) => {
                     })()}
 
                     <div className="space-y-2 sm:space-y-3">
-                      {users.map((u) => (
+                      {users.map((u) => {
+                        const deviceCount = Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0
+                          ? u.fcmTokens.length
+                          : u.fcmToken ? 1 : 0;
+                        return (
                         <div
                           key={u.id}
                           className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-2.5 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
@@ -1557,9 +1573,10 @@ const MainLayout = ({ theme = "blue", children }) => {
                             </div>
                           </div>
                           <div className="flex items-center shrink-0 self-start sm:self-center">
-                            {u.fcmToken ? (
+                            {deviceCount > 0 ? (
                               <div className="flex items-center text-green-600 dark:text-green-400 font-bold text-xs bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full border border-green-200 dark:border-green-800">
-                                <CheckCircle className="w-3.5 h-3.5 mr-1 shrink-0" /> Token Var
+                                <CheckCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
+                                <span>Token Var {deviceCount > 1 ? `(${deviceCount} Cihaz)` : ""}</span>
                               </div>
                             ) : (
                               <div className="flex items-center text-red-500 font-bold text-xs bg-red-50 dark:bg-red-900/20 px-2.5 py-1 rounded-full border border-red-200 dark:border-red-800">
@@ -1568,7 +1585,8 @@ const MainLayout = ({ theme = "blue", children }) => {
                             )}
                           </div>
                         </div>
-                      ))}
+                      );
+                    })}
                     </div>
                   </>
                 ) : (
@@ -6918,8 +6936,10 @@ export default function App() {
         const currentToken = await getTokenWithTimeout;
 
         if (currentToken) {
+          localStorage.setItem("isg_device_fcm_token", currentToken);
           await updateDoc(doc(db, "users", currentUser.id), {
             fcmToken: currentToken,
+            fcmTokens: arrayUnion(currentToken),
             lastActive: new Date(),
           });
           localStorage.setItem("isg_notification_device_owner", currentUser.id);
@@ -6999,14 +7019,17 @@ export default function App() {
       const currentToken = await getTokenWithTimeout;
 
       if (currentToken) {
+        localStorage.setItem("isg_device_fcm_token", currentToken);
         localStorage.setItem("isg_notification_device_owner", userObj.id);
         localStorage.setItem("isg_notification_role", userObj.role);
         localStorage.setItem("isg_notification_dept", userObj.dept || "");
 
-        if (userObj.fcmToken !== currentToken) {
-          console.log("Token mismatch detected, updating Firestore...");
+        const existingTokens = Array.isArray(userObj.fcmTokens) ? userObj.fcmTokens : [];
+        if (!existingTokens.includes(currentToken) || userObj.fcmToken !== currentToken) {
+          console.log("Token sync/registration detected, updating Firestore with multi-device array...");
           await updateDoc(doc(db, "users", userObj.id), {
             fcmToken: currentToken,
+            fcmTokens: arrayUnion(currentToken),
             lastActive: new Date(),
           });
           console.log("Token updated successfully for user:", userObj.username);
@@ -7181,7 +7204,8 @@ export default function App() {
                     prev.username === autoUser.username &&
                     prev.role === autoUser.role &&
                     prev.dept === autoUser.dept &&
-                    prev.fcmToken === autoUser.fcmToken
+                    prev.fcmToken === autoUser.fcmToken &&
+                    JSON.stringify(prev.fcmTokens) === JSON.stringify(autoUser.fcmTokens)
                   ) {
                     return prev;
                   }
@@ -7517,17 +7541,34 @@ export default function App() {
         localStorage.removeItem("isg_notification_role");
         localStorage.removeItem("isg_notification_dept");
 
-        // Remove FCM Token from database to stop background push notifications
+        // Multi-device safe logout: Remove ONLY this device's token from Firestore
         const loggedInUserId = localStorage.getItem("isg_logged_in_user");
+        const deviceFcmToken = localStorage.getItem("isg_device_fcm_token");
         if (loggedInUserId) {
           try {
-            await updateDoc(doc(db, "users", loggedInUserId), {
-              fcmToken: deleteField(),
-            });
+            const updates = {};
+            if (deviceFcmToken) {
+              updates.fcmTokens = arrayRemove(deviceFcmToken);
+            }
+            // Check remaining tokens to maintain fallback compatibility
+            const remainingTokens = (currentUser?.fcmTokens || []).filter(
+              (t) => t !== deviceFcmToken,
+            );
+            if (currentUser?.fcmToken === deviceFcmToken) {
+              if (remainingTokens.length > 0) {
+                updates.fcmToken = remainingTokens[0];
+              } else {
+                updates.fcmToken = deleteField();
+              }
+            }
+            if (Object.keys(updates).length > 0) {
+              await updateDoc(doc(db, "users", loggedInUserId), updates);
+            }
           } catch (e) {
             console.error("FCM Token silinemedi:", e);
           }
         }
+        localStorage.removeItem("isg_device_fcm_token");
 
         // Tarayıcıdaki tokenı da sil (tekrar girince otomatik eklenmesin)
         if (messaging) {
@@ -7777,10 +7818,14 @@ export default function App() {
     const isNotificationActiveForUser =
       notificationStatus === "granted" &&
       localStorage.getItem("isg_notification_device_owner") === currentUser?.id;
+    const hasAnyToken =
+      (Array.isArray(currentUser?.fcmTokens) &&
+        currentUser.fcmTokens.length > 0) ||
+      !!currentUser?.fcmToken;
     if (
       currentUser &&
       currentUser.role !== "yuklemeci" &&
-      (!currentUser.fcmToken || !isNotificationActiveForUser)
+      (!hasAnyToken || !isNotificationActiveForUser)
     ) {
       const dismissed = sessionStorage.getItem("isg_notif_prompt_dismissed");
       if (!dismissed) {
@@ -7994,7 +8039,7 @@ export default function App() {
                       >
                         {currentUser &&
                           currentUser.role !== "yuklemeci" &&
-                          (!currentUser.fcmToken ||
+                          (!((Array.isArray(currentUser.fcmTokens) && currentUser.fcmTokens.length > 0) || currentUser.fcmToken) ||
                             !(
                               notificationStatus === "granted" &&
                               localStorage.getItem(
