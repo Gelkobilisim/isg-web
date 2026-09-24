@@ -2,7 +2,7 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "System users including admins, department chiefs, and inspectors",
+      "description": "System users including admins, department chiefs, safety specialists, and logistics loaders",
       "type": "object",
       "properties": {
         "username": { "type": "string" },
@@ -10,13 +10,14 @@
         "role": { "type": "string", "enum": ["admin", "sef", "mod", "yuklemeci"] },
         "dept": { "type": "string" },
         "fcmToken": { "type": "string" },
+        "fcmTokens": { "type": "array" },
         "lastActive": { "type": "string" }
       },
       "required": ["username", "role", "name"]
     },
     "UserSecret": {
       "title": "UserSecret",
-      "description": "User credentials stored securely",
+      "description": "User credentials stored securely and accessible only via server-side logic",
       "type": "object",
       "properties": {
         "password": { "type": "string" }
@@ -25,7 +26,7 @@
     },
     "Task": {
       "title": "Task",
-      "description": "ISG Tasks and issues",
+      "description": "Occupational health and safety (İSG) task records, non-conformities, and actions",
       "type": "object",
       "properties": {
         "dept": { "type": "string" },
@@ -34,24 +35,137 @@
         "desc": { "type": "string" },
         "status": { "type": "string" },
         "timestamp": { "type": "number" },
+        "createdAt": { "type": "string" },
         "deadlineHours": { "type": "number" },
-        "imgUrl": { "type": "string" }
+        "imgUrl": { "type": "string" },
+        "resolvedImgUrl": { "type": "string" },
+        "resolvedNote": { "type": "string" }
       },
       "required": ["dept", "subject", "status"]
+    },
+    "Loading": {
+      "title": "Loading",
+      "description": "Shipment and logistics loading operations tracking records",
+      "type": "object",
+      "properties": {
+        "vehiclePlate": { "type": "string" },
+        "driverName": { "type": "string" },
+        "driverPhone": { "type": "string" },
+        "targetDept": { "type": "string" },
+        "tonnage": { "type": "number" },
+        "status": { "type": "string" },
+        "creatorId": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "createdAtDate": { "type": "string" },
+        "createdAtTime": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "postImgUrl": { "type": "string" },
+        "postNote": { "type": "string" },
+        "finishedAtTime": { "type": "string" }
+      },
+      "required": ["vehiclePlate", "status", "timestamp"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "description": "User feedbacks, feature suggestions, and crash reports captured by ErrorBoundary",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userRole": { "type": "string" },
+        "userDept": { "type": "string" },
+        "timestamp": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["text", "timestamp"]
+    },
+    "PointLog": {
+      "title": "PointLog",
+      "description": "History of safety points awarded or deducted for departments",
+      "type": "object",
+      "properties": {
+        "dept": { "type": "string" },
+        "points": { "type": "number" },
+        "reason": { "type": "string" },
+        "adminName": { "type": "string" },
+        "dateStr": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["dept", "points", "timestamp"]
+    },
+    "System": {
+      "title": "System",
+      "description": "System-wide settings, department safety points, and daily bonus checkpoints",
+      "type": "object",
+      "properties": {
+        "lastDailyBonus": { "type": "string" },
+        "lastBonusTimestamp": { "type": "number" }
+      }
+    },
+    "UserNotification": {
+      "title": "UserNotification",
+      "description": "Individual notifications delivered to specific users",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "read": { "type": "boolean" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["userId", "timestamp"]
+    },
+    "NotificationLog": {
+      "title": "NotificationLog",
+      "description": "Audit trail of push notifications sent across the system",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "sentBy": { "type": "string" },
+        "targetDept": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["timestamp"]
     }
   },
   "firestore": {
     "/users/{userId}": {
       "schema": "User",
-      "description": "User profile collection"
+      "description": "Application user profiles"
     },
     "/user_secrets/{userId}": {
       "schema": "UserSecret",
-      "description": "User password collection"
+      "description": "User credential hashes"
     },
     "/tasks/{taskId}": {
       "schema": "Task",
-      "description": "ISG Task issues collection"
+      "description": "İSG issues and corrective action records"
+    },
+    "/loadings/{loadingId}": {
+      "schema": "Loading",
+      "description": "Shipment tracking and loading logs"
+    },
+    "/feedbacks/{feedbackId}": {
+      "schema": "Feedback",
+      "description": "User suggestions and ErrorBoundary crash reports"
+    },
+    "/point_logs/{logId}": {
+      "schema": "PointLog",
+      "description": "Department safety points audit trail"
+    },
+    "/system/{docId}": {
+      "schema": "System",
+      "description": "Global points summary and daily bonus tracking"
+    },
+    "/user_notifications/{notificationId}": {
+      "schema": "UserNotification",
+      "description": "User-specific notifications inbox"
+    },
+    "/notification_logs/{logId}": {
+      "schema": "NotificationLog",
+      "description": "History of system push notifications"
     }
   }
 }

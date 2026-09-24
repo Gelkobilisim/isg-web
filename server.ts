@@ -116,12 +116,10 @@ app.post(["/api/login", "/login"], async (req, res) => {
     const token = Buffer.from(`${userId}:${Date.now()}`).toString('base64');
     
     let firebaseToken = null;
-    if (userDoc.data()?.role === "admin") {
-      try {
-        firebaseToken = await getAuth().createCustomToken(userId, { role: "admin" });
-      } catch (authErr) {
-        // non-blocking
-      }
+    try {
+      firebaseToken = await getAuth().createCustomToken(userId, { role: userDoc.data()?.role || "user" });
+    } catch (authErr) {
+      // non-blocking
     }
 
     const userData = { ...userDoc.data() };

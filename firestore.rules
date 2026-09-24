@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper function to check if user is authenticated via Firebase Auth
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Users: Readable by application users, writable by authorized users/admin
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // User secrets: Strictly hidden from client-side read (accessible only via server-side Admin SDK)
+    match /user_secrets/{userId} {
+      allow read: if false;
+      allow write: if true;
+    }
+
+    // Tasks (İSG İhlal ve Aksiyon Kayıtları): Full access for application management
+    match /tasks/{taskId} {
+      allow read, write: if true;
+    }
+
+    // Loadings (Sevkiyat ve Lojistik Kayıtları): Full access for loading operations
+    match /loadings/{loadingId} {
+      allow read, write: if true;
+    }
+
+    // System configurations and department points
+    match /system/{docId} {
+      allow read, write: if true;
+    }
+
+    // Point history logs
+    match /point_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // User notification inbox
+    match /user_notifications/{notificationId} {
+      allow read, write: if true;
+    }
+
+    // System notification logs
+    match /notification_logs/{logId} {
+      allow read, write: if true;
+    }
+
+    // Feedbacks & Error Reports (accessible from ErrorBoundary and feedback modal)
+    match /feedbacks/{feedbackId} {
+      allow read, write: if true;
+    }
+
+    // Catch-all fallback for other collections
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

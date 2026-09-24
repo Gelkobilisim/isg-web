@@ -541,8 +541,8 @@ const LoginScreen = () => {
         return;
       }
 
-      // Specifically for admin roles: enforce secure Firebase Auth persistence across browser refreshes
-      if (account.role === "admin" && data.firebaseToken) {
+      // Enforce secure Firebase Auth persistence across browser refreshes for authenticated accounts
+      if (data.firebaseToken) {
         try {
           await setPersistence(auth, browserLocalPersistence);
           await signInWithCustomToken(auth, data.firebaseToken);
@@ -552,12 +552,6 @@ const LoginScreen = () => {
           if (authErr?.code !== "auth/configuration-not-found") {
             console.warn("Firebase Auth notice:", authErr?.message || authErr);
           }
-        }
-      } else if (account.role !== "admin") {
-        try {
-          await signOut(auth);
-        } catch (e) {
-          // ignore
         }
       }
 
@@ -1303,59 +1297,58 @@ const MainLayout = ({ theme = "blue", children }) => {
         </main>
 
         {showDebug && (
-          <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-4xl w-full p-6 shadow-2xl animate-slide-up max-h-[90vh] flex flex-col">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                  <Activity className="w-6 h-6 mr-2 text-purple-600" />
-                  Geliştirici Konsolu (Debug)
+          <div className="fixed inset-0 bg-black/60 z-50 flex justify-center items-center p-2 sm:p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-4xl w-full p-4 sm:p-6 shadow-2xl animate-slide-up max-h-[92vh] flex flex-col">
+              <div className="flex justify-between items-center mb-3 sm:mb-4 gap-2">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-gray-100 flex items-center min-w-0">
+                  <Activity className="w-5 h-5 sm:w-6 sm:h-6 mr-2 text-purple-600 shrink-0" />
+                  <span className="truncate">Geliştirici Konsolu (Debug)</span>
                 </h3>
                 <button
                   onClick={() => setShowDebug(false)}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-lg transition-colors shrink-0"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </div>
 
-              <div className="flex space-x-2 border-b border-gray-200 dark:border-gray-700 mb-4 pb-2 overflow-x-auto hide-scrollbar">
+              <div className="flex space-x-1 sm:space-x-2 border-b border-gray-200 dark:border-gray-700 mb-3 sm:mb-4 pb-2 overflow-x-auto hide-scrollbar shrink-0">
                 <button
                   onClick={() => setDebugTab("users")}
-                  className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors whitespace-nowrap ${debugTab === "users" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 font-bold text-xs sm:text-sm rounded-lg transition-colors whitespace-nowrap ${debugTab === "users" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                 >
                   Kullanıcılar & Tokenlar
                 </button>
                 <button
                   onClick={() => setDebugTab("logs")}
-                  className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors flex items-center whitespace-nowrap ${debugTab === "logs" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 font-bold text-xs sm:text-sm rounded-lg transition-colors flex items-center whitespace-nowrap ${debugTab === "logs" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                 >
-                  <AlertCircle className="w-4 h-4 mr-1" /> Gönderim Hataları
-                  (Log)
+                  <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 shrink-0" /> Gönderim Hataları (Log)
                 </button>
                 <button
                   onClick={() => setDebugTab("tools")}
-                  className={`px-4 py-2 font-bold text-sm rounded-lg transition-colors flex items-center whitespace-nowrap ${debugTab === "tools" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
+                  className={`px-3 py-1.5 sm:px-4 sm:py-2 font-bold text-xs sm:text-sm rounded-lg transition-colors flex items-center whitespace-nowrap ${debugTab === "tools" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                 >
-                  <Send className="w-4 h-4 mr-1" /> Test & Bakım
+                  <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 shrink-0" /> Test & Bakım
                 </button>
               </div>
 
-              <div className="overflow-y-auto pr-2 flex-1 min-h-0">
+              <div className="overflow-y-auto pr-1 sm:pr-2 flex-1 min-h-0">
                 {debugTab === "tools" ? (
-                  <div className="space-y-6">
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                      <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
-                        <Send className="w-5 h-5 mr-2 text-blue-500" />
+                  <div className="space-y-4 sm:space-y-6">
+                    <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                      <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center text-sm sm:text-base">
+                        <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-blue-500 shrink-0" />
                         Birim Test Bildirimi
                       </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
                         Seçtiğiniz departmandaki şeflere anlık bir test
                         bildirimi göndererek cihazlarının açık/aktif olup
                         olmadığını test edebilirsiniz.
                       </p>
-                      <div className="flex flex-col sm:flex-row gap-3">
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                         <select
-                          className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
+                          className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 text-xs sm:text-sm text-gray-800 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 outline-none"
                           value={testDept}
                           onChange={(e) => setTestDept(e.target.value)}
                         >
@@ -1370,19 +1363,19 @@ const MainLayout = ({ theme = "blue", children }) => {
                         <button
                           onClick={handleTestNotification}
                           disabled={!testDept || isTesting}
-                          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-sm"
+                          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-sm text-xs sm:text-sm shrink-0"
                         >
                           {isTesting ? "Gönderiliyor..." : "Gönder"}
                         </button>
                       </div>
                     </div>
 
-                    <div className="bg-white dark:bg-gray-800 p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                      <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
-                        <Trash2 className="w-5 h-5 mr-2 text-red-500" />
+                    <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                      <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center text-sm sm:text-base">
+                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-red-500 shrink-0" />
                         Ölü Token Temizliği
                       </h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
                         Uygulamayı silmiş veya bildirim iznini iptal etmiş
                         kullanıcıların geçersiz token'larını test edip
                         veritabanından siler. Bu işlem, hatalı gönderim
@@ -1391,7 +1384,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                       <button
                         onClick={handleTokenCleanup}
                         disabled={isCleaning}
-                        className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 font-bold py-2 px-4 rounded-lg w-full flex justify-center items-center transition-colors border border-red-200 dark:border-red-800"
+                        className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 font-bold py-2.5 px-4 rounded-lg w-full flex justify-center items-center transition-colors border border-red-200 dark:border-red-800 text-xs sm:text-sm"
                       >
                         {isCleaning
                           ? "Temizleniyor..."
@@ -1401,7 +1394,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                   </div>
                 ) : debugTab === "users" ? (
                   <>
-                    <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-xl border border-purple-100 dark:border-purple-800 mb-4 text-sm text-purple-800 dark:text-purple-300">
+                    <div className="bg-purple-50 dark:bg-purple-900/20 p-3 sm:p-4 rounded-xl border border-purple-100 dark:border-purple-800 mb-3 sm:mb-4 text-xs sm:text-sm text-purple-800 dark:text-purple-300 leading-relaxed">
                       Bu ekran, rapor atıldığında kimlere bildirim gideceğini
                       anlamanız içindir. Bir şefe bildirim gitmesi için hem{" "}
                       <strong>Departman eşleşmesi</strong> gereklidir hem de o
@@ -1415,32 +1408,32 @@ const MainLayout = ({ theme = "blue", children }) => {
                       const ratio =
                         total > 0 ? Math.round((active / total) * 100) : 0;
                       return (
-                        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4">
-                          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm">
-                            <span className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 font-medium text-center">
-                              Sistemdeki Hesaplar
+                        <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-4">
+                          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm text-center">
+                            <span className="text-[10px] sm:text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium leading-tight truncate w-full">
+                              Hesaplar
                             </span>
-                            <span className="text-xl sm:text-2xl font-bold text-gray-800 dark:text-gray-100">
+                            <span className="text-base sm:text-2xl font-bold text-gray-800 dark:text-gray-100 mt-0.5">
                               {total}
                             </span>
                           </div>
-                          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm">
-                            <span className="text-xs sm:text-sm text-green-600 dark:text-green-400 font-medium text-center">
-                              Aktif Cihazlar
+                          <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-2 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm text-center">
+                            <span className="text-[10px] sm:text-xs md:text-sm text-green-600 dark:text-green-400 font-medium leading-tight truncate w-full">
+                              Aktif Cihaz
                             </span>
-                            <span className="text-xl sm:text-2xl font-bold text-green-700 dark:text-green-300">
+                            <span className="text-base sm:text-2xl font-bold text-green-700 dark:text-green-300 mt-0.5">
                               {active}
                             </span>
                           </div>
-                          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-3 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm relative overflow-hidden">
+                          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm relative overflow-hidden text-center">
                             <div
                               className="absolute inset-y-0 left-0 bg-blue-200 dark:bg-blue-900/50 transition-all duration-1000"
                               style={{ width: `${ratio}%` }}
                             ></div>
-                            <span className="text-xs sm:text-sm text-blue-700 dark:text-blue-300 font-medium text-center relative z-10 drop-shadow-sm">
+                            <span className="text-[10px] sm:text-xs md:text-sm text-blue-700 dark:text-blue-300 font-medium leading-tight relative z-10 drop-shadow-sm truncate w-full">
                               Kayıt Oranı
                             </span>
-                            <span className="text-xl sm:text-2xl font-bold text-blue-800 dark:text-blue-200 relative z-10 drop-shadow-sm">
+                            <span className="text-base sm:text-2xl font-bold text-blue-800 dark:text-blue-200 relative z-10 drop-shadow-sm mt-0.5">
                               %{ratio}
                             </span>
                           </div>
@@ -1448,56 +1441,49 @@ const MainLayout = ({ theme = "blue", children }) => {
                       );
                     })()}
 
-                    <div className="space-y-3">
-                      <div className="text-xs text-center text-gray-400 dark:text-gray-500 mb-2">
-                        Silmek için sağa veya sola kaydırın
-                      </div>
+                    <div className="space-y-2 sm:space-y-3">
                       {users.map((u) => (
                         <div
                           key={u.id}
-                          className="flex justify-between items-center p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
+                          className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-2.5 sm:p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50"
                         >
-                          <div>
-                            <div className="font-bold text-gray-800 dark:text-gray-100">
-                              {u.name}{" "}
-                              <span className="text-xs font-normal text-gray-500">
+                          <div className="min-w-0 flex-1">
+                            <div className="font-bold text-gray-800 dark:text-gray-100 text-xs sm:text-sm flex flex-wrap items-center gap-1">
+                              <span>{u.name}</span>
+                              <span className="text-[11px] font-normal text-gray-500 break-all">
                                 (@{u.username})
                               </span>
                             </div>
-                            <div className="text-xs mt-1 text-gray-600 dark:text-gray-400 flex flex-wrap gap-1 items-center">
-                              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded-full">
+                            <div className="text-xs mt-1.5 text-gray-600 dark:text-gray-400 flex flex-wrap gap-1 sm:gap-1.5 items-center">
+                              <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium">
                                 Rol: {u.role}
                               </span>
                               {u.dept && (
-                                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-0.5 rounded-full">
+                                <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium">
                                   Birim: {u.dept}
                                 </span>
                               )}
                               {u.lastPing && (
-                                <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded-full flex items-center">
-                                  <Activity className="w-3 h-3 mr-1" /> Son
-                                  Ping:{" "}
-                                  {u.lastPing?.toDate
-                                    ? u.lastPing
-                                        .toDate()
-                                        .toLocaleString("tr-TR")
-                                    : new Date(u.lastPing).toLocaleString(
-                                        "tr-TR",
-                                      )}
+                                <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium flex items-center">
+                                  <Activity className="w-3 h-3 mr-1 shrink-0" />
+                                  <span>
+                                    Son Ping:{" "}
+                                    {u.lastPing?.toDate
+                                      ? u.lastPing.toDate().toLocaleString("tr-TR")
+                                      : new Date(u.lastPing).toLocaleString("tr-TR")}
+                                  </span>
                                 </span>
                               )}
                             </div>
                           </div>
-                          <div className="flex flex-col items-end">
+                          <div className="flex items-center shrink-0 self-start sm:self-center">
                             {u.fcmToken ? (
-                              <div className="flex items-center text-green-600 dark:text-green-400 font-bold text-sm bg-green-50 dark:bg-green-900/20 px-3 py-1 rounded-full">
-                                <CheckCircle className="w-4 h-4 mr-1" /> Token
-                                Var
+                              <div className="flex items-center text-green-600 dark:text-green-400 font-bold text-xs bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full border border-green-200 dark:border-green-800">
+                                <CheckCircle className="w-3.5 h-3.5 mr-1 shrink-0" /> Token Var
                               </div>
                             ) : (
-                              <div className="flex items-center text-red-500 font-bold text-sm bg-red-50 dark:bg-red-900/20 px-3 py-1 rounded-full">
-                                <XCircle className="w-4 h-4 mr-1" /> Cihaz
-                                Kayıtlı Değil
+                              <div className="flex items-center text-red-500 font-bold text-xs bg-red-50 dark:bg-red-900/20 px-2.5 py-1 rounded-full border border-red-200 dark:border-red-800">
+                                <XCircle className="w-3.5 h-3.5 mr-1 shrink-0" /> Cihaz Kayıtlı Değil
                               </div>
                             )}
                           </div>
@@ -1506,54 +1492,54 @@ const MainLayout = ({ theme = "blue", children }) => {
                     </div>
                   </>
                 ) : (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {notifLogs.length === 0 ? (
-                      <div className="text-center text-gray-500 p-8 border border-dashed rounded-xl border-gray-300 dark:border-gray-700">
+                      <div className="text-center text-gray-500 p-8 border border-dashed rounded-xl border-gray-300 dark:border-gray-700 text-xs sm:text-sm">
                         Kayıtlı log bulunamadı.
                       </div>
                     ) : (
                       notifLogs.map((log) => (
                         <div
                           key={log.id}
-                          className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900/50"
+                          className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/50"
                         >
-                          <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-2">
-                            <div className="font-bold flex items-center">
+                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-2 gap-1">
+                            <div className="font-bold flex items-center text-xs sm:text-sm text-gray-800 dark:text-gray-100 min-w-0">
                               {log.failureCount > 0 ? (
-                                <AlertTriangle className="w-4 h-4 text-orange-500 mr-2" />
+                                <AlertTriangle className="w-4 h-4 text-orange-500 mr-1.5 shrink-0" />
                               ) : (
-                                <CheckCircle className="w-4 h-4 text-green-500 mr-2" />
+                                <CheckCircle className="w-4 h-4 text-green-500 mr-1.5 shrink-0" />
                               )}
-                              {log.title}
+                              <span className="truncate">{log.title}</span>
                             </div>
-                            <div className="text-xs text-gray-500">
+                            <div className="text-[11px] sm:text-xs text-gray-500 shrink-0">
                               {log.timestamp?.toDate
                                 ? log.timestamp.toDate().toLocaleString("tr-TR")
                                 : ""}
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-2 text-xs font-medium mb-3">
-                            <span className="bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded">
+                          <div className="flex flex-wrap gap-1 sm:gap-2 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
+                            <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded">
                               Hedef: {log.dept}
                             </span>
-                            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-1 rounded">
+                            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded">
                               Bulunan Cihaz: {log.targetCount}
                             </span>
-                            <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-1 rounded">
+                            <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded">
                               Başarılı: {log.successCount}
                             </span>
-                            <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-1 rounded">
+                            <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-0.5 rounded">
                               Hatalı: {log.failureCount}
                             </span>
                           </div>
                           {log.failureCount > 0 &&
                             log.failedDetails &&
                             log.failedDetails.length > 0 && (
-                              <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-800 text-xs text-red-800 dark:text-red-300 font-mono">
+                              <div className="bg-red-50 dark:bg-red-900/20 p-2.5 sm:p-3 rounded-lg border border-red-100 dark:border-red-800 text-[11px] text-red-800 dark:text-red-300 font-mono break-all">
                                 {log.failedDetails.map((f, i) => (
                                   <div
                                     key={i}
-                                    className="mb-1 truncate border-b border-red-100 dark:border-red-900/50 pb-1 last:border-0 last:pb-0 last:mb-0"
+                                    className="mb-1 border-b border-red-100 dark:border-red-900/50 pb-1 last:border-0 last:pb-0 last:mb-0"
                                   >
                                     <span className="font-bold">Hata:</span>{" "}
                                     {f.error} <br />
@@ -2663,24 +2649,24 @@ const ModDashboard = () => {
             İSG Uzmanı Paneli
           </h2>
 
-          <div className="hidden md:flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-full md:w-auto">
+          <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-full md:w-auto">
             <button
               onClick={() => setActiveTab("create")}
-              className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === "create" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              className={`flex-1 md:flex-none px-3 py-2 sm:px-6 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${activeTab === "create" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
               <span className="flex items-center justify-center">
-                <Plus className="w-4 h-4 mr-2" /> İhlal Oluştur
+                <Plus className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0" /> İhlal Oluştur
               </span>
             </button>
             <button
               onClick={() => setActiveTab("review")}
-              className={`flex-1 md:flex-none px-6 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === "review" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              className={`flex-1 md:flex-none px-3 py-2 sm:px-6 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${activeTab === "review" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
               <span className="flex items-center justify-center">
-                <CheckSquare className="w-4 h-4 mr-2" />
+                <CheckSquare className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0" />
                 Yanıtları Kontrol Et
                 {reviewTasks.length > 0 && (
-                  <span className="ml-2 bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-xs">
+                  <span className="ml-1.5 sm:ml-2 bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs">
                     {reviewTasks.length}
                   </span>
                 )}
@@ -5003,7 +4989,7 @@ const AdminDashboard = () => {
                     <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 bg-gray-50/50 animate-slide-up">
                       <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-3 border-b border-gray-100 dark:border-gray-700 gap-3">
                         <div>
-                          <div className="flex items-center space-x-3 mb-1 flex-wrap gap-2">
+                          <div className="flex items-center mb-1 flex-wrap gap-2">
                             <span className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
                               {load.plaka}
                             </span>
@@ -6458,7 +6444,11 @@ export default function App() {
   const sessionVerifiedRef = useRef(false);
 
   const handleSnapErr = useCallback((err) => {
-    console.error("Firestore snapshot error:", err);
+    if (err?.code === "permission-denied") {
+      console.warn("Firestore snapshot access pending permission or session refresh:", err?.message || err);
+    } else {
+      console.error("Firestore snapshot error:", err);
+    }
     setIsFirebaseLoading(false);
   }, []);
   useEffect(() => {
@@ -7034,7 +7024,12 @@ export default function App() {
   }, [currentUser?.id]);
 
   useEffect(() => {
-    if (isFirebaseLoading || !points || Object.keys(points).length === 0)
+    if (
+      isFirebaseLoading ||
+      !currentUser ||
+      !points ||
+      Object.keys(points).length === 0
+    )
       return;
 
     const checkDailyBonus = async () => {
@@ -7100,11 +7095,15 @@ export default function App() {
           `Otomatik Günlük Bonus Dağıtıldı: ${distributed} birime 20 puan eklendi.`,
         );
       } catch (err) {
-        console.error("Otomatik bonus dağıtımı hatası:", err);
+        if (err?.code === "permission-denied") {
+          console.warn("Otomatik bonus dağıtımı yetkilendirme bekleniyor:", err?.message || err);
+        } else {
+          console.error("Otomatik bonus dağıtımı hatası:", err);
+        }
       }
     };
     checkDailyBonus();
-  }, [isFirebaseLoading, points, tasks]);
+  }, [isFirebaseLoading, currentUser, points, tasks]);
 
   const getLastFridayOfCurrentMonth = useCallback(() => {
     const today = new Date();
