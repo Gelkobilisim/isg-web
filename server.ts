@@ -2,6 +2,9 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import helmet from "helmet";
 
 import { initializeApp, cert, getApps } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
@@ -15,9 +18,24 @@ dotenv.config();
 
 const app = express();
 const PORT = 3000;
+const JWT_SECRET =
+  process.env.JWT_SECRET ||
+  process.env.SESSION_SECRET ||
+  "ads-metal-isg-jwt-secret-key-2026-production-guard";
 
-app.use(cors());
-app.use(express.json());
+// Security headers (Helmet)
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
+app.use(cors({
+  origin: true,
+  credentials: true,
+}));
+app.use(express.json({ limit: "15mb" }));
 
 // Initialize Firebase Admin
 let isFirebaseAdminInitialized = false;
@@ -65,6 +83,151 @@ interface CachedUser {
   cachedAt: number;
 }
 const userCache = new Map<string, CachedUser>();
+const MAX_LOGIN_ATTEMPTS_SIZE = 1000;
+const MAX_USER_CACHE_SIZE = 500;
+
+function pruneStaleLoginAttempts() {
+  const now = Date.now();
+  for (const [key, record] of loginAttempts.entries()) {
+    if (now > record.lockedUntil && now - record.lastAttemptAt > 60 * 60 * 1000) {
+      loginAttempts.delete(key);
+    }
+  }
+}
+
+// Background cleanup every 30 minutes
+setInterval(pruneStaleLoginAttempts, 30 * 60 * 1000);
+
+// Progressive Brute-Force Lockout Tracker:
+// 1st-4th mistake: warning with attempts left
+// 5th mistake: 1 minute lockout
+// If wrong again after 1 min: 3 minutes lockout
+// If wrong again after 3 min: 15 minutes lockout
+// IF CORRECT AT ANY POINT: Reset counter and lock completely!
+interface LoginAttemptRecord {
+  failedCount: number;
+  stage: number; // 0: normal, 1: 1-min lock, 2: 3-min lock, 3: 15-min lock
+  lockedUntil: number; // timestamp in ms
+  lastAttemptAt: number;
+}
+
+const loginAttempts = new Map<string, LoginAttemptRecord>();
+
+function checkLockout(username: string): { isLocked: boolean; remainingSeconds: number; message?: string } {
+  const record = loginAttempts.get(username);
+  if (!record) return { isLocked: false, remainingSeconds: 0 };
+
+  const now = Date.now();
+
+  // If 1 hour passed since last attempt and lock has expired, reset stale record
+  if (now > record.lockedUntil && now - record.lastAttemptAt > 60 * 60 * 1000) {
+    loginAttempts.delete(username);
+    return { isLocked: false, remainingSeconds: 0 };
+  }
+
+  if (now < record.lockedUntil) {
+    const remainingSeconds = Math.ceil((record.lockedUntil - now) / 1000);
+    const minutes = Math.ceil(remainingSeconds / 60);
+    return {
+      isLocked: true,
+      remainingSeconds,
+      message: `Çok fazla hatalı giriş denemesi yapıldı. Güvenliğiniz için hesabınız geçici olarak kilitlendi. Lütfen ${remainingSeconds} saniye (~${minutes} dk) sonra tekrar deneyin.`
+    };
+  }
+
+  return { isLocked: false, remainingSeconds: 0 };
+}
+
+function recordFailedAttempt(username: string): { locked: boolean; remainingSeconds: number; error: string } {
+  const now = Date.now();
+  let record = loginAttempts.get(username);
+
+  if (!record) {
+    if (loginAttempts.size >= MAX_LOGIN_ATTEMPTS_SIZE) {
+      pruneStaleLoginAttempts();
+      if (loginAttempts.size >= MAX_LOGIN_ATTEMPTS_SIZE) {
+        const oldestKey = loginAttempts.keys().next().value;
+        if (oldestKey) loginAttempts.delete(oldestKey);
+      }
+    }
+    record = {
+      failedCount: 1,
+      stage: 0,
+      lockedUntil: 0,
+      lastAttemptAt: now
+    };
+    loginAttempts.set(username, record);
+    return {
+      locked: false,
+      remainingSeconds: 0,
+      error: "Geçersiz kullanıcı adı veya şifre. (Kalan deneme hakkı: 4)"
+    };
+  }
+
+  record.lastAttemptAt = now;
+
+  // If user was previously locked and that lock expired, this subsequent failure escalates to the next stage
+  if (record.stage === 1) {
+    // 1-min -> 3-min lockout
+    record.stage = 2;
+    record.lockedUntil = now + 3 * 60 * 1000;
+    record.failedCount++;
+    return {
+      locked: true,
+      remainingSeconds: 180,
+      error: "Hatalı şifre tekrarlandı. Hesabınız 3 dakika süreyle kilitlendi. Lütfen 3 dakika (180 sn) bekleyin."
+    };
+  } else if (record.stage >= 2) {
+    // 3-min -> 15-min lockout
+    record.stage = 3;
+    record.lockedUntil = now + 15 * 60 * 1000;
+    record.failedCount++;
+    return {
+      locked: true,
+      remainingSeconds: 900,
+      error: "Hatalı şifre tekrarlandı. Hesabınız 15 dakika süreyle kilitlendi. Lütfen 15 dakika bekleyin."
+    };
+  } else {
+    // Still in initial stage (stage 0)
+    record.failedCount++;
+
+    if (record.failedCount >= 5) {
+      // 5th failed attempt: 1-minute lockout
+      record.stage = 1;
+      record.lockedUntil = now + 1 * 60 * 1000;
+      return {
+        locked: true,
+        remainingSeconds: 60,
+        error: "5 kez hatalı şifre girildi! Güvenlik gereği hesabınız 1 dakika süreyle kilitlendi. Lütfen 60 saniye bekleyin."
+      };
+    } else {
+      const remainingAttempts = 5 - record.failedCount;
+      return {
+        locked: false,
+        remainingSeconds: 0,
+        error: `Geçersiz kullanıcı adı veya şifre. (Kalan deneme hakkı: ${remainingAttempts})`
+      };
+    }
+  }
+}
+
+// Reset lockout upon SUCCESSFUL login
+function resetLockout(username: string) {
+  loginAttempts.delete(username);
+}
+
+function verifyUserToken(req: express.Request): any {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = authHeader.split(" ")[1];
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
+  }
+}
 
 app.post(["/api/login", "/login"], async (req, res) => {
   const { username, password } = req.body || {};
@@ -74,6 +237,16 @@ app.post(["/api/login", "/login"], async (req, res) => {
 
   const cleanUsername = String(username).toLowerCase().trim();
   const cleanPassword = String(password).trim();
+
+  // Check if account is currently locked out
+  const lockoutStatus = checkLockout(cleanUsername);
+  if (lockoutStatus.isLocked) {
+    return res.status(429).json({
+      error: lockoutStatus.message,
+      locked: true,
+      remainingSeconds: lockoutStatus.remainingSeconds
+    });
+  }
 
   if (!isFirebaseAdminInitialized) {
     return res.status(500).json({
@@ -89,11 +262,17 @@ app.post(["/api/login", "/login"], async (req, res) => {
       .get();
       
     if (usersSnapshot.empty) {
-      return res.status(401).json({ error: "Geçersiz kullanıcı adı veya şifre" });
+      const fail = recordFailedAttempt(cleanUsername);
+      return res.status(fail.locked ? 429 : 401).json({
+        error: fail.error,
+        locked: fail.locked,
+        remainingSeconds: fail.remainingSeconds
+      });
     }
 
     const userDoc = usersSnapshot.docs[0];
     const userId = userDoc.id;
+    const dbUserData = userDoc.data();
 
     let storedPassword = null;
     try {
@@ -105,25 +284,96 @@ app.post(["/api/login", "/login"], async (req, res) => {
       // non-blocking
     }
 
-    if (!storedPassword && userDoc.data()?.password) {
-      storedPassword = userDoc.data()?.password;
+    if (!storedPassword && dbUserData?.password) {
+      storedPassword = dbUserData?.password;
     }
 
-    if (!storedPassword || storedPassword !== cleanPassword) {
-      return res.status(401).json({ error: "Geçersiz kullanıcı adı veya şifre" });
+    if (!storedPassword) {
+      const fail = recordFailedAttempt(cleanUsername);
+      return res.status(fail.locked ? 429 : 401).json({
+        error: fail.error,
+        locked: fail.locked,
+        remainingSeconds: fail.remainingSeconds
+      });
     }
 
-    const token = Buffer.from(`${userId}:${Date.now()}`).toString('base64');
+    // Verify password with bcrypt or legacy plaintext
+    let isPasswordValid = false;
+    const isBcryptHash = typeof storedPassword === "string" && (
+      storedPassword.startsWith("$2a$") ||
+      storedPassword.startsWith("$2b$") ||
+      storedPassword.startsWith("$2y$")
+    );
+
+    if (isBcryptHash) {
+      isPasswordValid = bcrypt.compareSync(cleanPassword, storedPassword);
+    } else {
+      // Plaintext legacy password check
+      isPasswordValid = (storedPassword === cleanPassword);
+
+      // Automatic seamless migration to bcrypt hash
+      if (isPasswordValid) {
+        try {
+          const salt = bcrypt.genSaltSync(10);
+          const hashedPassword = bcrypt.hashSync(cleanPassword, salt);
+          // Store securely in user_secrets only
+          await getFirestore().collection("user_secrets").doc(userId).set({
+            password: hashedPassword,
+            updatedAt: new Date()
+          }, { merge: true });
+
+          // Remove plain text password from users collection if present
+          if (dbUserData?.password) {
+            await getFirestore().collection("users").doc(userId).update({
+              password: null
+            });
+          }
+          storedPassword = hashedPassword;
+          console.log(`🔒 [Güvenlik] "${cleanUsername}" kullanıcısının parolası otomatik olarak güvenli bcrypt özetine yükseltildi.`);
+        } catch (migErr) {
+          console.warn("Parola hash güncelleme uyarısı:", migErr);
+        }
+      }
+    }
+
+    if (!isPasswordValid) {
+      const fail = recordFailedAttempt(cleanUsername);
+      return res.status(fail.locked ? 429 : 401).json({
+        error: fail.error,
+        locked: fail.locked,
+        remainingSeconds: fail.remainingSeconds
+      });
+    }
+
+    // CRITICAL: Successfully authenticated! Reset any failed attempts / lockout state completely
+    resetLockout(cleanUsername);
+
+    // Generate secure cryptographically signed JWT token (valid for 7 days)
+    const token = jwt.sign(
+      {
+        userId: userId,
+        username: cleanUsername,
+        role: dbUserData?.role || "user",
+        dept: dbUserData?.dept || null,
+      },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
     
     let firebaseToken = null;
     try {
-      firebaseToken = await getAuth().createCustomToken(userId, { role: userDoc.data()?.role || "user" });
+      firebaseToken = await getAuth().createCustomToken(userId, { role: dbUserData?.role || "user" });
     } catch (authErr) {
       // non-blocking
     }
 
-    const userData = { ...userDoc.data() };
+    const userData = { ...dbUserData };
     delete userData.password;
+
+    if (userCache.size >= MAX_USER_CACHE_SIZE) {
+      const oldestKey = userCache.keys().next().value;
+      if (oldestKey) userCache.delete(oldestKey);
+    }
 
     userCache.set(cleanUsername, {
       user: { id: userId, ...userData },
@@ -142,14 +392,39 @@ app.post(["/api/login", "/login"], async (req, res) => {
 
     // Fallback: Authenticate from memory cache if quota is temporarily exhausted
     const cached = userCache.get(cleanUsername);
-    if (cached && cached.password === cleanPassword) {
-      const token = Buffer.from(`${cached.user.id}:${Date.now()}`).toString('base64');
-      return res.json({
-        success: true,
-        user: cached.user,
-        token: token,
-        firebaseToken: null
-      });
+    if (cached && cached.password) {
+      const isCachedValid = typeof cached.password === "string" && cached.password.startsWith("$2")
+        ? bcrypt.compareSync(cleanPassword, cached.password)
+        : cached.password === cleanPassword;
+
+      if (isCachedValid) {
+        // Reset lockout on successful cached login
+        resetLockout(cleanUsername);
+
+        const token = jwt.sign(
+          {
+            userId: cached.user.id,
+            username: cleanUsername,
+            role: cached.user.role || "user",
+            dept: cached.user.dept || null,
+          },
+          JWT_SECRET,
+          { expiresIn: "7d" }
+        );
+        return res.json({
+          success: true,
+          user: cached.user,
+          token: token,
+          firebaseToken: null
+        });
+      } else {
+        const fail = recordFailedAttempt(cleanUsername);
+        return res.status(fail.locked ? 429 : 401).json({
+          error: fail.error,
+          locked: fail.locked,
+          remainingSeconds: fail.remainingSeconds
+        });
+      }
     }
 
     if (error?.message?.includes("RESOURCE_EXHAUSTED") || error?.code === 8) {
@@ -178,10 +453,29 @@ app.post(["/api/verify-session", "/verify-session"], async (req, res) => {
       return res.status(400).json({ valid: false, error: "Token ve kullanıcı ID gereklidir." });
     }
 
-    const decoded = Buffer.from(token, "base64").toString("utf-8");
-    const [tokenUserId] = decoded.split(":");
-    if (tokenUserId !== userId) {
-      return res.status(401).json({ valid: false, error: "Geçersiz oturum anahtarı." });
+    // Verify JWT cryptographic signature and expiry
+    let decodedPayload: any = null;
+    try {
+      decodedPayload = jwt.verify(token, JWT_SECRET);
+    } catch (jwtErr: any) {
+      // Backward compatibility transition for already logged-in users with legacy base64 token
+      try {
+        const legacyDecoded = Buffer.from(token, "base64").toString("utf-8");
+        const [legacyUserId, timestampStr] = legacyDecoded.split(":");
+        const tokenTime = Number(timestampStr);
+        // Only accept legacy token if format matches and is less than 7 days old
+        if (legacyUserId === userId && !isNaN(tokenTime) && (Date.now() - tokenTime < 7 * 24 * 60 * 60 * 1000)) {
+          decodedPayload = { userId: legacyUserId };
+        } else {
+          return res.status(401).json({ valid: false, error: "Oturum süresi dolmuş veya geçersiz imza." });
+        }
+      } catch {
+        return res.status(401).json({ valid: false, error: "Geçersiz veya süresi dolmuş oturum anahtarı." });
+      }
+    }
+
+    if (!decodedPayload || decodedPayload.userId !== userId) {
+      return res.status(401).json({ valid: false, error: "Yetkisiz oturum doğrulama isteği." });
     }
 
     try {
@@ -193,16 +487,30 @@ app.post(["/api/verify-session", "/verify-session"], async (req, res) => {
       const userData = { ...userDoc.data() };
       delete userData.password;
 
+      // Provide updated signed token in response so legacy sessions get seamlessly upgraded
+      const refreshedToken = jwt.sign(
+        {
+          userId: userId,
+          username: userData.username,
+          role: userData.role || "user",
+          dept: userData.dept || null,
+        },
+        JWT_SECRET,
+        { expiresIn: "7d" }
+      );
+
       return res.json({
         valid: true,
-        user: { id: userId, ...userData }
+        user: { id: userId, ...userData },
+        token: refreshedToken
       });
     } catch (dbErr: any) {
       if (dbErr?.message?.includes("RESOURCE_EXHAUSTED") || dbErr?.code === 8) {
         if (userId === "1") {
           return res.json({
             valid: true,
-            user: { id: "1", username: "agiradar", role: "admin", name: "Ağır Adar", dept: null }
+            user: { id: "1", username: "agiradar", role: "admin", name: "Ağır Adar", dept: null },
+            token: token
           });
         }
       }
@@ -213,15 +521,165 @@ app.post(["/api/verify-session", "/verify-session"], async (req, res) => {
   }
 });
 
+// Admin: Kilitli ve deneme yapılan hesapları sorgula
+app.get(["/api/admin/locked-accounts", "/admin/locked-accounts"], (req, res) => {
+  const user = verifyUserToken(req);
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Yetkisiz işlem: Yalnızca yönetici (admin) erişebilir." });
+  }
+
+  const now = Date.now();
+  const accounts: Array<{
+    username: string;
+    failedCount: number;
+    stage: number;
+    isLocked: boolean;
+    remainingSeconds: number;
+    lockedUntil: number;
+    lastAttemptAt: number;
+  }> = [];
+
+  loginAttempts.forEach((rec, username) => {
+    const isLocked = now < rec.lockedUntil;
+    const remainingSeconds = isLocked ? Math.ceil((rec.lockedUntil - now) / 1000) : 0;
+    accounts.push({
+      username,
+      failedCount: rec.failedCount,
+      stage: rec.stage,
+      isLocked,
+      remainingSeconds,
+      lockedUntil: rec.lockedUntil,
+      lastAttemptAt: rec.lastAttemptAt,
+    });
+  });
+
+  return res.json({
+    success: true,
+    accounts,
+  });
+});
+
+// Admin: Kilitlenen hesabın kilidini aç ve hatalı giriş sayaçlarını sıfırla
+app.post(["/api/admin/unlock-account", "/admin/unlock-account"], (req, res) => {
+  const user = verifyUserToken(req);
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Yetkisiz işlem: Yalnızca yönetici (admin) hesap kilidi açabilir." });
+  }
+
+  const { username } = req.body || {};
+  if (!username) {
+    return res.status(400).json({ error: "Kullanıcı adı belirtilmelidir." });
+  }
+
+  const cleanUsername = String(username).toLowerCase().trim();
+  const hadRecord = loginAttempts.has(cleanUsername);
+  resetLockout(cleanUsername);
+
+  console.log(`🔓 [Admin İşlemi] Yönetici "${user.username}" tarafından "${cleanUsername}" kullanıcısının kilidi ve hatalı deneme kayıtları sıfırlandı.`);
+
+  return res.json({
+    success: true,
+    message: `"${cleanUsername}" kullanıcısının güvenlik kilidi ve hatalı giriş sayaçları başarıyla kaldırıldı.`,
+    hadRecord,
+  });
+});
+
+// Admin: Yeni kullanıcı oluşturma (şifreyi doğrudan bcrypt hash ile user_secrets'a kaydeder)
+app.post(["/api/admin/create-user", "/admin/create-user"], async (req, res) => {
+  const user = verifyUserToken(req);
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Yetkisiz işlem: Yalnızca admin kullanıcı ekleyebilir." });
+  }
+
+  const { name, username, password, role, dept } = req.body || {};
+  if (!name || !username || !password) {
+    return res.status(400).json({ error: "Ad, kullanıcı adı ve şifre zorunludur." });
+  }
+
+  const cleanUsername = String(username).toLowerCase().trim();
+  const newUserId = Date.now().toString();
+
+  try {
+    const existing = await getFirestore().collection("users").where("username", "==", cleanUsername).limit(1).get();
+    if (!existing.empty) {
+      return res.status(400).json({ error: "Bu kullanıcı adı zaten kullanımda!" });
+    }
+
+    const salt = bcrypt.genSaltSync(10);
+    const hashedPassword = bcrypt.hashSync(String(password).trim(), salt);
+
+    await getFirestore().collection("user_secrets").doc(newUserId).set({
+      password: hashedPassword,
+      createdAt: new Date(),
+    });
+
+    const publicUserData = {
+      id: newUserId,
+      name: String(name).trim(),
+      username: cleanUsername,
+      role: role || "sef",
+      dept: dept || null,
+      createdAt: new Date(),
+    };
+
+    await getFirestore().collection("users").doc(newUserId).set(publicUserData);
+
+    return res.json({ success: true, user: publicUserData });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Kullanıcı oluşturulamadı" });
+  }
+});
+
+// Admin: Kullanıcı güncelleme (şifre girilmişse bcrypt ile user_secrets'a güvenli yazar)
+app.post(["/api/admin/update-user", "/admin/update-user"], async (req, res) => {
+  const user = verifyUserToken(req);
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Yetkisiz işlem: Yalnızca admin kullanıcı güncelleyebilir." });
+  }
+
+  const { id, name, username, password } = req.body || {};
+  if (!id || !name || !username) {
+    return res.status(400).json({ error: "Kullanıcı ID, ad ve kullanıcı adı zorunludur." });
+  }
+
+  const cleanUsername = String(username).toLowerCase().trim();
+
+  try {
+    await getFirestore().collection("users").doc(id).update({
+      name: String(name).trim(),
+      username: cleanUsername,
+    });
+
+    if (password && String(password).trim()) {
+      const salt = bcrypt.genSaltSync(10);
+      const hashedPassword = bcrypt.hashSync(String(password).trim(), salt);
+      await getFirestore().collection("user_secrets").doc(id).set({
+        password: hashedPassword,
+        updatedAt: new Date(),
+      }, { merge: true });
+    }
+
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Kullanıcı güncellenemedi" });
+  }
+});
+
 app.post(["/api/notify", "/notify"], async (req, res) => {
   if (!isFirebaseAdminInitialized) {
     return res.status(500).json({ error: "Firebase Admin is not configured." });
   }
   
   const authHeader = req.headers.authorization;
-  if (authHeader !== `Bearer ${process.env.VITE_FIREBASE_API_KEY}`) {
-      // API Key olarak uygulamanın var olan VITE_FIREBASE_API_KEY'ini kullanıyoruz ki ekstra ayar gerekmesin
-      return res.status(401).json({ error: "Unauthorized" });
+  const user = verifyUserToken(req);
+  const isValidApiKey = authHeader === `Bearer ${process.env.VITE_FIREBASE_API_KEY}`;
+
+  if (!user && !isValidApiKey) {
+    return res.status(401).json({ error: "Yetkisiz bildirim isteği (Oturum açılması gereklidir)." });
+  }
+
+  if (user && !["admin", "mod", "sef", "yuklemeci"].includes(user.role)) {
+    return res.status(403).json({ error: "Bu işlem için bildirim gönderme yetkiniz bulunmamaktadır." });
   }
 
   const { type, payload } = req.body;
@@ -328,6 +786,26 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         notification: {
           title: notificationTitle,
           body: notificationBody,
+        },
+        data: {
+          type: type || "",
+          click_action: "/",
+          title: notificationTitle,
+          body: notificationBody,
+        },
+        webpush: {
+          headers: {
+            Urgency: "high",
+          },
+          fcmOptions: {
+            link: "/",
+          },
+          notification: {
+            icon: "/adsmetal_logo.jpg",
+            badge: "/adsmetal_logo.jpg",
+            vibrate: [200, 100, 200],
+            requireInteraction: false,
+          },
         },
         tokens: uniqueTokens,
       };
@@ -456,6 +934,13 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
 app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
   if (!isFirebaseAdminInitialized)
     return res.status(500).json({ error: "Firebase Admin is not configured." });
+
+  const user = verifyUserToken(req);
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({
+      error: "Yetkisiz işlem: Bu token temizleme aracını yalnızca sistem yöneticisi (admin) çalıştırabilir."
+    });
+  }
 
   try {
     const usersSnapshot = await getFirestore().collection("users").get();

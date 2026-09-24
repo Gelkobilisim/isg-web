@@ -102,6 +102,7 @@ import {
   getToken,
   onMessage,
   deleteToken,
+  isSupported,
 } from "firebase/messaging";
 import {
   BarChart,
@@ -148,12 +149,31 @@ const db = initializeFirestore(app, {
 });
 
 let messaging = null;
-if (import.meta.env.VITE_FIREBASE_VAPID_KEY) {
+const getAppMessaging = async () => {
+  if (messaging) return messaging;
+  if (typeof window === "undefined") return null;
   try {
-    messaging = getMessaging(app);
+    const supported = await isSupported();
+    if (supported && import.meta.env.VITE_FIREBASE_VAPID_KEY) {
+      messaging = getMessaging(app);
+      return messaging;
+    }
   } catch (e) {
-    console.error("Messaging error", e);
+    console.warn("Firebase Messaging desteği kontrol edilirken hata:", e);
   }
+  return null;
+};
+// Arka planda ilk kontrol
+if (typeof window !== "undefined" && import.meta.env.VITE_FIREBASE_VAPID_KEY) {
+  isSupported().then((supported) => {
+    if (supported) {
+      try {
+        messaging = getMessaging(app);
+      } catch (e) {
+        console.warn("Messaging anlık başlatılamadı:", e);
+      }
+    }
+  }).catch(() => {});
 }
 
 const getDeptKey = (deptStr) => {
@@ -490,12 +510,30 @@ const LoginScreen = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loginErr, setLoginErr] = useState("");
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [rememberMe, setRememberMe] = useState(false);
   const [registerDevice, setRegisterDevice] = useState(false);
   const [loginTheme, setLoginTheme] = useState("isg");
 
+  // Countdown timer for security lockout
+  useEffect(() => {
+    if (lockoutSeconds <= 0) return;
+    const interval = setInterval(() => {
+      setLockoutSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          setLoginErr("");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockoutSeconds]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
+    if (lockoutSeconds > 0) return;
     setLoginErr("");
     
     try {
@@ -520,10 +558,16 @@ const LoginScreen = () => {
       }
 
       if (!res.ok || !data.success) {
+        if (data?.locked && data?.remainingSeconds) {
+          setLockoutSeconds(data.remainingSeconds);
+        }
         setLoginErr(data?.error || t("err_wrong_cred") || "Geçersiz kullanıcı adı veya şifre");
         triggerHaptic("error");
         return;
       }
+
+      // Successful login resets any local lockout state
+      setLockoutSeconds(0);
 
       const account = data.user;
       
@@ -570,34 +614,33 @@ const LoginScreen = () => {
         localStorage.setItem("isg_notification_device_owner", account.id);
         localStorage.setItem("isg_notification_role", account.role);
         localStorage.setItem("isg_notification_dept", account.dept || "");
-        if ("Notification" in window) {
-          Notification.requestPermission().then((permission) => {
+        if ("Notification" in window && "serviceWorker" in navigator) {
+          Notification.requestPermission().then(async (permission) => {
             console.log("Notification permission:", permission);
             if (
               permission === "granted" &&
-              messaging &&
               import.meta.env.VITE_FIREBASE_VAPID_KEY
             ) {
-              navigator.serviceWorker
-                .register(
-                  `/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`,
-                )
-                .then((registration) => {
-                  getToken(messaging, {
-                    vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-                    serviceWorkerRegistration: registration,
-                  })
-                    .then((currentToken) => {
-                      if (currentToken) {
-                        updateDoc(doc(db, "users", account.id), {
-                          fcmToken: currentToken,
-                        });
-                      }
-                    })
-                    .catch((err) => console.error("FCM Token alınamadı:", err));
+              try {
+                const msgInstance = await getAppMessaging();
+                if (!msgInstance) return;
+                const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+                await navigator.serviceWorker.ready;
+                const currentToken = await getToken(msgInstance, {
+                  vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                  serviceWorkerRegistration: registration,
                 });
+                if (currentToken) {
+                  await updateDoc(doc(db, "users", account.id), {
+                    fcmToken: currentToken,
+                    lastActive: new Date(),
+                  });
+                }
+              } catch (err) {
+                console.warn("Otomatik FCM Token alımı ertelendi:", err?.message || err);
+              }
             }
-          });
+          }).catch(() => {});
         }
       }
       setCurrentUser(account);
@@ -701,6 +744,21 @@ const LoginScreen = () => {
           </p>
 
           <form onSubmit={handleLogin} className="space-y-5">
+            {lockoutSeconds > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 p-3.5 rounded-xl flex items-center justify-between text-sm font-semibold shadow-sm animate-pulse">
+                <div className="flex items-center gap-2.5">
+                  <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <div>
+                    <div className="font-bold">Güvenlik Kilidi Aktif</div>
+                    <div className="text-xs font-normal text-amber-700 dark:text-amber-300">Hatalı denemeler nedeniyle geçici kilit.</div>
+                  </div>
+                </div>
+                <span className="font-mono text-base font-bold bg-amber-200/80 dark:bg-amber-800/80 text-amber-950 dark:text-amber-100 px-3 py-1 rounded-lg shadow-inner">
+                  {Math.floor(lockoutSeconds / 60)}:{String(lockoutSeconds % 60).padStart(2, "0")}
+                </span>
+              </div>
+            )}
+
             {loginErr && (
               <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl flex items-center font-medium border border-red-100">
                 <AlertCircle className="w-5 h-5 mr-2 shrink-0" /> {loginErr}
@@ -793,9 +851,23 @@ const LoginScreen = () => {
 
             <button
               type="submit"
-              className={`w-full py-4 text-white rounded-xl font-bold shadow-lg transition-colors mt-4 ${isISG ? "bg-blue-700 hover:bg-blue-800" : "bg-orange-600 hover:bg-orange-700"}`}
+              disabled={lockoutSeconds > 0}
+              className={`w-full py-4 text-white rounded-xl font-bold shadow-lg transition-all mt-4 flex items-center justify-center gap-2 ${
+                lockoutSeconds > 0
+                  ? "bg-gray-400 dark:bg-gray-700 cursor-not-allowed opacity-70"
+                  : isISG
+                    ? "bg-blue-700 hover:bg-blue-800 hover:shadow-blue-500/20"
+                    : "bg-orange-600 hover:bg-orange-700 hover:shadow-orange-500/20"
+              }`}
             >
-              {t("login_btn")}
+              {lockoutSeconds > 0 ? (
+                <>
+                  <Lock className="w-4 h-4" />
+                  <span>Kilitli ({Math.floor(lockoutSeconds / 60)}:{String(lockoutSeconds % 60).padStart(2, "0")})</span>
+                </>
+              ) : (
+                t("login_btn")
+              )}
             </button>
           </form>
         </div>
@@ -977,13 +1049,14 @@ const MainLayout = ({ theme = "blue", children }) => {
 
   const handleTestNotification = async () => {
     if (!testDept) return;
+    const token = localStorage.getItem("isg_auth_token") || "";
     setIsTesting(true);
     try {
       const res = await fetch("/api/notify", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_FIREBASE_API_KEY}`
+          "Authorization": token ? `Bearer ${token}` : `Bearer ${import.meta.env.VITE_FIREBASE_API_KEY}`
         },
         body: JSON.stringify({
           type: "TEST_NOTIFICATION",
@@ -1009,9 +1082,16 @@ const MainLayout = ({ theme = "blue", children }) => {
       )
     )
       return;
+    const token = localStorage.getItem("isg_auth_token") || "";
     setIsCleaning(true);
     try {
-      const res = await fetch("/api/cleanup-tokens", { method: "POST" });
+      const res = await fetch("/api/cleanup-tokens", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        }
+      });
       const data = await res.json();
       if (data.success) {
         alert(
@@ -3460,7 +3540,11 @@ const FeedbacksAdmin = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "feedbacks"), orderBy("timestamp", "desc"));
+    const q = query(
+      collection(db, "feedbacks"),
+      orderBy("timestamp", "desc"),
+      limit(100),
+    );
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
@@ -3645,6 +3729,60 @@ const AdminDashboard = () => {
   const [deleteUserCountdown, setDeleteUserCountdown] = useState(5);
 
   const [accountTab, setAccountTab] = useState("isg");
+  const [lockedAccounts, setLockedAccounts] = useState([]);
+  const [loadingLocked, setLoadingLocked] = useState(false);
+
+  const fetchLockedAccounts = useCallback(async () => {
+    const token = localStorage.getItem("isg_auth_token");
+    if (!token) return;
+    setLoadingLocked(true);
+    try {
+      const res = await fetch("/api/admin/locked-accounts", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        setLockedAccounts(data.accounts || []);
+      }
+    } catch (err) {
+      console.error("Kilitli hesaplar alınamadı:", err);
+    } finally {
+      setLoadingLocked(false);
+    }
+  }, []);
+
+  const handleUnlockAccount = useCallback(async (usernameToUnlock) => {
+    const token = localStorage.getItem("isg_auth_token");
+    if (!token) return;
+    try {
+      const res = await fetch("/api/admin/unlock-account", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ username: usernameToUnlock }),
+      });
+      const data = await res.json();
+      if (data && data.success) {
+        toast.success(data.message || `"${usernameToUnlock}" kilidi kaldırıldı!`);
+        fetchLockedAccounts();
+      } else {
+        toast.error(data?.error || "Hesap kilidi kaldırılamadı.");
+      }
+    } catch (err) {
+      toast.error("Bağlantı hatası: Kilit açılamadı.");
+    }
+  }, [fetchLockedAccounts]);
+
+  // Admin kullanıcı yönetimi sekmesindeyken kilitli hesapları düzenli kontrol et
+  useEffect(() => {
+    if (adminViewMode === "users" && currentUser?.role === "admin") {
+      fetchLockedAccounts();
+      const interval = setInterval(fetchLockedAccounts, 8000);
+      return () => clearInterval(interval);
+    }
+  }, [adminViewMode, currentUser, fetchLockedAccounts]);
   const [isgCalendarMonth, setIsgCalendarMonth] = useState(
     new Date().getMonth(),
   );
@@ -3820,24 +3958,48 @@ const AdminDashboard = () => {
 
   const handleCreateUser = async (e) => {
     e.preventDefault();
-    if (users.find((u) => u.username === newUser.username)) {
-      alert(t("err_username_taken") || "Username taken!");
+    if (users.find((u) => u.username.toLowerCase() === newUser.username.toLowerCase())) {
+      toast.error(t("err_username_taken") || "Bu kullanıcı adı zaten kullanımda!");
       return;
     }
-    const newUserId = Date.now().toString();
     const finalRole = accountTab === "yukleme" ? "yuklemeci" : newUser.role;
     const finalDept = finalRole === "sef" ? newUser.dept : null;
 
-    const userObj = {
-      ...newUser,
-      role: finalRole,
-      id: newUserId,
-      dept: finalDept,
-    };
-    // Sifreyi kaldir ve ayri koleksiyona kaydet
-    const { password, ...publicUserObj } = userObj;
-    await setDoc(doc(db, "user_secrets", newUserId), { password });
-    await setDoc(doc(db, "users", newUserId), publicUserObj);
+    try {
+      const token = localStorage.getItem("isg_auth_token");
+      const res = await fetch("/api/admin/create-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          name: newUser.name,
+          username: newUser.username,
+          password: newUser.password,
+          role: finalRole,
+          dept: finalDept,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error || "Kullanıcı oluşturulamadı.");
+      }
+      toast.success("Kullanıcı ve şifresi güvenli (bcrypt) olarak oluşturuldu.");
+    } catch (apiErr) {
+      console.warn("API create user error:", apiErr);
+      const newUserId = Date.now().toString();
+      const userObj = {
+        name: newUser.name,
+        username: newUser.username.toLowerCase().trim(),
+        role: finalRole,
+        id: newUserId,
+        dept: finalDept,
+      };
+      await setDoc(doc(db, "users", newUserId), userObj);
+      toast.success("Kullanıcı oluşturuldu.");
+    }
+
     setNewUser({
       username: "",
       password: "",
@@ -3859,14 +4021,36 @@ const AdminDashboard = () => {
       !editUserForm.name
     )
       return;
-    await updateDoc(doc(db, "users", userToUpdate), {
-      username: editUserForm.username,
-      name: editUserForm.name,
-    });
-    // Sifreyi ayri guncelle (eger yeni sifre girilmisse)
-    if (editUserForm.password && editUserForm.password.trim()) {
-      await setDoc(doc(db, "user_secrets", userToUpdate), { password: editUserForm.password.trim() }, { merge: true });
+
+    try {
+      const token = localStorage.getItem("isg_auth_token");
+      const res = await fetch("/api/admin/update-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          id: userToUpdate,
+          name: editUserForm.name,
+          username: editUserForm.username,
+          password: editUserForm.password,
+        })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error || "Güncelleme yapılamadı.");
+      }
+      toast.success("Kullanıcı bilgileri ve şifresi başarıyla güncellendi.");
+    } catch (apiErr) {
+      console.warn("API update user error:", apiErr);
+      await updateDoc(doc(db, "users", userToUpdate), {
+        username: editUserForm.username,
+        name: editUserForm.name,
+      });
+      toast.success("Kullanıcı güncellendi.");
     }
+
     setShowUpdateUserModal(false);
     setUserToUpdate(null);
     setEditingUserId(null);
@@ -4700,6 +4884,120 @@ const AdminDashboard = () => {
             </button>
           </div>
 
+          {/* Hesap Güvenliği & Kilit Durumu Kartı */}
+          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 p-5 rounded-2xl border border-amber-200/80 dark:border-gray-700 mb-8 shadow-sm">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4 pb-3 border-b border-amber-200/60 dark:border-gray-700">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">
+                  <Lock className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base flex items-center gap-2">
+                    Hesap Güvenliği & Kilit Durumu
+                    {lockedAccounts.filter((a) => a.isLocked).length > 0 && (
+                      <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-extrabold animate-pulse">
+                        {lockedAccounts.filter((a) => a.isLocked).length} Kilitli
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    5 hatalı denemede 1 dk, sonraki hatalarda 3 dk ve 15 dk kilitlenen hesapları buradan yönetebilirsiniz.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={fetchLockedAccounts}
+                disabled={loadingLocked}
+                className="self-start sm:self-center px-3.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+              >
+                <Loader2 className={`w-3.5 h-3.5 ${loadingLocked ? "animate-spin text-amber-600" : ""}`} />
+                Yenile
+              </button>
+            </div>
+
+            {lockedAccounts.length === 0 ? (
+              <div className="text-center py-4 bg-white/70 dark:bg-gray-800/70 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-2">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                <span>Şu anda kilitli veya hatalı şifre denemesi bulunan hesap bulunmuyor. Tüm hesaplar güvende.</span>
+              </div>
+            ) : (
+              <div className="space-y-2.5">
+                {lockedAccounts.map((acc) => {
+                  const stageLabel =
+                    acc.stage === 1
+                      ? "1 Dakika"
+                      : acc.stage === 2
+                        ? "3 Dakika"
+                        : acc.stage >= 3
+                          ? "15 Dakika"
+                          : "Henüz Kilitlenmedi";
+                  return (
+                    <div
+                      key={acc.username}
+                      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-xl border transition-all gap-3 ${
+                        acc.isLocked
+                          ? "bg-red-50/90 dark:bg-red-950/40 border-red-200 dark:border-red-900/60 shadow-sm"
+                          : "bg-white dark:bg-gray-800/90 border-gray-200 dark:border-gray-700"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`p-2 rounded-lg ${
+                            acc.isLocked
+                              ? "bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400"
+                              : "bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400"
+                          }`}
+                        >
+                          <ShieldAlert className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-gray-900 dark:text-white text-sm">
+                              @{acc.username}
+                            </span>
+                            {acc.isLocked ? (
+                              <span className="bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                                <Lock className="w-3 h-3" /> Kilitli (
+                                {Math.floor(acc.remainingSeconds / 60)}:
+                                {String(acc.remainingSeconds % 60).padStart(2, "0")} kaldı)
+                              </span>
+                            ) : (
+                              <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                                {acc.failedCount} Hatalı Deneme
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                            <span>
+                              Hata Sayısı: <b>{acc.failedCount}</b>
+                            </span>
+                            <span>
+                              Kilit Kademesi: <b>{stageLabel}</b>
+                            </span>
+                            <span>
+                              Son Deneme:{" "}
+                              <b>{new Date(acc.lastAttemptAt).toLocaleTimeString()}</b>
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => handleUnlockAccount(acc.username)}
+                        className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        Kilidi Kaldır ve Sıfırla
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <form
             onSubmit={handleCreateUser}
             className="bg-gray-50 dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-700 mb-8 space-y-4"
@@ -4814,10 +5112,17 @@ const AdminDashboard = () => {
                   currentUser.role === "admin" ||
                   currentUser.username === "agiradar" ||
                   currentUser.username === "agiradarsahin";
+                const lockedInfo = lockedAccounts.find(
+                  (a) => a.username.toLowerCase() === u.username.toLowerCase(),
+                );
                 return (
                   <div
                     key={u.id}
-                    className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 border rounded-xl hover:bg-gray-50 dark:bg-gray-900 transition-colors gap-3"
+                    className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 border rounded-xl hover:bg-gray-50 dark:bg-gray-900 transition-colors gap-3 ${
+                      lockedInfo?.isLocked
+                        ? "border-red-300 dark:border-red-900 bg-red-50/40 dark:bg-red-950/20"
+                        : ""
+                    }`}
                   >
                     {isEditing ? (
                       <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -4860,19 +5165,32 @@ const AdminDashboard = () => {
                       </div>
                     ) : (
                       <div>
-                        <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">
-                          {u.name}{" "}
-                          <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-2">
-                            @{u.username}
-                          </span>
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">
+                            {u.name}
+                            <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-2">
+                              @{u.username}
+                            </span>
+                          </p>
+                          {lockedInfo?.isLocked ? (
+                            <span className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-950/70 text-red-700 dark:text-red-300 text-[11px] font-bold px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 animate-pulse">
+                              <Lock className="w-3 h-3 text-red-600" />
+                              Kilitli ({Math.floor(lockedInfo.remainingSeconds / 60)}:
+                              {String(lockedInfo.remainingSeconds % 60).padStart(2, "0")})
+                            </span>
+                          ) : lockedInfo && lockedInfo.failedCount > 0 ? (
+                            <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[11px] font-medium px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
+                              ⚠️ {lockedInfo.failedCount} Hata
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-0.5">
                           {u.role === "sef" ? `Şef - ${u.dept}` : u.role}
                         </p>
                       </div>
                     )}
 
-                    <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end">
+                    <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end flex-wrap gap-y-2">
                       {isEditing ? (
                         <>
                           <button
@@ -4890,6 +5208,17 @@ const AdminDashboard = () => {
                         </>
                       ) : (
                         <>
+                          {lockedInfo && (lockedInfo.isLocked || lockedInfo.failedCount > 0) && (
+                            <button
+                              type="button"
+                              onClick={() => handleUnlockAccount(u.username)}
+                              className="bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+                              title="Hesap kilidini aç ve hatalı giriş sayaçlarını sıfırla"
+                            >
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>Kilidi Aç</span>
+                            </button>
+                          )}
                           {canEdit && (
                             <button
                               onClick={() => {
@@ -4901,6 +5230,7 @@ const AdminDashboard = () => {
                                 });
                               }}
                               className="text-blue-500 hover:bg-blue-50 p-2 rounded-md"
+                              title="Düzenle"
                             >
                               <Edit className="w-4 h-4" />
                             </button>
@@ -4909,6 +5239,7 @@ const AdminDashboard = () => {
                             <button
                               onClick={() => handleDeleteUserClick(u.id)}
                               className="text-red-500 hover:bg-red-50 p-2 rounded-md"
+                              title="Sil"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -6442,6 +6773,7 @@ export default function App() {
 
   const lastActiveRecordedRef = useRef(0);
   const sessionVerifiedRef = useRef(false);
+  const bonusRunningRef = useRef(false);
 
   const handleSnapErr = useCallback((err) => {
     if (err?.code === "permission-denied") {
@@ -6492,10 +6824,21 @@ export default function App() {
   const requestNotificationPermission = async () => {
     if (isRegisteringDevice) return;
 
-    if (!("Notification" in window)) {
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
       setToastMessage({
         type: "error",
-        message: "Tarayıcınız bildirimleri desteklemiyor.",
+        message: "Tarayıcınız web anlık bildirimlerini desteklemiyor.",
+      });
+      return;
+    }
+
+    // iOS Safari PWA Standalone kontrolü
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    const isStandalone = window.navigator.standalone || window.matchMedia?.('(display-mode: standalone)')?.matches;
+    if (isIOSDevice && !isStandalone) {
+      setToastMessage({
+        type: "error",
+        message: "Apple (iOS) cihazlarda bildirim alabilmek için Safari'de 'Paylaş' simgesine basıp 'Ana Ekrana Ekle' dedikten sonra uygulamayı ana ekrandan açmalısınız.",
       });
       return;
     }
@@ -6518,10 +6861,10 @@ export default function App() {
           () =>
             reject(
               new Error(
-                "İzin isteği zaman aşımına uğradı. Lütfen tarayıcı ayarlarınızdan bildirim izinlerini manuel kontrol edin (Özellikle iOS Safari'de).",
+                "İzin isteği zaman aşımına uğradı. Lütfen tarayıcı ayarlarınızdan bildirim izinlerini manuel kontrol edin.",
               ),
             ),
-          5000,
+          12000,
         );
 
         Notification.requestPermission()
@@ -6536,27 +6879,30 @@ export default function App() {
       });
 
       const permission = await requestPermissionWithTimeout;
-
       setNotificationStatus(permission);
-      if (permission === "granted" && messaging && currentUser) {
-        // Timeout wrapper for mobile devices where serviceWorker/getToken can hang
+
+      if (permission === "granted" && currentUser) {
+        const msgInstance = await getAppMessaging();
+        if (!msgInstance) {
+          throw new Error("Tarayıcınızın bildirim altyapısı bu oturumda başlatılamadı. Gizli sekme veya engelli ayarları kontrol edin.");
+        }
+
         const getTokenWithTimeout = new Promise((resolve, reject) => {
           const timer = setTimeout(
             () =>
               reject(
                 new Error(
-                  "Cihaz kayıt işlemi zaman aşımına uğradı. Telefonunuz bu özelliği desteklemiyor olabilir veya bağlantı sorunu var.",
+                  "Cihaz kayıt işlemi zaman aşımına uğradı. İnternet bağlantınızı kontrol edip tekrar deneyin.",
                 ),
               ),
-            8000,
+            25000,
           );
 
           (async () => {
             try {
-              const registration = await navigator.serviceWorker.register(
-                `/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`,
-              );
-              const currentToken = await getToken(messaging, {
+              const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+              await navigator.serviceWorker.ready;
+              const currentToken = await getToken(msgInstance, {
                 vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
                 serviceWorkerRegistration: registration,
               });
@@ -6588,7 +6934,7 @@ export default function App() {
         } else {
           setToastMessage({
             type: "error",
-            message: "Token alınamadı. Cihazınız desteklemiyor olabilir.",
+            message: "Token alınamadı. Cihazınız veya tarayıcınız bu protokolü desteklemiyor olabilir.",
           });
         }
       } else if (permission === "denied") {
@@ -6600,9 +6946,15 @@ export default function App() {
       }
     } catch (err) {
       console.error("Bildirim izni/token alınamadı:", err);
+      let errMsg = err?.message || "Tarayıcı izinlerini kontrol edin.";
+      if (err?.code === "messaging/permission-blocked" || err?.message?.includes("permission")) {
+        errMsg = "Bildirim izni tarayıcı tarafından engellendi. Adres çubuğundaki kilit simgesinden izin verin.";
+      } else if (err?.code === "messaging/unsupported-browser") {
+        errMsg = "Kullandığınız tarayıcı Push bildirim protokolünü desteklemiyor.";
+      }
       setToastMessage({
         type: "error",
-        message: `Kayıt sırasında hata oluştu: ${err.message || "Tarayıcı izinlerini kontrol edin."}`,
+        message: `Kayıt sırasında hata oluştu: ${errMsg}`,
       });
     } finally {
       setIsRegisteringDevice(false);
@@ -6612,24 +6964,26 @@ export default function App() {
   const verifyAndSyncToken = useCallback(async (userObj) => {
     if (
       !("Notification" in window) ||
+      !("serviceWorker" in navigator) ||
       Notification.permission !== "granted" ||
-      !messaging ||
       !userObj
     )
       return;
 
     try {
+      const msgInstance = await getAppMessaging();
+      if (!msgInstance) return;
+
       const getTokenWithTimeout = new Promise((resolve, reject) => {
         const timer = setTimeout(
           () => reject(new Error("Background token sync timed out")),
-          8000,
+          20000,
         );
         (async () => {
           try {
-            const registration = await navigator.serviceWorker.register(
-              `/firebase-messaging-sw.js?apiKey=${import.meta.env.VITE_FIREBASE_API_KEY}`,
-            );
-            const currentToken = await getToken(messaging, {
+            const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+            await navigator.serviceWorker.ready;
+            const currentToken = await getToken(msgInstance, {
               vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
               serviceWorkerRegistration: registration,
             });
@@ -6653,12 +7007,13 @@ export default function App() {
           console.log("Token mismatch detected, updating Firestore...");
           await updateDoc(doc(db, "users", userObj.id), {
             fcmToken: currentToken,
+            lastActive: new Date(),
           });
           console.log("Token updated successfully for user:", userObj.username);
         }
       }
     } catch (error) {
-      console.error("Token verification failed:", error);
+      console.warn("Token verification sync notice:", error?.message || error);
     }
   }, []);
 
@@ -6813,6 +7168,8 @@ export default function App() {
                       localStorage.removeItem("isg_logged_in_user");
                       localStorage.removeItem("isg_auth_token");
                       setCurrentUser(null);
+                    } else if (verifyData && verifyData.token) {
+                      localStorage.setItem("isg_auth_token", verifyData.token);
                     }
                   })
                   .catch(() => {});
@@ -7027,12 +7384,15 @@ export default function App() {
     if (
       isFirebaseLoading ||
       !currentUser ||
+      currentUser.role !== "admin" ||
+      bonusRunningRef.current ||
       !points ||
       Object.keys(points).length === 0
     )
       return;
 
     const checkDailyBonus = async () => {
+      bonusRunningRef.current = true;
       try {
         const today = new Date();
         const formattedToday = `${today.getDate().toString().padStart(2, "0")}.${(today.getMonth() + 1).toString().padStart(2, "0")}.${today.getFullYear()}`;
@@ -7100,10 +7460,12 @@ export default function App() {
         } else {
           console.error("Otomatik bonus dağıtımı hatası:", err);
         }
+      } finally {
+        bonusRunningRef.current = false;
       }
     };
     checkDailyBonus();
-  }, [isFirebaseLoading, currentUser, points, tasks]);
+  }, [isFirebaseLoading, currentUser?.role, points?.lastDailyBonus, points?.lastBonusTimestamp, tasks]);
 
   const getLastFridayOfCurrentMonth = useCallback(() => {
     const today = new Date();
@@ -7212,11 +7574,12 @@ export default function App() {
       triggerHaptic("success");
 
       // API Notification trigger
+      const currentToken = localStorage.getItem("isg_auth_token") || "";
       fetch("/api/notify", {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${import.meta.env.VITE_FIREBASE_API_KEY}`
+          "Authorization": currentToken ? `Bearer ${currentToken}` : `Bearer ${import.meta.env.VITE_FIREBASE_API_KEY}`
         },
         body: JSON.stringify({
           type: "NEW_TASK",
@@ -7243,12 +7606,18 @@ export default function App() {
     async (id, newStatus, chiefNote = "", afterImgUrl = "", modNote = "") => {
       const taskRef = doc(db, "tasks", id);
 
-      // Puan sistemi mantığı: Sadece "acik" durumdan "cozuldu" durumuna geçerken
-      if (newStatus === "cozuldu") {
+      try {
         const taskSnap = await getDoc(taskRef);
+        let dept = "";
+        let oldStatus = "";
+
         if (taskSnap.exists()) {
           const taskData = taskSnap.data();
-          if (taskData.status !== "cozuldu") {
+          dept = taskData.dept || "";
+          oldStatus = taskData.status || "";
+
+          // Puan sistemi mantığı: Sadece "acik" durumdan "cozuldu" durumuna geçerken
+          if (newStatus === "cozuldu" && oldStatus !== "cozuldu") {
             const now = taskData.resolvedTimestamp || Date.now();
             const createdAt = taskData.timestamp;
             const deadlineHours = taskData.deadlineHours;
@@ -7284,16 +7653,6 @@ export default function App() {
             }
           }
         }
-      }
-
-      try {
-        const taskSnap = await getDoc(taskRef);
-        let dept = "";
-        let oldStatus = "";
-        if (taskSnap.exists()) {
-          dept = taskSnap.data().dept;
-          oldStatus = taskSnap.data().status;
-        }
 
         const updates = { status: newStatus };
         if (chiefNote) updates.chiefNote = chiefNote;
@@ -7312,11 +7671,12 @@ export default function App() {
             newStatus === "kapatildi" ||
             newStatus === "acik")
         ) {
+          const currentToken = localStorage.getItem("isg_auth_token") || "";
           fetch("/api/notify", {
             method: "POST",
             headers: { 
               "Content-Type": "application/json",
-              "Authorization": `Bearer ${import.meta.env.VITE_FIREBASE_API_KEY}`
+              "Authorization": currentToken ? `Bearer ${currentToken}` : `Bearer ${import.meta.env.VITE_FIREBASE_API_KEY}`
             },
             body: JSON.stringify({
               type: "STATUS_CHANGE",
@@ -7513,6 +7873,7 @@ export default function App() {
       finishLoading,
       get24HourTonnage,
       notificationStatus,
+      requestNotificationPermission,
     ],
   );
 

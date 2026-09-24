@@ -2,10 +2,10 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
 
 const urlParams = new URLSearchParams(location.search);
-const apiKey = urlParams.get('apiKey');
+const apiKey = urlParams.get('apiKey') || "AIzaSyCKdLCPFTXl4JdGJpSD--yAIpd29BtnN-k";
 
 firebase.initializeApp({
-  apiKey: apiKey || "REPLACE_ME_IF_NEEDED", // We try to get from URL, but fallback just in case, though it shouldn't be empty
+  apiKey: apiKey,
   authDomain: "isg-web-6363.firebaseapp.com",
   projectId: "isg-web-6363",
   storageBucket: "isg-web-6363.firebasestorage.app",
@@ -14,25 +14,45 @@ firebase.initializeApp({
 });
 
 try {
-    const messaging = firebase.messaging();
-    messaging.onBackgroundMessage(function(payload) {
-      console.log('[firebase-messaging-sw.js] Arka plan bildirimi alındı: ', payload);
-      const notificationTitle = payload.notification.title;
-      const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/adsmetal_logo.jpg'
-      };
-      self.registration.showNotification(notificationTitle, notificationOptions);
-    });
-} catch(e) {
-    console.error("SW Init error", e);
+  const messaging = firebase.messaging();
+  messaging.onBackgroundMessage(function(payload) {
+    console.log('[firebase-messaging-sw.js] Arka plan bildirimi alindi: ', payload);
+    const title = payload.notification?.title || payload.data?.title || "ADS Metal İSG Bildirimi";
+    const body = payload.notification?.body || payload.data?.body || "Yeni bir bildiriminiz var.";
+    const options = {
+      body: body,
+      icon: '/adsmetal_logo.jpg',
+      badge: '/adsmetal_logo.jpg',
+      vibrate: [200, 100, 200],
+      data: {
+        url: payload.data?.click_action || payload.fcmOptions?.link || '/'
+      }
+    };
+    self.registration.showNotification(title, options);
+  });
+} catch (e) {
+  console.error("SW Init error", e);
 }
 
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || '/';
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (let i = 0; i < clientList.length; i++) {
+        const client = clientList[i];
+        if (client.url.includes(self.registration.scope) && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
+  );
+});
 
 self.addEventListener('pushsubscriptionchange', function(event) {
-  console.log('[firebase-messaging-sw.js] Push subscription expired/changed, attempting to resync...');
-  // The actual Firebase SDK running in the client tab will handle token refresh on next visit/visibility change.
-  // But we can also notify clients to refresh immediately if they are open.
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clients => {
       for (const client of clients) {

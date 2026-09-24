@@ -6,16 +6,22 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Users: Readable by application users, writable by authorized users/admin
-    match /users/{userId} {
-      allow read: if true;
-      allow write: if true;
+    // Helper function to check if user has admin claim
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.role == 'admin';
     }
 
-    // User secrets: Strictly hidden from client-side read (accessible only via server-side Admin SDK)
+    // User secrets: Strictly hidden from client-side read and write.
+    // Accessible ONLY via server-side Firebase Admin SDK.
     match /user_secrets/{userId} {
-      allow read: if false;
-      allow write: if true;
+      allow read, write: if false;
+    }
+
+    // Users: Readable by application users.
+    // Write permitted for user profiles and tokens, but client cannot write/overwrite passwords directly.
+    match /users/{userId} {
+      allow read: if true;
+      allow write: if !('password' in request.resource.data);
     }
 
     // Tasks (İSG İhlal ve Aksiyon Kayıtları): Full access for application management
@@ -43,19 +49,22 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // System notification logs
+    // System notification logs: Read only from client, server Admin SDK handles writes
     match /notification_logs/{logId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow write: if false;
     }
 
     // Feedbacks & Error Reports (accessible from ErrorBoundary and feedback modal)
     match /feedbacks/{feedbackId} {
-      allow read, write: if true;
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if true;
     }
 
-    // Catch-all fallback for other collections
+    // Catch-all fallback: Explicitly deny all other collections and arbitrary documents
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if false;
     }
   }
 }
