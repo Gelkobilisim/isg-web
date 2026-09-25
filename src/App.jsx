@@ -66,6 +66,9 @@ import {
   MessageSquare,
   Upload,
   FileText,
+  Sparkles,
+  ArrowRight,
+  KeyRound,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "motion/react";
@@ -275,6 +278,45 @@ const STATUS_INFO = {
       "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border-gray-400",
     icon: XCircle,
   },
+  kapatildi: {
+    label_key: "stat_kapatildi",
+    color: "bg-emerald-100 text-emerald-800 border-emerald-500",
+    icon: CheckCircle,
+  },
+};
+
+const triggerClientNotification = (title, options = {}) => {
+  try {
+    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.ready
+        .then((reg) => {
+          if (reg && typeof reg.showNotification === "function") {
+            reg.showNotification(title, {
+              icon: "/adsmetal_logo.jpg",
+              badge: "/adsmetal_logo.jpg",
+              vibrate: [200, 100, 200],
+              ...options,
+            });
+          }
+        })
+        .catch(() => {});
+      return;
+    }
+
+    try {
+      new Notification(title, {
+        icon: "/adsmetal_logo.jpg",
+        ...options,
+      });
+    } catch {
+      // Direct Notification constructor not supported or blocked in mobile environment
+    }
+  } catch (err) {
+    console.warn("Client notification failed silently:", err);
+  }
 };
 
 const formatDate = (dateObj) => {
@@ -324,29 +366,27 @@ const CompanyLogo = ({
   theme = "blue",
 }) => (
   <div
-    className={`flex flex-col items-center justify-center bg-white dark:bg-gray-800 p-2 rounded-xl shadow-sm ${className}`}
+    className={`inline-flex items-center gap-2.5 p-1 rounded-xl ${className}`}
   >
-    <div className={`flex items-center space-x-1 ${scale} origin-center`}>
-      <div className="relative w-8 h-8 flex items-center justify-center overflow-hidden">
-        <div
-          className={`absolute top-0 left-0 w-full h-full border-t-4 border-l-4 rounded-tl-full opacity-80 ${theme === "orange" ? "border-orange-600" : "border-blue-900"}`}
-        ></div>
-        <div
-          className={`absolute top-1 left-1 w-[90%] h-[90%] border-t-4 border-l-4 rounded-tl-full ${theme === "orange" ? "border-orange-400" : "border-blue-400"}`}
-        ></div>
-        <div className="absolute top-3 left-2 w-[80%] h-[80%] border-t-4 border-l-4 border-gray-400 rounded-tl-full opacity-50"></div>
+    <div className={`flex items-center gap-2.5 ${scale} origin-center`}>
+      <div className="relative w-8 h-8 rounded-xl overflow-hidden shadow-sm shrink-0 border border-gray-200 dark:border-gray-700 bg-white">
+        <img
+          src="/adsmetal_logo.jpg"
+          alt="ADS Metal"
+          className="w-full h-full object-cover"
+        />
       </div>
-      <div className="flex flex-col">
-        <div className="flex items-baseline space-x-1">
-          <span className="text-gray-800 dark:text-gray-100 font-extrabold text-2xl tracking-tighter">
+      <div className="flex flex-col text-left">
+        <div className="flex items-baseline space-x-1 leading-none">
+          <span className="text-gray-900 dark:text-white font-black text-xl tracking-tight">
             ADS
           </span>
-          <span className="text-gray-800 dark:text-gray-100 font-bold text-xl">
+          <span className="text-gray-700 dark:text-gray-300 font-bold text-base">
             Metal A.Ş.
           </span>
         </div>
         <span
-          className={`text-[6px] font-bold text-white px-1 rounded-sm tracking-widest uppercase -mt-1 w-max ${theme === "orange" ? "bg-orange-600" : "bg-blue-900"}`}
+          className={`text-[7px] font-extrabold text-white px-1 py-0.5 rounded tracking-wider uppercase mt-0.5 w-max ${theme === "orange" ? "bg-orange-600" : "bg-blue-800"}`}
         >
           Transformer Tanks & Fin Walls
         </span>
@@ -518,6 +558,8 @@ const LoginScreen = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [registerDevice, setRegisterDevice] = useState(false);
   const [loginTheme, setLoginTheme] = useState("isg");
+  const [welcomeState, setWelcomeState] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Countdown timer for security lockout
   useEffect(() => {
@@ -537,8 +579,9 @@ const LoginScreen = () => {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (lockoutSeconds > 0) return;
+    if (lockoutSeconds > 0 || isSubmitting || welcomeState) return;
     setLoginErr("");
+    setIsSubmitting(true);
     
     try {
       const cleanUsername = username.toLowerCase().trim();
@@ -566,6 +609,7 @@ const LoginScreen = () => {
           setLockoutSeconds(data.remainingSeconds);
         }
         setLoginErr(data?.error || t("err_wrong_cred") || "Geçersiz kullanıcı adı veya şifre");
+        setIsSubmitting(false);
         triggerHaptic("error");
         return;
       }
@@ -577,6 +621,7 @@ const LoginScreen = () => {
       
       if (loginTheme === "isg" && account.role === "yuklemeci") {
         setLoginErr(t("err_isg_module"));
+        setIsSubmitting(false);
         triggerHaptic("error");
         return;
       }
@@ -585,6 +630,7 @@ const LoginScreen = () => {
         (account.role === "sef" || account.role === "mod")
       ) {
         setLoginErr(t("err_yukleme_module"));
+        setIsSubmitting(false);
         triggerHaptic("error");
         return;
       }
@@ -649,12 +695,32 @@ const LoginScreen = () => {
           }).catch(() => {});
         }
       }
-      setCurrentUser(account);
-      setLoginErr("");
+      // Show welcome animation sequence before transitioning
+      setWelcomeState({
+        user: account,
+        step: 0,
+      });
       triggerHaptic("success");
+
+      setTimeout(() => {
+        setWelcomeState((prev) => (prev ? { ...prev, step: 1 } : null));
+      }, 450);
+
+      setTimeout(() => {
+        setWelcomeState((prev) => (prev ? { ...prev, step: 2 } : null));
+      }, 950);
+
+      setTimeout(() => {
+        setCurrentUser(account);
+        setLoginErr("");
+        setIsSubmitting(false);
+        setWelcomeState(null);
+      }, 1500);
     } catch (err) {
       console.error("Login failed:", err);
       setLoginErr(err?.message || "Giriş yapılırken sunucuya ulaşılamadı. Lütfen tekrar deneyin.");
+      setIsSubmitting(false);
+      setWelcomeState(null);
       triggerHaptic("error");
     }
   };
@@ -714,69 +780,227 @@ const LoginScreen = () => {
 
       <div className="w-full max-w-4xl flex flex-col md:flex-row bg-white dark:bg-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl overflow-hidden animate-slide-up z-10 border border-white/20">
         <div
-          className={`hidden md:flex flex-col items-center justify-center w-1/2 p-12 border-r border-gray-100 dark:border-gray-700 transition-colors duration-500 ${isISG ? "bg-blue-50/50" : "bg-orange-50/50"}`}
+          className={`hidden md:flex flex-col justify-between w-1/2 p-8 lg:p-10 relative overflow-hidden transition-all duration-500 select-none ${
+            isISG
+              ? "bg-gradient-to-br from-slate-900 via-blue-950 to-slate-950 text-white border-r border-blue-500/20"
+              : "bg-gradient-to-br from-slate-900 via-orange-950 to-slate-950 text-white border-r border-orange-500/20"
+          }`}
         >
-          <CompanyLogo
-            className="bg-transparent shadow-none mb-6"
-            scale="scale-150"
-            theme={isISG ? "blue" : "orange"}
+          {/* Background Ambient Glows & Grid Pattern */}
+          <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px]" />
+          <div
+            className={`absolute -top-20 -left-20 w-64 h-64 rounded-full blur-3xl opacity-40 pointer-events-none ${
+              isISG ? "bg-blue-500" : "bg-orange-500"
+            }`}
           />
-          <h1
-            className={`text-3xl font-bold text-center mt-8 ${isISG ? "text-blue-900" : "text-orange-900"}`}
-          >
-            {isISG ? t("sys_isg_title") : t("sys_yukleme_title")}
-            <br />
-            {t("sys_management")}
-          </h1>
+          <div
+            className={`absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-30 pointer-events-none ${
+              isISG ? "bg-cyan-500" : "bg-amber-500"
+            }`}
+          />
+
+          {/* Top Badge: System Mode Indicator */}
+          <div className="relative z-10 flex items-center justify-between">
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider shadow-sm border ${
+                isISG
+                  ? "bg-blue-500/10 text-blue-300 border-blue-400/30"
+                  : "bg-orange-500/10 text-orange-300 border-orange-400/30"
+              }`}
+            >
+              {isISG ? (
+                <>
+                  <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                  <span>İSG & Tertip Portalı</span>
+                </>
+              ) : (
+                <>
+                  <Truck className="w-3.5 h-3.5 text-orange-400" />
+                  <span>Lojistik & Sevkiyat</span>
+                </>
+              )}
+            </span>
+            <span className="text-[11px] font-bold text-gray-400 tracking-wider">
+              KURUMSAL PORTAL
+            </span>
+          </div>
+
+          {/* Center Brand Identity */}
+          <div className="relative z-10 flex flex-col items-center text-center my-auto py-6">
+            {/* Logo Avatar with Glowing Rings */}
+            <div className="relative mb-5 group">
+              <div
+                className={`absolute -inset-3 rounded-3xl blur-xl opacity-60 group-hover:opacity-100 transition-opacity ${
+                  isISG ? "bg-gradient-to-r from-blue-600 to-cyan-500" : "bg-gradient-to-r from-orange-600 to-amber-500"
+                }`}
+              />
+              <div className="relative w-20 h-20 lg:w-24 lg:h-24 rounded-3xl p-1.5 bg-gradient-to-b from-white/20 to-white/5 border border-white/20 shadow-2xl backdrop-blur-md flex items-center justify-center overflow-hidden">
+                <img
+                  src="/adsmetal_logo.jpg"
+                  alt="ADS Metal"
+                  className="w-full h-full object-cover rounded-[18px]"
+                />
+              </div>
+            </div>
+
+            {/* Company Name */}
+            <div className="flex items-baseline justify-center gap-1.5 text-white">
+              <span className="text-3xl font-black tracking-tight drop-shadow-sm">
+                ADS
+              </span>
+              <span className="text-2xl font-bold text-gray-200 tracking-tight">
+                Metal A.Ş.
+              </span>
+            </div>
+            <p className="text-[10px] uppercase font-bold text-blue-300/80 dark:text-gray-400 tracking-[0.22em] mt-1 mb-4">
+              Transformer Tanks & Fin Walls
+            </p>
+
+            {/* Main Title with Gradient */}
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight leading-tight">
+              <span
+                className={`bg-clip-text text-transparent bg-gradient-to-r ${
+                  isISG
+                    ? "from-white via-blue-100 to-cyan-300"
+                    : "from-white via-orange-100 to-amber-300"
+                }`}
+              >
+                {isISG ? t("sys_isg_title") : t("sys_yukleme_title")}
+              </span>
+              <span className="block text-base lg:text-lg font-bold text-gray-300 mt-1">
+                {t("sys_management")}
+              </span>
+            </h1>
+
+            {/* Feature Highlights Pills */}
+            <div className="mt-5 flex flex-col gap-2 w-full max-w-xs text-left">
+              {isISG ? (
+                <>
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
+                    <ShieldAlert className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Sıfır İş Kazası & Proaktif Denetim</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
+                    <Clock className="w-4 h-4 text-blue-400 shrink-0" />
+                    <span>Anlık İhlal & Termin Süresi Takibi</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
+                    <TrendingUp className="w-4 h-4 text-cyan-400 shrink-0" />
+                    <span>Departman Başarı & Teşvik Puanlama</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
+                    <Truck className="w-4 h-4 text-amber-400 shrink-0" />
+                    <span>Canlı Plaka, Şoför & Tır Takibi</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
+                    <Scale className="w-4 h-4 text-orange-400 shrink-0" />
+                    <span>Günlük Tonaj & Sevkiyat Raporları</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
+                    <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Fotoğraflı Teslimat & Onay Zinciri</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Bottom Footer Info */}
+          <div className="relative z-10 flex items-center justify-between text-[11px] text-gray-400 pt-4 border-t border-white/10">
+            <span className="flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-gray-400" />
+              <span>Anadolu OSB Fabrikası</span>
+            </span>
+            <span className="font-semibold text-gray-300">Güvenli Çalışma Alanı</span>
+          </div>
         </div>
 
         <div className="w-full md:w-1/2 p-6 md:p-12 flex flex-col justify-center">
-          <div className="md:hidden text-center mb-8">
-            <CompanyLogo
-              className="mx-auto"
-              scale="scale-110"
-              theme={isISG ? "blue" : "orange"}
-            />
-            <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 mt-4">
-              {isISG ? t("sys_isg_title") : t("sys_yukleme_title")}
-            </h1>
+          <div className="md:hidden text-center mb-6">
+            <div className="relative inline-flex mb-3">
+              <div
+                className={`absolute -inset-2 rounded-2xl blur-lg opacity-60 ${
+                  isISG ? "bg-blue-500/40" : "bg-orange-500/40"
+                }`}
+              />
+              <div className="relative w-16 h-16 rounded-2xl p-1 bg-gradient-to-b from-white/20 to-white/5 border border-white/20 shadow-xl overflow-hidden bg-white dark:bg-gray-800 flex items-center justify-center">
+                <img
+                  src="/adsmetal_logo.jpg"
+                  alt="ADS Metal"
+                  className="w-full h-full object-cover rounded-xl"
+                />
+              </div>
+            </div>
+            <div className="flex items-baseline justify-center gap-1">
+              <span className="text-xl font-black text-gray-900 dark:text-white">ADS</span>
+              <span className="text-lg font-bold text-gray-700 dark:text-gray-300">Metal A.Ş.</span>
+            </div>
+            <div
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase mt-2 mb-1 border ${
+                isISG
+                  ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/40"
+                  : "bg-orange-50 dark:bg-orange-950/40 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-900/40"
+              }`}
+            >
+              {isISG ? <ShieldCheck className="w-3.5 h-3.5" /> : <Truck className="w-3.5 h-3.5" />}
+              <span>{isISG ? t("sys_isg_title") : t("sys_yukleme_title")}</span>
+            </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-2">
-            {t("welcome")}
-          </h2>
-          <p className="text-gray-500 dark:text-gray-400 mb-8 text-sm">
-            {t("login_desc")}
-          </p>
+          <div className="mb-6">
+            <div
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wider uppercase mb-2 border ${
+                isISG
+                  ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20"
+                  : "bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+              <span>GÜVENLİ GİRİŞ PORTALI</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-1.5">
+              {t("welcome") || "Hoş Geldiniz"}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm font-medium">
+              {t("login_desc") || "Sisteme devam etmek için hesap bilgilerinizi girin."}
+            </p>
+          </div>
 
-          <form onSubmit={handleLogin} className="space-y-5">
+          <form onSubmit={handleLogin} className="space-y-4 sm:space-y-5">
             {lockoutSeconds > 0 && (
-              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 p-3.5 rounded-xl flex items-center justify-between text-sm font-semibold shadow-sm animate-pulse">
+              <div className="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-900 dark:text-amber-200 p-3.5 rounded-2xl flex items-center justify-between text-sm font-semibold shadow-sm animate-pulse">
                 <div className="flex items-center gap-2.5">
                   <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
                   <div>
                     <div className="font-bold">Güvenlik Kilidi Aktif</div>
-                    <div className="text-xs font-normal text-amber-700 dark:text-amber-300">Hatalı denemeler nedeniyle geçici kilit.</div>
+                    <div className="text-xs font-normal text-amber-700 dark:text-amber-300">
+                      Hatalı denemeler nedeniyle geçici kilit.
+                    </div>
                   </div>
                 </div>
-                <span className="font-mono text-base font-bold bg-amber-200/80 dark:bg-amber-800/80 text-amber-950 dark:text-amber-100 px-3 py-1 rounded-lg shadow-inner">
+                <span className="font-mono text-base font-bold bg-amber-200/80 dark:bg-amber-800/80 text-amber-950 dark:text-amber-100 px-3 py-1 rounded-xl shadow-inner">
                   {Math.floor(lockoutSeconds / 60)}:{String(lockoutSeconds % 60).padStart(2, "0")}
                 </span>
               </div>
             )}
 
             {loginErr && (
-              <div className="bg-red-50 text-red-600 text-sm p-3 rounded-xl flex items-center font-medium border border-red-100">
-                <AlertCircle className="w-5 h-5 mr-2 shrink-0" /> {loginErr}
+              <div className="bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-300 text-xs sm:text-sm p-3.5 rounded-2xl flex items-center font-bold border border-red-200 dark:border-red-800/50 shadow-sm animate-shake">
+                <AlertCircle className="w-5 h-5 mr-2 shrink-0 text-red-500" /> {loginErr}
               </div>
             )}
 
-            <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                {t("username")}
+            <div className="space-y-1.5">
+              <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                {t("username") || "Kullanıcı Adı"}
               </label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition-colors">
+                  <User className="w-5 h-5" />
+                </div>
                 <input
                   type="text"
                   autoComplete="username"
@@ -784,100 +1008,306 @@ const LoginScreen = () => {
                   autoCorrect="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-4 py-3.5 outline-none focus:ring-2 bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? "focus:ring-blue-500" : "focus:ring-orange-500"}`}
+                  placeholder="Kullanıcı adınızı girin"
+                  className={`w-full border rounded-2xl pl-11 pr-4 py-3.5 outline-none transition-all font-semibold text-sm ${
+                    isISG
+                      ? "border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-900/70 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-blue-500/15"
+                      : "border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-900/70 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-orange-500 focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-orange-500/15"
+                  }`}
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                {t("password")}
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 w-5 h-5" />
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-extrabold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                  {t("password") || "Şifre"}
+                </label>
+              </div>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 dark:text-gray-500 group-focus-within:text-blue-500 dark:group-focus-within:text-blue-400 transition-colors">
+                  <Lock className="w-5 h-5" />
+                </div>
                 <input
                   type={showPassword ? "text" : "password"}
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`w-full border border-gray-300 dark:border-gray-600 rounded-xl pl-12 pr-12 py-3.5 outline-none focus:ring-2 bg-gray-50 text-gray-800 dark:text-gray-100 dark:bg-gray-900 focus:bg-white dark:bg-gray-800 transition-colors ${isISG ? "focus:ring-blue-500" : "focus:ring-orange-500"}`}
+                  placeholder="••••••••"
+                  className={`w-full border rounded-2xl pl-11 pr-12 py-3.5 outline-none transition-all font-semibold text-sm ${
+                    isISG
+                      ? "border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-900/70 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-blue-500/15"
+                      : "border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-900/70 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-orange-500 focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-orange-500/15"
+                  }`}
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300 p-1.5 rounded-lg transition-colors focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200 transition-colors cursor-pointer"
                   aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
                 >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                  <div className="p-1.5 rounded-xl hover:bg-gray-200/60 dark:hover:bg-gray-800 transition-colors">
+                    {showPassword ? (
+                      <EyeOff className="w-4 h-4" />
+                    ) : (
+                      <Eye className="w-4 h-4" />
+                    )}
+                  </div>
                 </button>
               </div>
             </div>
 
-            <div className="flex items-center mt-2 pl-1">
-              <input
-                type="checkbox"
-                id="rememberMe"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                className={`w-4 h-4 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded cursor-pointer ${isISG ? "text-blue-600 focus:ring-blue-500" : "text-orange-600 focus:ring-orange-500"}`}
-              />
+            {/* Remember Me Checkbox */}
+            <div className="flex items-center justify-between pt-0.5">
               <label
                 htmlFor="rememberMe"
-                className="ml-2 text-sm font-bold text-gray-600 dark:text-gray-300 cursor-pointer select-none"
+                className="flex items-center gap-2.5 cursor-pointer select-none group"
               >
-                {t("remember_me")}
-              </label>
-            </div>
-
-            <div className="flex items-start mt-4 pl-1 bg-gray-50 dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700">
-              <input
-                type="checkbox"
-                id="registerDevice"
-                checked={registerDevice}
-                onChange={(e) => setRegisterDevice(e.target.checked)}
-                className={`w-4 h-4 mt-0.5 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 rounded cursor-pointer ${isISG ? "text-blue-600 focus:ring-blue-500" : "text-orange-600 focus:ring-orange-500"}`}
-              />
-              <label
-                htmlFor="registerDevice"
-                className="ml-3 text-sm font-bold text-gray-700 dark:text-gray-200 cursor-pointer select-none flex flex-col"
-              >
-                <span>Bu cihazı bildirim için kaydet</span>
-                <span className="text-xs font-normal text-gray-500 mt-1 leading-tight">
-                  Giriş yaptığım bu cihaza sadece bu hesabın bildirimlerini
-                  gönder.
+                <div className="relative flex items-center justify-center">
+                  <input
+                    type="checkbox"
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-5 h-5 rounded-lg border-2 transition-all flex items-center justify-center ${
+                      rememberMe
+                        ? isISG
+                          ? "bg-blue-600 border-blue-600 text-white shadow-sm"
+                          : "bg-orange-600 border-orange-600 text-white shadow-sm"
+                        : "border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800/80 group-hover:border-gray-400"
+                    }`}
+                  >
+                    {rememberMe && <CheckCircle className="w-3.5 h-3.5 fill-current" />}
+                  </div>
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                  {t("remember_me") || "Oturumumu Açık Tut (Beni Hatırla)"}
                 </span>
               </label>
             </div>
 
+            {/* Interactive Device Notification Card */}
+            <div
+              onClick={() => setRegisterDevice(!registerDevice)}
+              className={`p-3.5 rounded-2xl border transition-all cursor-pointer select-none flex items-center justify-between gap-3 ${
+                registerDevice
+                  ? isISG
+                    ? "bg-blue-500/10 border-blue-500/40 shadow-sm"
+                    : "bg-orange-500/10 border-orange-500/40 shadow-sm"
+                  : "bg-gray-50/70 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700/60 hover:border-gray-300 dark:hover:border-gray-600"
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                    registerDevice
+                      ? isISG
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-orange-600 text-white shadow-sm"
+                      : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <Bell className="w-4 h-4" />
+                </div>
+                <div className="flex flex-col text-left">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs sm:text-sm font-extrabold text-gray-800 dark:text-gray-100">
+                      Bu Cihazı Bildirim İçin Kaydet
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                        registerDevice
+                          ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                          : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
+                      }`}
+                    >
+                      {registerDevice ? "Aktif" : "Önerilen"}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
+                    Giriş yaptığınız bu cihaza anlık sesli bildirimler iletilsin.
+                  </span>
+                </div>
+              </div>
+
+              {/* Modern Toggle Switch */}
+              <div
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
+                  registerDevice
+                    ? isISG
+                      ? "bg-blue-600"
+                      : "bg-orange-600"
+                    : "bg-gray-300 dark:bg-gray-700"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    registerDevice ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </div>
+            </div>
+
+            {/* Submit Button */}
             <button
               type="submit"
-              disabled={lockoutSeconds > 0}
-              className={`w-full py-4 text-white rounded-xl font-bold shadow-lg transition-all mt-4 flex items-center justify-center gap-2 ${
-                lockoutSeconds > 0
-                  ? "bg-gray-400 dark:bg-gray-700 cursor-not-allowed opacity-70"
+              disabled={lockoutSeconds > 0 || isSubmitting || !!welcomeState}
+              className={`w-full py-4 text-white rounded-2xl font-extrabold shadow-xl transition-all duration-300 flex items-center justify-center gap-2.5 text-base tracking-wide cursor-pointer active:scale-[0.98] ${
+                lockoutSeconds > 0 || isSubmitting || !!welcomeState
+                  ? "bg-gray-400 dark:bg-gray-700 cursor-not-allowed opacity-70 shadow-none"
                   : isISG
-                    ? "bg-blue-700 hover:bg-blue-800 hover:shadow-blue-500/20"
-                    : "bg-orange-600 hover:bg-orange-700 hover:shadow-orange-500/20"
+                    ? "bg-gradient-to-r from-blue-600 via-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-[0_12px_28px_-6px_rgba(37,99,235,0.45)] hover:shadow-[0_16px_32px_-6px_rgba(37,99,235,0.55)]"
+                    : "bg-gradient-to-r from-orange-600 via-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 shadow-[0_12px_28px_-6px_rgba(234,88,12,0.45)] hover:shadow-[0_16px_32px_-6px_rgba(234,88,12,0.55)]"
               }`}
             >
               {lockoutSeconds > 0 ? (
                 <>
-                  <Lock className="w-4 h-4" />
-                  <span>Kilitli ({Math.floor(lockoutSeconds / 60)}:{String(lockoutSeconds % 60).padStart(2, "0")})</span>
+                  <Lock className="w-5 h-5" />
+                  <span>
+                    Kilitli ({Math.floor(lockoutSeconds / 60)}:
+                    {String(lockoutSeconds % 60).padStart(2, "0")})
+                  </span>
+                </>
+              ) : isSubmitting || welcomeState ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span>
+                    {welcomeState ? "Giriş Yapılıyor..." : "Doğrulanıyor..."}
+                  </span>
                 </>
               ) : (
-                t("login_btn")
+                <>
+                  <span>{t("login_btn") || "Sisteme Giriş Yap"}</span>
+                  <ArrowRight className="w-5 h-5" />
+                </>
               )}
             </button>
+
+            {/* Bottom Security Trust Badge */}
+            <div className="flex items-center justify-center gap-2 pt-1 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
+              <Lock className="w-3.5 h-3.5" />
+              <span>256-Bit SSL Uçtan Uca Güvenli Bağlantı</span>
+            </div>
           </form>
         </div>
       </div>
+
+      {/* Full-screen Welcome Animation Overlay */}
+      <AnimatePresence>
+        {welcomeState && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-xl animate-fade-in"
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: -20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className="relative w-full max-w-md bg-gradient-to-b from-gray-900/95 via-gray-900/98 to-gray-950 text-white rounded-3xl p-8 border border-white/10 shadow-[0_0_80px_rgba(59,130,246,0.25)] flex flex-col items-center text-center overflow-hidden"
+            >
+              {/* Top ambient glow light */}
+              <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-64 h-64 bg-blue-500/20 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Animated Logo with glowing ring */}
+              <div className="relative mb-6">
+                <div className="absolute -inset-3 bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 rounded-full blur-xl opacity-75 animate-pulse" />
+                <div className="relative w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-blue-500 via-indigo-500 to-sky-400 shadow-2xl flex items-center justify-center overflow-hidden">
+                  <img
+                    src="/adsmetal_logo.jpg"
+                    alt="ADS Metal"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                </div>
+                <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-white p-1.5 rounded-full shadow-lg border-2 border-gray-900 animate-bounce">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+              </div>
+
+              {/* Title & Welcome Text */}
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-3">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-spin" />
+                <span>ADS TAKİP SİSTEMİ</span>
+              </div>
+
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
+                Hoş Geldiniz!
+              </h2>
+
+              <p className="text-base sm:text-lg font-bold text-gray-200 mb-1">
+                Sayın <span className="text-blue-400 font-extrabold">{welcomeState.user.name || welcomeState.user.username}</span>
+              </p>
+
+              {/* Role badge */}
+              <div className="mt-1 mb-6">
+                <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-extrabold bg-white/5 border border-white/10 text-gray-300">
+                  {welcomeState.user.role === "admin"
+                    ? "🛡️ Sistem Yöneticisi"
+                    : welcomeState.user.role === "mod"
+                    ? "⛑️ İSG Uzmanı"
+                    : welcomeState.user.role === "sef"
+                    ? `🏢 ${welcomeState.user.dept || ""} Birim Şefi`
+                    : welcomeState.user.role === "yuklemeci"
+                    ? "🚚 Yükleme Sorumlusu"
+                    : "👷 Personel / Yüklenici"}
+                </span>
+              </div>
+
+              {/* Dynamic Step Text & Micro-spinner */}
+              <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
+                <div className="flex items-center justify-center gap-2 text-sm font-bold text-blue-300 mb-3">
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                  <span>
+                    {welcomeState.step === 0 && "Kimlik doğrulandı, oturum açılıyor..."}
+                    {welcomeState.step === 1 && "Çalışma alanı ve izinler hazırlanıyor..."}
+                    {welcomeState.step === 2 && "Panele aktarılıyorsunuz..."}
+                  </span>
+                </div>
+
+                {/* Animated Progress Bar */}
+                <div className="w-full bg-gray-800 rounded-full h-2.5 overflow-hidden p-0.5 border border-white/5">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-cyan-400 transition-all duration-500 ease-out"
+                    style={{
+                      width:
+                        welcomeState.step === 0
+                          ? "35%"
+                          : welcomeState.step === 1
+                          ? "75%"
+                          : "100%",
+                    }}
+                  />
+                </div>
+
+                {/* 3 Step Indicator Badges */}
+                <div className="grid grid-cols-3 gap-2 mt-3 text-[11px] font-semibold text-gray-400">
+                  <span className={welcomeState.step >= 0 ? "text-emerald-400 font-bold" : ""}>
+                    ✓ Doğrulama
+                  </span>
+                  <span className={welcomeState.step >= 1 ? "text-emerald-400 font-bold" : ""}>
+                    {welcomeState.step >= 1 ? "✓ Hazırlık" : "• Hazırlık"}
+                  </span>
+                  <span className={welcomeState.step >= 2 ? "text-blue-400 font-bold" : ""}>
+                    {welcomeState.step >= 2 ? "🚀 Başlatılıyor" : "• Başlat"}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
+                <Lock className="w-3.5 h-3.5 text-gray-500" />
+                <span>256-bit Güvenli Oturum Açma</span>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -2697,7 +3127,9 @@ const ModDashboard = () => {
     priority: "yuksek",
     subject: "",
     desc: "",
+    deadlineHours: 24,
   });
+  const [isCustomDeadline, setIsCustomDeadline] = React.useState(false);
   const [reviewLimit, setReviewLimit] = React.useState(10);
   const [isReviewPaginating, setIsReviewPaginating] = React.useState(false);
 
@@ -2724,7 +3156,7 @@ const ModDashboard = () => {
       formState.priority,
       formState.subject,
       formState.desc,
-      24,
+      Number(formState.deadlineHours) || 24,
       imgPreview,
     );
     setFormState({
@@ -2732,7 +3164,9 @@ const ModDashboard = () => {
       priority: "yuksek",
       subject: "",
       desc: "",
+      deadlineHours: 24,
     });
+    setIsCustomDeadline(false);
     setImgPreview(null);
     toast.success(
       t("success_created") || "İhlal kaydı başarıyla oluşturuldu.",
@@ -2812,7 +3246,7 @@ const ModDashboard = () => {
             {t("create_violation") || "İhlal Kaydı Oluştur"}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
                   {t("department") || "Departman"}
@@ -2849,6 +3283,102 @@ const ModDashboard = () => {
                   <option value="orta">{t("medium") || "Orta"}</option>
                   <option value="dusuk">{t("low") || "Düşük"}</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center justify-between">
+                  <span className="flex items-center">
+                    <Clock className="w-4 h-4 mr-1.5 text-blue-500" />
+                    Çözüm Süresi (Termin)
+                  </span>
+                  <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 rounded-md">
+                    {formState.deadlineHours} Saat
+                  </span>
+                </label>
+                <div className="flex gap-2">
+                  <select
+                    value={
+                      [1, 2, 4, 8, 12, 24, 48, 72, 168].includes(Number(formState.deadlineHours)) && !isCustomDeadline
+                        ? String(formState.deadlineHours)
+                        : "custom"
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === "custom") {
+                        setIsCustomDeadline(true);
+                      } else {
+                        setIsCustomDeadline(false);
+                        setFormState({ ...formState, deadlineHours: Number(e.target.value) });
+                      }
+                    }}
+                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100 text-sm"
+                  >
+                    <option value="1">1 Saat (Durdurma / Acil)</option>
+                    <option value="2">2 Saat (Acil Müdahale)</option>
+                    <option value="4">4 Saat (Yarım Vardiya)</option>
+                    <option value="8">8 Saat (Vardiya Sonu)</option>
+                    <option value="12">12 Saat</option>
+                    <option value="24">24 Saat (1 Gün - Standart)</option>
+                    <option value="48">48 Saat (2 Gün)</option>
+                    <option value="72">72 Saat (3 Gün)</option>
+                    <option value="168">168 Saat (1 Hafta)</option>
+                    <option value="custom">⚙️ Farklı Süre Gir...</option>
+                  </select>
+                  {isCustomDeadline && (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min="1"
+                        max="720"
+                        value={formState.deadlineHours}
+                        onChange={(e) => {
+                          const val = Math.max(1, parseInt(e.target.value, 10) || 1);
+                          setFormState({ ...formState, deadlineHours: val });
+                        }}
+                        className="w-20 border border-blue-500 dark:border-blue-400 rounded-xl p-3 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100 text-center text-sm"
+                        placeholder="Saat"
+                      />
+                      <span className="text-xs font-bold text-gray-500">saat</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Canlı Termin ve Son Çözüm Tarihi Rozeti */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200/80 dark:border-blue-900/60 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
+              <div className="flex items-center text-blue-900 dark:text-blue-200 font-semibold">
+                <Clock className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400 shrink-0 animate-pulse" />
+                <span>
+                  <strong>Birim Şefine Verilen Süre:</strong> {formState.deadlineHours} Saat
+                  <span className="text-gray-400 dark:text-gray-500 mx-2">•</span>
+                  <strong>Son Teslim Vakti:</strong>{" "}
+                  {new Date(Date.now() + (Number(formState.deadlineHours) || 24) * 60 * 60 * 1000).toLocaleString("tr-TR", {
+                    day: "numeric",
+                    month: "long",
+                    weekday: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Hızlı Süre:</span>
+                {[2, 4, 8, 24, 48].map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => {
+                      setIsCustomDeadline(false);
+                      setFormState({ ...formState, deadlineHours: h });
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      Number(formState.deadlineHours) === h && !isCustomDeadline
+                        ? "bg-blue-600 text-white shadow-sm scale-105"
+                        : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                    }`}
+                  >
+                    {h}s
+                  </button>
+                ))}
               </div>
             </div>
             <div>
@@ -3215,16 +3745,17 @@ const SefDashboard = () => {
   const [afterImgPreview, setAfterImgPreview] = React.useState(null);
 
   const { openTasks, completedTasks, openCount } = React.useMemo(() => {
-    const my = tasks
-      .filter((task) => task.dept === currentUser.dept)
-      .sort((a, b) => b.timestamp - a.timestamp);
+    const userDept = currentUser?.dept;
+    const my = (tasks || [])
+      .filter((task) => task && (!userDept || task.dept === userDept))
+      .sort((a, b) => (Number(b?.timestamp) || 0) - (Number(a?.timestamp) || 0));
     const opens = my.filter(
-      (t) => t.status === "acik" || t.status === "itiraz_edildi",
+      (t) => t && (t.status === "acik" || t.status === "itiraz_edildi"),
     );
     return {
       openTasks: opens,
       completedTasks: my.filter(
-        (t) => t.status !== "acik" && t.status !== "itiraz_edildi",
+        (t) => t && t.status !== "acik" && t.status !== "itiraz_edildi",
       ),
       openCount: opens.length,
     };
@@ -3249,7 +3780,10 @@ const SefDashboard = () => {
 
   const formatTimeRemaining = (timestamp, deadlineHours) => {
     if (!timestamp || !deadlineHours) return null;
-    const deadline = timestamp + deadlineHours * 60 * 60 * 1000;
+    const ts = Number(timestamp);
+    const dh = Number(deadlineHours);
+    if (isNaN(ts) || isNaN(dh)) return null;
+    const deadline = ts + dh * 60 * 60 * 1000;
     const now = Date.now();
     const diff = deadline - now;
 
@@ -3274,6 +3808,7 @@ const SefDashboard = () => {
   const formatDateStr = (timestamp) => {
     if (!timestamp) return "";
     const date = new Date(timestamp);
+    if (isNaN(date.getTime())) return "";
     return date.toLocaleDateString("tr-TR", {
       day: "numeric",
       month: "short",
@@ -3305,7 +3840,7 @@ const SefDashboard = () => {
       <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
         <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100">
           <ShieldAlert className="w-8 h-8 mr-3 text-blue-500" />{" "}
-          {t(getDeptKey(currentUser.dept))}{" "}
+          {t(getDeptKey(currentUser?.dept || ""))}{" "}
           {t("dept_tasks") || "Birimi Görevleri"}
         </h2>
         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
@@ -6835,6 +7370,7 @@ export default function App() {
   const lastActiveRecordedRef = useRef(0);
   const sessionVerifiedRef = useRef(false);
   const bonusRunningRef = useRef(false);
+  const previousTasksRef = useRef([]);
 
   const handleSnapErr = useCallback((err) => {
     if (err?.code === "permission-denied") {
@@ -7160,12 +7696,9 @@ export default function App() {
       try {
         unsubMessage = onMessage(messaging, (payload) => {
           console.log("Ön planda mesaj alındı: ", payload);
-          if (
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            new Notification(payload.notification.title, {
-              body: payload.notification.body,
+          if (payload?.notification?.title) {
+            triggerClientNotification(payload.notification.title, {
+              body: payload.notification.body || "",
               icon: "/adsmetal_logo.jpg",
             });
           }
@@ -7329,18 +7862,16 @@ export default function App() {
     const unsubTasks = onSnapshot(
       collection(db, "tasks"),
       (snapshot) => {
-        const tasksData = snapshot.docs.map((doc) => doc.data());
-        tasksData.sort((a, b) => b.timestamp - a.timestamp);
+        const tasksData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        tasksData.sort((a, b) => (Number(b?.timestamp) || 0) - (Number(a?.timestamp) || 0));
 
-        setTasks((prevTasks) => {
-          if (
-            prevTasks.length > 0 &&
-            "Notification" in window &&
-            Notification.permission === "granted"
-          ) {
-            const ownerId = localStorage.getItem(
-              "isg_notification_device_owner",
-            );
+        const prevTasks = previousTasksRef.current;
+        if (prevTasks && prevTasks.length > 0) {
+          try {
+            const ownerId = localStorage.getItem("isg_notification_device_owner");
             const notifRole = localStorage.getItem("isg_notification_role");
             const notifDept = localStorage.getItem("isg_notification_dept");
             const localLang = localStorage.getItem("isg_lang") || "tr";
@@ -7353,13 +7884,11 @@ export default function App() {
                     (notifRole === "sef" && notifDept === newTask.dept) ||
                     notifRole === "admin";
                   if (isTargetUser) {
-                    new Notification(
-                      localLang === "tr"
-                        ? "Yeni İSG İhlali"
-                        : "New OHS Violation",
+                    triggerClientNotification(
+                      localLang === "tr" ? "Yeni İSG İhlali" : "New OHS Violation",
                       {
-                        body: newTask.desc,
-                        icon: "/favicon.svg",
+                        body: newTask.desc || newTask.subject || "Yeni bir ihlal kaydı açıldı.",
+                        tag: `new-task-${newTask.id}`,
                       },
                     );
                   }
@@ -7405,14 +7934,20 @@ export default function App() {
                   }
 
                   if (title && body) {
-                    new Notification(title, { body, icon: "/favicon.svg" });
+                    triggerClientNotification(title, {
+                      body,
+                      tag: `status-${newTask.id}-${newTask.status}`,
+                    });
                   }
                 }
               });
             }
+          } catch (notifErr) {
+            console.warn("Background notification check error:", notifErr);
           }
-          return tasksData;
-        });
+        }
+        previousTasksRef.current = tasksData;
+        setTasks(tasksData);
       },
       handleSnapErr,
     );
