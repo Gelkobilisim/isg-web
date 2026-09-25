@@ -23,7 +23,9 @@ try {
       body: body,
       icon: '/adsmetal_logo.jpg',
       badge: '/adsmetal_logo.jpg',
-      vibrate: [200, 100, 200],
+      vibrate: [200, 100, 200, 100, 200],
+      silent: false,
+      sound: 'default',
       data: {
         url: payload.data?.click_action || payload.fcmOptions?.link || '/'
       }

@@ -69,6 +69,7 @@ import {
   Sparkles,
   ArrowRight,
   KeyRound,
+  Volume2,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "motion/react";
@@ -285,8 +286,89 @@ const STATUS_INFO = {
   },
 };
 
+let sharedAudioCtx = null;
+const getAudioContext = () => {
+  if (typeof window === "undefined") return null;
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new AudioCtx();
+    }
+    if (sharedAudioCtx.state === "suspended") {
+      sharedAudioCtx.resume().catch(() => {});
+    }
+    return sharedAudioCtx;
+  } catch (e) {
+    return null;
+  }
+};
+
+const playNotificationSound = (type = "chime") => {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+    const now = ctx.currentTime;
+
+    if (type === "urgent" || type === "alert") {
+      // High-priority alert sound (two-tone warning)
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, now); // A5
+      osc.frequency.setValueAtTime(659.25, now + 0.12); // E5
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.4);
+    } else {
+      // Harmonic crystal chime: G5 (784Hz) -> C6 (1046.5Hz) with warm resonance
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gainNode = ctx.createGain();
+
+      osc1.type = "sine";
+      osc2.type = "triangle";
+
+      osc1.frequency.setValueAtTime(783.99, now); // G5
+      osc1.frequency.exponentialRampToValueAtTime(1046.5, now + 0.08); // C6
+
+      osc2.frequency.setValueAtTime(1567.98, now); // Harmonic G6
+      osc2.frequency.exponentialRampToValueAtTime(2093.0, now + 0.08); // Harmonic C7
+
+      gainNode.gain.setValueAtTime(0, now);
+      gainNode.gain.linearRampToValueAtTime(0.28, now + 0.02);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + 0.58);
+
+      osc1.connect(gainNode);
+      osc2.connect(gainNode);
+      gainNode.connect(ctx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.58);
+      osc2.stop(now + 0.58);
+    }
+
+    // Optional haptic vibration for mobile devices
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate([150, 75, 150]);
+    }
+  } catch (err) {
+    console.warn("Notification sound could not be played:", err);
+  }
+};
+
 const triggerClientNotification = (title, options = {}) => {
   try {
+    // Play crystal clear notification sound immediately
+    playNotificationSound(options.soundType || "chime");
+
     if (typeof window === "undefined" || !("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
 
@@ -297,7 +379,8 @@ const triggerClientNotification = (title, options = {}) => {
             reg.showNotification(title, {
               icon: "/adsmetal_logo.jpg",
               badge: "/adsmetal_logo.jpg",
-              vibrate: [200, 100, 200],
+              vibrate: [200, 100, 200, 100, 200],
+              silent: false,
               ...options,
             });
           }
@@ -309,6 +392,7 @@ const triggerClientNotification = (title, options = {}) => {
     try {
       new Notification(title, {
         icon: "/adsmetal_logo.jpg",
+        silent: false,
         ...options,
       });
     } catch {
@@ -1894,13 +1978,27 @@ const MainLayout = ({ theme = "blue", children }) => {
                             </option>
                           ))}
                         </select>
-                        <button
-                          onClick={handleTestNotification}
-                          disabled={!testDept || isTesting}
-                          className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-sm text-xs sm:text-sm shrink-0"
-                        >
-                          {isTesting ? "Gönderiliyor..." : "Gönder"}
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playNotificationSound("chime");
+                              triggerHaptic("success");
+                            }}
+                            title="Bildirim Zil Sesini Çal"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm text-xs sm:text-sm shrink-0"
+                          >
+                            <Volume2 className="w-4 h-4" />
+                            <span>Sesi Test Et</span>
+                          </button>
+                          <button
+                            onClick={handleTestNotification}
+                            disabled={!testDept || isTesting}
+                            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-sm text-xs sm:text-sm shrink-0"
+                          >
+                            {isTesting ? "Gönderiliyor..." : "Gönder"}
+                          </button>
+                        </div>
                       </div>
                     </div>
 

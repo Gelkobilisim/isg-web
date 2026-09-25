@@ -813,8 +813,27 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           notification: {
             icon: "/adsmetal_logo.jpg",
             badge: "/adsmetal_logo.jpg",
-            vibrate: [200, 100, 200],
+            vibrate: [200, 100, 200, 100, 200],
             requireInteraction: false,
+            silent: false,
+            sound: "default",
+          },
+        },
+        android: {
+          priority: "high",
+          notification: {
+            sound: "default",
+            defaultSound: true,
+            defaultVibrateTimings: true,
+            icon: "/adsmetal_logo.jpg",
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
+            },
           },
         },
         tokens: uniqueTokens,
