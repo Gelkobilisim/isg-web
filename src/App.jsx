@@ -304,6 +304,22 @@ const getAudioContext = () => {
   }
 };
 
+// Seamless AudioContext unlock on first user gesture for iOS Safari & Android Chrome
+if (typeof window !== "undefined") {
+  const unlockAudio = () => {
+    try {
+      const ctx = getAudioContext();
+      if (ctx && ctx.state === "suspended") {
+        ctx.resume().catch(() => {});
+      }
+    } catch {}
+    window.removeEventListener("pointerdown", unlockAudio);
+    window.removeEventListener("keydown", unlockAudio);
+  };
+  window.addEventListener("pointerdown", unlockAudio, { passive: true, once: true });
+  window.addEventListener("keydown", unlockAudio, { passive: true, once: true });
+}
+
 const playNotificationSound = (type = "chime") => {
   try {
     const ctx = getAudioContext();
@@ -7516,7 +7532,7 @@ export default function App() {
     }
   }, []);
 
-  const requestNotificationPermission = async () => {
+  const requestNotificationPermission = useCallback(async () => {
     if (isRegisteringDevice) return;
 
     if (!("Notification" in window) || !("serviceWorker" in navigator)) {
@@ -7656,7 +7672,7 @@ export default function App() {
     } finally {
       setIsRegisteringDevice(false);
     }
-  };
+  }, [isRegisteringDevice, currentUser]);
 
   const verifyAndSyncToken = useCallback(async (userObj) => {
     if (
@@ -8269,7 +8285,7 @@ export default function App() {
     localStorage.removeItem("isg_logged_in_user");
     localStorage.removeItem("isg_auth_token");
     setShowLogoutModal(false);
-  }, []);
+  }, [currentUser]);
 
   const createTask = useCallback(
     async (dept, priority, subject, desc, deadlineHours, imgUrl) => {
