@@ -2682,7 +2682,7 @@ const YukleniciDashboard = () => {
 };
 const ModDashboard = () => {
   const ctx = useAppContext();
-  const { t, tasks, createTask, updateTaskStatus, DEPARTMENTS } = ctx;
+  const { t, tasks, createTask, updateTaskStatus } = ctx;
 
   const [activeTab, setActiveTab] = React.useState("create"); // 'create' or 'review'
   const [actionModal, setActionModal] = React.useState({
@@ -2825,9 +2825,9 @@ const ModDashboard = () => {
                   }
                   className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100"
                 >
-                  {DEPARTMENTS.map((d) => (
-                    <option key={d.id} value={d.name}>
-                      {t(d.key)}
+                  {DEPARTMENTS.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {t(getDeptKey(dept)) || dept}
                     </option>
                   ))}
                 </select>
@@ -2966,7 +2966,7 @@ const ModDashboard = () => {
                           {task.subject || "İhlal Bildirimi"}
                         </span>
                         <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                          ({t(ctx.getDeptKey(task.dept))})
+                          ({t(getDeptKey(task.dept))})
                         </span>
                         <span
                           className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${task.priority === "yuksek" || task.priority === "kritik" ? "bg-red-100 text-red-700" : task.priority === "orta" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}
@@ -8082,6 +8082,8 @@ export default function App() {
       requestNotificationPermission,
       showPdfReportModal,
       setShowPdfReportModal,
+      DEPARTMENTS,
+      getDeptKey,
     }),
     [
       currentUser,
