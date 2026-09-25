@@ -65,6 +65,7 @@ import {
   Bug,
   MessageSquare,
   Upload,
+  FileText,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "motion/react";
@@ -125,6 +126,7 @@ import {
   ShipmentCardSkeleton,
   PaginationControl,
 } from "./components/SkeletonLoader";
+import PdfReportModal from "./components/PdfReportModal";
 
 import { validateEnvVariables } from "./utils/envValidator";
 
@@ -944,6 +946,8 @@ const MainLayout = ({ theme = "blue", children }) => {
     db,
     notificationStatus,
     requestNotificationPermission,
+    showPdfReportModal,
+    setShowPdfReportModal,
   } = ctx;
 
   let roleText = currentUser.role;
@@ -1273,6 +1277,22 @@ const MainLayout = ({ theme = "blue", children }) => {
             >
               <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
               <span>Gelen Bildirimler</span>
+            </button>
+          )}
+
+          {(currentUser.role === "admin" ||
+            currentUser.role === "yonetici" ||
+            currentUser.username === "agiradar" ||
+            currentUser.username === "agiradarsahin") && (
+            <button
+              onClick={() => {
+                setShowPdfReportModal(true);
+                setSidebarOpen(false);
+              }}
+              className="w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-all text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 cursor-pointer"
+            >
+              <FileText className="w-5 h-5 mr-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span>Rapor Oluştur (PDF)</span>
             </button>
           )}
         </nav>
@@ -1874,6 +1894,8 @@ const YuklemeciDashboard = () => {
     db,
     notificationStatus,
     requestNotificationPermission,
+    showPdfReportModal,
+    setShowPdfReportModal,
   } = ctx;
 
   const [isCreating, setIsCreating] = useState(false);
@@ -1945,20 +1967,29 @@ const YuklemeciDashboard = () => {
           </h1>
           <p className="text-orange-100 font-medium">{t("yuk_desc")}</p>
         </div>
-        <div className="z-10 bg-white dark:bg-gray-800/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex items-center space-x-3">
-          <div className="bg-white dark:bg-gray-800/20 p-2 rounded-xl">
-            <Scale className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">
-              {t("tonnage_24h")}
-            </p>
-            <p className="text-2xl font-extrabold text-white">
-              {tonnage24h.toLocaleString("tr-TR")}{" "}
-              <span className="text-sm font-medium">
-                {t("unit_ton") || "Ton"}
-              </span>
-            </p>
+        <div className="z-10 flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setShowPdfReportModal(true)}
+            className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/30 text-white font-bold text-sm flex items-center space-x-2 transition-all cursor-pointer shadow-sm"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Sevkiyat Raporu (PDF)</span>
+          </button>
+          <div className="bg-white dark:bg-gray-800/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex items-center space-x-3">
+            <div className="bg-white dark:bg-gray-800/20 p-2 rounded-xl">
+              <Scale className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">
+                {t("tonnage_24h")}
+              </p>
+              <p className="text-2xl font-extrabold text-white">
+                {tonnage24h.toLocaleString("tr-TR")}{" "}
+                <span className="text-sm font-medium">
+                  {t("unit_ton") || "Ton"}
+                </span>
+              </p>
+            </div>
           </div>
         </div>
         <Package className="w-48 h-48 text-white opacity-10 absolute right-0 -bottom-10 z-0 transform -rotate-12 pointer-events-none" />
@@ -3722,6 +3753,8 @@ const AdminDashboard = () => {
     db,
     notificationStatus,
     requestNotificationPermission,
+    showPdfReportModal,
+    setShowPdfReportModal,
   } = ctx;
 
   const navigate = useNavigate();
@@ -6398,19 +6431,28 @@ const AdminDashboard = () => {
             </div>
           </div>
         </div>
-        {adminSystemMode === "isg" && (
-          <div className="flex items-center bg-blue-50 px-5 py-3 rounded-2xl border border-blue-100 mt-4 md:mt-0">
-            <Calendar className="w-6 h-6 text-blue-600 mr-3" />
-            <div>
-              <p className="text-xs font-bold text-blue-800 uppercase tracking-wider">
-                {t("next_reset")}
-              </p>
-              <p className="text-lg font-bold text-blue-900">
-                {getLastFridayOfCurrentMonth()}
-              </p>
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto mt-4 xl:mt-0">
+          <button
+            onClick={() => setShowPdfReportModal(true)}
+            className="flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-4 py-2.5 rounded-2xl font-bold shadow-md hover:shadow-lg transition-all text-sm cursor-pointer"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Yönetim Raporu (PDF)</span>
+          </button>
+          {adminSystemMode === "isg" && (
+            <div className="flex items-center bg-blue-50 dark:bg-blue-900/30 px-5 py-2.5 rounded-2xl border border-blue-100 dark:border-blue-800">
+              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3" />
+              <div>
+                <p className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider">
+                  {t("next_reset")}
+                </p>
+                <p className="text-base font-bold text-blue-900 dark:text-blue-200">
+                  {getLastFridayOfCurrentMonth()}
+                </p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -6782,6 +6824,7 @@ export default function App() {
 
   const [adminSystemMode, setAdminSystemMode] = useState("isg");
   const [adminViewMode, setAdminViewMode] = useState("list");
+  const [showPdfReportModal, setShowPdfReportModal] = useState(false);
 
   const [notificationStatus, setNotificationStatus] = useState(
     "Notification" in window ? Notification.permission : "unsupported",
@@ -7598,21 +7641,73 @@ export default function App() {
   const createTask = useCallback(
     async (dept, priority, subject, desc, deadlineHours, imgUrl) => {
       const taskId = Date.now().toString();
+      const taskDeadline = deadlineHours || 24;
+
+      // Determine initial infraction penalty based on priority level
+      const normPri = (priority || "").toLowerCase();
+      let infractionPenalty = 10;
+      let priorityCode = "A";
+      let priorityLabel = "Normal";
+
+      if (
+        normPri.includes("c") ||
+        normPri.includes("kritik") ||
+        normPri === "yuksek" ||
+        normPri === "high"
+      ) {
+        infractionPenalty = 20;
+        priorityCode = "C";
+        priorityLabel = "Kritik";
+      } else if (
+        normPri.includes("b") ||
+        normPri === "orta" ||
+        normPri === "medium"
+      ) {
+        infractionPenalty = 15;
+        priorityCode = "B";
+        priorityLabel = "Yüksek Risk";
+      }
+
       const newTask = {
         id: taskId,
         dept,
         priority,
+        level: priorityCode,
         subject,
         desc,
         status: "acik",
         createdAt: formatDate(new Date()),
         timestamp: Date.now(),
-        deadlineHours,
+        deadlineHours: taskDeadline,
         imgUrl: imgUrl || "",
         modNote: "",
+        initialPenalty: infractionPenalty,
       };
       await setDoc(doc(db, "tasks", taskId), newTask);
       triggerHaptic("success");
+
+      // 1. İHLAL OLUŞTUĞUNDA DEPARTMANDAN EKSİ PUAN DÜŞÜLÜR
+      if (dept && infractionPenalty > 0) {
+        try {
+          const pointsRef = doc(db, "system", "points");
+          await updateDoc(pointsRef, {
+            [dept]: increment(-infractionPenalty),
+          });
+
+          await addDoc(collection(db, "point_logs"), {
+            id: Date.now().toString() + Math.random().toString(36).substring(7),
+            dept: dept,
+            points: -infractionPenalty,
+            reason: `Yeni İSG İhlali Tespiti (${priorityCode} Seviye - ${priorityLabel})`,
+            adminName: "Sistem (İSG İhlal)",
+            dateStr: new Date().toLocaleString("tr-TR"),
+            timestamp: Date.now(),
+            taskId: taskId,
+          });
+        } catch (e) {
+          console.error("İhlal puan kesintisi hatası:", e);
+        }
+      }
 
       // API Notification trigger
       const currentToken = localStorage.getItem("isg_auth_token") || "";
@@ -7657,41 +7752,137 @@ export default function App() {
           dept = taskData.dept || "";
           oldStatus = taskData.status || "";
 
-          // Puan sistemi mantığı: Sadece "acik" durumdan "cozuldu" durumuna geçerken
+          // Puan sistemi mantığı:
+          // 1. "acik" veya "itiraz_edildi" durumundan "cozuldu" durumuna geçerken:
           if (newStatus === "cozuldu" && oldStatus !== "cozuldu") {
-            const now = taskData.resolvedTimestamp || Date.now();
-            const createdAt = taskData.timestamp;
-            const deadlineHours = taskData.deadlineHours;
-            if (deadlineHours) {
-              const diffMs = now - createdAt;
-              const diffHours = diffMs / (1000 * 60 * 60);
-              let multiplier = 1;
-              if (diffHours <= deadlineHours / 2) multiplier = 2;
+            const now = Date.now();
+            const createdAt = taskData.timestamp || now;
+            const deadlineHours = taskData.deadlineHours || 24;
+            const diffMs = Math.max(0, now - createdAt);
+            const diffHours = diffMs / (1000 * 60 * 60);
 
-              let basePoint = 0;
-              if (taskData.priority === "C_KRITIK") basePoint = 20;
-              else if (taskData.priority === "B_YUKSEK") basePoint = 15;
-              else if (taskData.priority === "A_NORMAL") basePoint = 10;
+            // Determine priority baseline
+            const normPri = (taskData.priority || taskData.level || "").toLowerCase();
+            let baseRecovery = 10;
+            let priorityCode = "A";
+            if (
+              normPri.includes("c") ||
+              normPri.includes("kritik") ||
+              normPri === "yuksek" ||
+              normPri === "high"
+            ) {
+              baseRecovery = 20;
+              priorityCode = "C";
+            } else if (
+              normPri.includes("b") ||
+              normPri === "orta" ||
+              normPri === "medium"
+            ) {
+              baseRecovery = 15;
+              priorityCode = "B";
+            }
 
-              const earnedPoint = basePoint * multiplier;
+            const initialPenalty = taskData.initialPenalty || baseRecovery;
 
-              if (earnedPoint > 0 && taskData.dept) {
+            if (diffHours <= deadlineHours) {
+              // ZAMANINDA ÇÖZÜM
+              if (diffHours <= deadlineHours / 2) {
+                // HIZLI ÇÖZÜM: Verilen sürenin ilk yarısında tamamlandı (Örn: 24 saatin ilk 12 saatinde)
+                // Kesilen ceza iade edilir + Hızlı müdahale ödülü (+10 puan) eklenir
+                const bonusReward = 10;
+                const totalPoints = initialPenalty + bonusReward;
+
                 const pointsRef = doc(db, "system", "points");
-                const deptKey = taskData.dept;
                 await updateDoc(pointsRef, {
-                  [deptKey]: increment(earnedPoint),
+                  [dept]: increment(totalPoints),
                 });
 
-                const logRef = doc(collection(db, "point_logs"));
-                await setDoc(logRef, {
+                await addDoc(collection(db, "point_logs"), {
+                  id: Date.now().toString() + Math.random().toString(36).substring(7),
+                  dept: dept,
+                  points: totalPoints,
+                  reason: `Hızlı İhlal Çözümü: ${Math.round(diffHours)} saatte giderildi (+${initialPenalty} ceza telafisi, +${bonusReward} hızlı müdahale ödülü)`,
+                  adminName: "Sistem (Hızlı Çözüm)",
+                  dateStr: new Date().toLocaleString("tr-TR"),
                   timestamp: Date.now(),
-                  dept: taskData.dept,
-                  points: earnedPoint,
-                  taskId: taskData.id,
-                  reason: `${taskData.priority} ihlal çözümü`,
+                  taskId: id,
+                });
+              } else {
+                // NORMAL ZAMANINDA ÇÖZÜM: Süre dolmadan tamamlandı
+                // Kesilen ceza puanı telafi edilir
+                const pointsRef = doc(db, "system", "points");
+                await updateDoc(pointsRef, {
+                  [dept]: increment(initialPenalty),
+                });
+
+                await addDoc(collection(db, "point_logs"), {
+                  id: Date.now().toString() + Math.random().toString(36).substring(7),
+                  dept: dept,
+                  points: initialPenalty,
+                  reason: `Zamanında İhlal Çözümü: ${Math.round(diffHours)} saatte tamamlandı (+${initialPenalty} ceza telafisi)`,
+                  adminName: "Sistem (Zamanında Çözüm)",
+                  dateStr: new Date().toLocaleString("tr-TR"),
+                  timestamp: Date.now(),
+                  taskId: id,
                 });
               }
+            } else {
+              // GEÇ ÇÖZÜLDÜ (SÜRE AŞIMI - X ÇARPANLI EKSİ PUAN KESİNTİSİ)
+              // Verilen süre aşılmış! Sürenin kaç katı aşıldığına göre katlanan ek ceza puanı kesilir:
+              const lateRatio = diffHours / deadlineHours;
+              let lateMultiplier = 1.5;
+              let latePenalty = 15;
+
+              if (lateRatio >= 2) {
+                // Sürenin 2 katından fazla gecikmiş (Örn: 24 saatlik süre 48 saatten sonra çözülmüş)
+                lateMultiplier = 3;
+                latePenalty = 30; // 3x ağır gecikme cezası
+              } else if (lateRatio >= 1.5) {
+                // 1.5 kat gecikme (Örn: 36 saat ve üzeri)
+                lateMultiplier = 2;
+                latePenalty = 20; // 2x gecikme cezası
+              } else {
+                // 1x - 1.5x gecikme (Örn: 25 - 35 saat)
+                lateMultiplier = 1.5;
+                latePenalty = 15;
+              }
+
+              const pointsRef = doc(db, "system", "points");
+              await updateDoc(pointsRef, {
+                [dept]: increment(-latePenalty),
+              });
+
+              await addDoc(collection(db, "point_logs"), {
+                id: Date.now().toString() + Math.random().toString(36).substring(7),
+                dept: dept,
+                points: -latePenalty,
+                reason: `Gecikmeli İhlal Çözümü: Verilen ${deadlineHours} saatlik süre ${Math.round(diffHours)} saatte aşılarak çözüldü (${lateMultiplier}x Gecikme Cezası: -${latePenalty} Puan)`,
+                adminName: "Sistem (Süre Aşımı Cezası)",
+                dateStr: new Date().toLocaleString("tr-TR"),
+                timestamp: Date.now(),
+                taskId: id,
+              });
             }
+          }
+
+          // 2. Haksız ihlal itirazı kabul edildiğinde ("kapatildi"):
+          if (newStatus === "kapatildi" && oldStatus === "itiraz_edildi") {
+            const initialPenalty = taskData.initialPenalty || 15;
+            const pointsRef = doc(db, "system", "points");
+            await updateDoc(pointsRef, {
+              [dept]: increment(initialPenalty),
+            });
+
+            await addDoc(collection(db, "point_logs"), {
+              id: Date.now().toString() + Math.random().toString(36).substring(7),
+              dept: dept,
+              points: initialPenalty,
+              reason: `İtiraz Kabul Edildi: İhlal tutanağı iptal edildi (+${initialPenalty} ceza puanı iadesi)`,
+              adminName: "Yönetim (İtiraz Onayı)",
+              dateStr: new Date().toLocaleString("tr-TR"),
+              timestamp: Date.now(),
+              taskId: id,
+            });
           }
         }
 
@@ -7889,6 +8080,8 @@ export default function App() {
       db,
       notificationStatus,
       requestNotificationPermission,
+      showPdfReportModal,
+      setShowPdfReportModal,
     }),
     [
       currentUser,
@@ -7919,6 +8112,7 @@ export default function App() {
       get24HourTonnage,
       notificationStatus,
       requestNotificationPermission,
+      showPdfReportModal,
     ],
   );
 
@@ -8142,6 +8336,16 @@ export default function App() {
                           </div>
                         </div>
                       )}
+
+                      <PdfReportModal
+                        isOpen={showPdfReportModal}
+                        onClose={() => setShowPdfReportModal(false)}
+                        tasks={tasks}
+                        loadings={loadings}
+                        departments={DEPARTMENTS}
+                        currentUser={currentUser}
+                        points={points}
+                      />
                     </>
                   </ProtectedRoute>
                 }
