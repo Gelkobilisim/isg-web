@@ -1,6 +1,7 @@
 import { triggerHaptic } from "./utils/haptics";
 import { DICT } from "./i18n";
 import { Toaster, toast } from "react-hot-toast";
+import { CountUp } from "./components/CountUp";
 import React, {
   useState,
   useEffect,
@@ -70,6 +71,7 @@ import {
   ArrowRight,
   KeyRound,
   Volume2,
+  VolumeX,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "motion/react";
@@ -322,12 +324,83 @@ if (typeof window !== "undefined") {
 
 const playNotificationSound = (type = "chime") => {
   try {
+    // Respect optional sound alert preference
+    if (
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem("isg_sound_alerts") === "false"
+    ) {
+      return;
+    }
+
     const ctx = getAudioContext();
     if (!ctx) return;
     if (ctx.state === "suspended") {
       ctx.resume().catch(() => {});
     }
     const now = ctx.currentTime;
+
+    if (type === "critical_alarm" || type === "emergency") {
+      // Elegant industrial alert chime: 2-tone melodic double-pulse (clear, urgent, non-abrasive)
+      // Pulse 1: 880Hz -> 1174Hz (0.14s)
+      const osc1 = ctx.createOscillator();
+      const oscHarm1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+
+      osc1.type = "sine";
+      oscHarm1.type = "triangle";
+
+      osc1.frequency.setValueAtTime(880, now);
+      osc1.frequency.exponentialRampToValueAtTime(1174.66, now + 0.07);
+
+      oscHarm1.frequency.setValueAtTime(440, now);
+      oscHarm1.frequency.exponentialRampToValueAtTime(587.33, now + 0.07);
+
+      gain1.gain.setValueAtTime(0, now);
+      gain1.gain.linearRampToValueAtTime(0.32, now + 0.015);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+      osc1.connect(gain1);
+      oscHarm1.connect(gain1);
+      gain1.connect(ctx.destination);
+
+      osc1.start(now);
+      oscHarm1.start(now);
+      osc1.stop(now + 0.14);
+      oscHarm1.stop(now + 0.14);
+
+      // Pulse 2: 987.77Hz -> 1318.5Hz (starts at now + 0.16s, lasts 0.28s)
+      const t2 = now + 0.16;
+      const osc2 = ctx.createOscillator();
+      const oscHarm2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+
+      osc2.type = "sine";
+      oscHarm2.type = "triangle";
+
+      osc2.frequency.setValueAtTime(987.77, t2);
+      osc2.frequency.exponentialRampToValueAtTime(1318.51, t2 + 0.08);
+
+      oscHarm2.frequency.setValueAtTime(493.88, t2);
+      oscHarm2.frequency.exponentialRampToValueAtTime(659.25, t2 + 0.08);
+
+      gain2.gain.setValueAtTime(0, t2);
+      gain2.gain.linearRampToValueAtTime(0.35, t2 + 0.015);
+      gain2.gain.exponentialRampToValueAtTime(0.0001, t2 + 0.28);
+
+      osc2.connect(gain2);
+      oscHarm2.connect(gain2);
+      gain2.connect(ctx.destination);
+
+      osc2.start(t2);
+      oscHarm2.start(t2);
+      osc2.stop(t2 + 0.28);
+      oscHarm2.stop(t2 + 0.28);
+
+      if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+        navigator.vibrate([180, 80, 220]);
+      }
+      return;
+    }
 
     if (type === "urgent" || type === "alert") {
       // High-priority alert sound (two-tone warning)
@@ -668,7 +741,7 @@ const LoginScreen = () => {
       setLockoutSeconds((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          setLoginErr("");
+          setTimeout(() => setLoginErr(""), 0);
           return 0;
         }
         return prev - 1;
@@ -1294,6 +1367,13 @@ const LoginScreen = () => {
               <span>256-Bit SSL Uçtan Uca Güvenli Bağlantı</span>
             </div>
           </form>
+
+          {/* Signature */}
+          <div className="pt-4 text-center">
+            <span className="text-xs italic font-light text-gray-400/50 dark:text-gray-500/40 select-none tracking-widest">
+              by Gelkobilisim
+            </span>
+          </div>
         </div>
       </div>
 
@@ -1478,6 +1558,8 @@ const MainLayout = ({ theme = "blue", children }) => {
     requestNotificationPermission,
     showPdfReportModal,
     setShowPdfReportModal,
+    soundAlerts,
+    toggleSoundAlerts,
   } = ctx;
 
   let roleText = currentUser.role;
@@ -1896,13 +1978,18 @@ const MainLayout = ({ theme = "blue", children }) => {
           >
             <LogOut className="w-5 h-5 mr-3 shrink-0" /> {t("logout")}
           </button>
+          <div className="pt-2 text-center">
+            <span className="text-[10px] italic font-light text-gray-400/40 dark:text-gray-500/40 select-none tracking-widest">
+              by Gelkobilisim
+            </span>
+          </div>
         </div>
       </aside>
 
       {/* Main Content Wrapper */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile Header */}
-        <header className="lg:hidden bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
+        {/* Mobile Header (Glassmorphic) */}
+        <header className="lg:hidden glass-header border-b border-gray-200/80 dark:border-gray-800/80 px-4 py-2.5 flex items-center justify-between shrink-0 sticky top-0 z-30 shadow-xs">
           <div className="flex items-center">
             <button
               onClick={() => setSidebarOpen(true)}
@@ -1917,17 +2004,114 @@ const MainLayout = ({ theme = "blue", children }) => {
               />
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg"
-          >
-            <LogOut className="w-5 h-5" />
-          </button>
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={toggleSoundAlerts}
+              className={`p-2 rounded-lg transition-colors ${
+                soundAlerts
+                  ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
+                  : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
+              }`}
+              title={soundAlerts ? "Sesli Uyarılar: Açık" : "Sesli Uyarılar: Kapalı"}
+            >
+              {soundAlerts ? (
+                <Volume2 className="w-4 h-4" />
+              ) : (
+                <VolumeX className="w-4 h-4" />
+              )}
+            </button>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+              title="Tema"
+            >
+              {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+            </button>
+            <button
+              onClick={logout}
+              className="p-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-lg"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </header>
+
+        {/* Desktop Header (Glassmorphic) */}
+        <header className="hidden lg:flex glass-header border-b border-gray-200/80 dark:border-gray-800/80 px-6 py-2.5 items-center justify-between shrink-0 sticky top-0 z-20 shadow-xs">
+          <div className="flex items-center space-x-3">
+            <span
+              className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                adminSystemMode === "yukleme"
+                  ? "bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20"
+                  : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full animate-pulse ${
+                  adminSystemMode === "yukleme" ? "bg-orange-500" : "bg-blue-500"
+                }`}
+              ></span>
+              {adminSystemMode === "yukleme"
+                ? "Sevkiyat & Lojistik Modülü"
+                : "İSG & Kalite Portalı"}
+            </span>
+            <span className="text-xs text-gray-300 dark:text-gray-600">•</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              ADS Metal A.Ş. — Anadolu OSB
+            </span>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-2 bg-gray-100/70 dark:bg-gray-800/70 px-3 py-1.5 rounded-xl border border-gray-200/60 dark:border-gray-700/60 text-xs">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+              <span className="font-bold text-gray-800 dark:text-gray-100">
+                {currentUser?.name || "Kullanıcı"}
+              </span>
+              <span className="text-[10px] text-gray-400">({roleText})</span>
+            </div>
+            <button
+              onClick={toggleSoundAlerts}
+              className={`p-2 rounded-xl transition-colors ${
+                soundAlerts
+                  ? "text-blue-600 dark:text-blue-400 bg-blue-50/80 dark:bg-blue-900/30 hover:bg-blue-100"
+                  : "text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+              title={
+                soundAlerts
+                  ? "Sesli Uyarılar: Açık (Test sesi için tıklayın)"
+                  : "Sesli Uyarılar: Kapalı"
+              }
+            >
+              {soundAlerts ? (
+                <Volume2 className="w-4 h-4" />
+              ) : (
+                <VolumeX className="w-4 h-4" />
+              )}
+            </button>
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              title="Tema Değiştir"
+            >
+              {darkMode ? (
+                <Sun className="w-4 h-4 text-amber-400" />
+              ) : (
+                <Moon className="w-4 h-4 text-slate-600" />
+              )}
+            </button>
+          </div>
         </header>
 
         {/* Main Scrollable Content */}
-        <main className="flex-1 overflow-y-auto w-full relative min-w-0 overflow-x-hidden">
-          {children}
+        <main className="flex-1 overflow-y-auto w-full relative min-w-0 overflow-x-hidden flex flex-col justify-between">
+          <div className="flex-1 w-full flex flex-col">
+            {children}
+          </div>
+          <footer className="w-full py-4 text-center shrink-0">
+            <span className="text-xs italic font-light text-gray-400/40 dark:text-gray-500/40 select-none tracking-widest transition-opacity hover:opacity-80">
+              by Gelkobilisim
+            </span>
+          </footer>
         </main>
 
         {showDebug && (
@@ -2527,9 +2711,9 @@ const YuklemeciDashboard = () => {
               <p className="text-[11px] uppercase font-bold text-orange-200 tracking-wider">
                 {t("tonnage_24h")}
               </p>
-              <p className="text-2xl font-extrabold text-white">
-                {tonnage24h.toLocaleString("tr-TR")}{" "}
-                <span className="text-sm font-medium">
+              <p className="text-2xl font-extrabold text-white flex items-baseline">
+                <CountUp end={tonnage24h} decimals={1} />
+                <span className="text-sm font-medium ml-1">
                   {t("unit_ton") || "Ton"}
                 </span>
               </p>
@@ -2799,7 +2983,11 @@ const YuklemeciDashboard = () => {
           {activeLoadings.map((load) => (
             <div
               key={load.id}
-              className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col"
+              className={`bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col card-interactive status-rail ${
+                load.status === "yukleniyor"
+                  ? "status-rail-emerald"
+                  : "status-rail-amber"
+              }`}
             >
               <div className="bg-gray-50 dark:bg-gray-900 p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
                 <div>
@@ -3599,10 +3787,11 @@ const ModDashboard = () => {
             <div className="grid grid-cols-1 gap-6">
               {reviewTasks.slice(0, reviewLimit).map((task) => {
                 const isObjection = task.status === "itiraz_edildi";
+                const rail = isObjection ? "status-rail-red" : "status-rail-amber";
                 return (
                   <div
                     key={task.id}
-                    className="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 flex flex-col md:flex-row gap-5 hover:shadow-md transition-shadow"
+                    className={`border border-gray-200 dark:border-gray-700 rounded-2xl p-5 flex flex-col md:flex-row gap-5 card-interactive status-rail ${rail} bg-white dark:bg-gray-800 shadow-sm`}
                   >
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-3 mb-3">
@@ -4011,10 +4200,16 @@ const SefDashboard = () => {
         {displayTasks.slice(0, sefiTasksLimit).map((task) => {
           const statusObj = STATUS_INFO[task.status] || STATUS_INFO["acik"];
           const StatusIcon = statusObj.icon;
+          const railClass =
+            task.priority === "yuksek" || task.priority === "kritik"
+              ? "status-rail-red"
+              : task.status === "onaylandi" || task.status === "cozuldu"
+                ? "status-rail-emerald"
+                : "status-rail-amber";
           return (
             <div
               key={task.id}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col transition-all hover:shadow-md"
+              className={`bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col card-interactive status-rail ${railClass}`}
             >
               <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex flex-col gap-1.5">
@@ -4609,7 +4804,7 @@ const AdminDashboard = () => {
   const handleIsgPrevMonth = useCallback(() => {
     setIsgCalendarMonth((prev) => {
       if (prev === 0) {
-        setIsgCalendarYear((y) => y - 1);
+        setTimeout(() => setIsgCalendarYear((y) => y - 1), 0);
         return 11;
       }
       return prev - 1;
@@ -4619,7 +4814,7 @@ const AdminDashboard = () => {
   const handleIsgNextMonth = useCallback(() => {
     setIsgCalendarMonth((prev) => {
       if (prev === 11) {
-        setIsgCalendarYear((y) => y + 1);
+        setTimeout(() => setIsgCalendarYear((y) => y + 1), 0);
         return 0;
       }
       return prev + 1;
@@ -4634,7 +4829,7 @@ const AdminDashboard = () => {
   const handleYuklemePrevMonth = useCallback(() => {
     setYuklemeCalendarMonth((prev) => {
       if (prev === 0) {
-        setYuklemeCalendarYear((y) => y - 1);
+        setTimeout(() => setYuklemeCalendarYear((y) => y - 1), 0);
         return 11;
       }
       return prev - 1;
@@ -4644,7 +4839,7 @@ const AdminDashboard = () => {
   const handleYuklemeNextMonth = useCallback(() => {
     setYuklemeCalendarMonth((prev) => {
       if (prev === 11) {
-        setYuklemeCalendarYear((y) => y + 1);
+        setTimeout(() => setYuklemeCalendarYear((y) => y + 1), 0);
         return 0;
       }
       return prev + 1;
@@ -5315,39 +5510,51 @@ const AdminDashboard = () => {
           </div>
 
           <div className="grid gap-4 mb-8">
-            {sortedDepts.map((dept, index) => (
-              <div
-                key={dept}
-                className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border rounded-2xl transition-colors ${index === 0 ? "bg-gradient-to-r from-yellow-50 to-white border-yellow-200" : "bg-white dark:bg-gray-800 hover:bg-gray-50"}`}
-              >
-                <div className="flex items-center">
-                  <span
-                    className={`w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg mr-4 shadow-sm ${index === 0 ? "bg-yellow-400 text-white" : index === 1 ? "bg-gray-300 text-white" : index === 2 ? "bg-orange-400 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"}`}
-                  >
-                    {index + 1}
-                  </span>
-                  <span className="font-bold text-lg text-gray-800 dark:text-gray-100">
-                    {t(getDeptKey(dept))}
-                  </span>
-                </div>
-                <div className="text-right flex items-center space-x-2 sm:space-x-4 mt-4 sm:mt-0">
-                  <button
-                    onClick={() => handleCustomBonus(dept)}
-                    className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg hover:bg-blue-100 font-bold transition-colors"
-                  >
-                    {t("custom_bonus") || "Özel Puan"}
-                  </button>
-                  <div>
-                    <span className={`text-3xl font-extrabold ${(points[dept] ?? 100) >= 90 ? "text-emerald-600 dark:text-emerald-400" : (points[dept] ?? 100) >= 70 ? "text-amber-500 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"}`}>
-                      {points[dept] ?? 100}
+            {sortedDepts.map((dept, index) => {
+              const railClass =
+                index === 0
+                  ? "status-rail-amber"
+                  : index === 1
+                    ? "status-rail-blue"
+                    : "status-rail-emerald";
+              return (
+                <div
+                  key={dept}
+                  className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border rounded-2xl transition-all card-interactive status-rail ${railClass} ${
+                    index === 0
+                      ? "bg-gradient-to-r from-yellow-50/80 to-white dark:from-yellow-950/20 dark:to-gray-800 border-yellow-300 dark:border-yellow-700/60 shadow-sm"
+                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50/60 dark:hover:bg-gray-750"
+                  }`}
+                >
+                  <div className="flex items-center">
+                    <span
+                      className={`w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg mr-4 shadow-sm ${index === 0 ? "bg-yellow-400 text-white" : index === 1 ? "bg-gray-300 text-white" : index === 2 ? "bg-orange-400 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"}`}
+                    >
+                      {index + 1}
                     </span>
-                    <span className="text-sm text-gray-500 dark:text-gray-400 font-normal ml-1 tracking-wider uppercase">
-                      {t("risk") || "Puan"}
+                    <span className="font-bold text-lg text-gray-800 dark:text-gray-100">
+                      {t(getDeptKey(dept))}
                     </span>
                   </div>
+                  <div className="text-right flex items-center space-x-2 sm:space-x-4 mt-4 sm:mt-0">
+                    <button
+                      onClick={() => handleCustomBonus(dept)}
+                      className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 font-bold transition-colors"
+                    >
+                      {t("custom_bonus") || "Özel Puan"}
+                    </button>
+                    <div>
+                      <span className={`text-3xl font-extrabold ${(points[dept] ?? 100) >= 90 ? "text-emerald-600 dark:text-emerald-400" : (points[dept] ?? 100) >= 70 ? "text-amber-500 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"}`}>
+                        <CountUp end={points[dept] ?? 100} duration={700} />
+                      </span>
+                      <span className="text-sm text-gray-500 dark:text-gray-400 font-normal ml-1 tracking-wider uppercase">
+                        {t("risk") || "Puan"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-4 pt-6 border-t border-gray-100 dark:border-gray-700">
@@ -6760,9 +6967,16 @@ const AdminDashboard = () => {
                         }
                       }
 
+                      const adminRail =
+                        task.priority === "kritik" || task.priority === "yuksek"
+                          ? "status-rail-red"
+                          : task.status === "onaylandi"
+                            ? "status-rail-emerald"
+                            : "status-rail-amber";
+
                       return (
                         <div
-                          className={`p-5 rounded-2xl border-l-4 bg-gray-50 dark:bg-gray-900 ${statusDef.color.split(" ")[2]} ${isGlowing ? "shadow-[0_0_15px_rgba(239,68,68,0.5)] ring-1 ring-red-400 animate-[pulse_2s_ease-in-out_infinite]" : "shadow-sm"}`}
+                          className={`p-5 rounded-2xl border-l-4 bg-gray-50 dark:bg-gray-900 ${statusDef.color.split(" ")[2]} card-interactive status-rail ${adminRail} ${isGlowing ? "shadow-[0_0_15px_rgba(239,68,68,0.5)] ring-1 ring-red-400 animate-[pulse_2s_ease-in-out_infinite]" : "shadow-sm"}`}
                         >
                           <div
                             className="flex flex-col cursor-pointer"
@@ -7120,6 +7334,11 @@ const AdminDashboard = () => {
                 {sortedDeptsAdmin.map((dept, index) => {
                   const redCount = getRedTaskCount(dept);
                   const isSelected = selectedAdminDept === dept;
+                  const borderRail = isSelected
+                    ? "border-blue-500 bg-blue-50/80 dark:bg-blue-900/30"
+                    : redCount > 0
+                      ? "border-red-500 hover:bg-red-50/30 dark:hover:bg-red-950/20"
+                      : "border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20";
                   return (
                     <div
                       key={dept}
@@ -7128,34 +7347,35 @@ const AdminDashboard = () => {
                         setAdminDeptFilter("all");
                         window.scrollTo(0, 0);
                       }}
-                      className={`flex justify-between items-center p-4 cursor-pointer transition-all group border-l-4 ${isSelected ? "border-blue-500 bg-blue-50" : "border-transparent hover:bg-gray-50"}`}
+                      className={`flex justify-between items-center p-4 cursor-pointer transition-all duration-200 group border-l-4 ${borderRail} hover:translate-x-1`}
                     >
                       <div className="flex items-center">
                         <span className="w-6 text-center text-sm font-bold mr-3 text-gray-400 dark:text-gray-500">
                           {index + 1}.
                         </span>
                         <span
-                          className={`font-bold ${isSelected ? "text-blue-700" : "text-gray-700 dark:text-gray-200 group-hover:text-blue-600"}`}
+                          className={`font-bold ${isSelected ? "text-blue-700 dark:text-blue-400" : "text-gray-700 dark:text-gray-200 group-hover:text-blue-600"}`}
                         >
                           {t(getDeptKey(dept))}
                         </span>
                       </div>
                       <div className="flex items-center">
                         {redCount > 0 ? (
-                          <div className="flex items-center bg-red-50 text-red-700 px-3 py-1.5 rounded-full border border-red-100 mr-2 shadow-sm">
-                            <span className="font-bold text-xs">
-                              {redCount} {t("problem")}
+                          <div className="flex items-center bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-3 py-1.5 rounded-full border border-red-100 dark:border-red-800 mr-2 shadow-xs">
+                            <span className="font-bold text-xs flex items-center">
+                              <CountUp end={redCount} />
+                              <span className="ml-1">{t("problem")}</span>
                             </span>
                           </div>
                         ) : (
-                          <div className="flex items-center bg-green-50 text-green-700 px-3 py-1.5 rounded-full border border-green-100 mr-2 opacity-90">
+                          <div className="flex items-center bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-full border border-green-100 dark:border-green-800 mr-2 opacity-90">
                             <span className="font-bold text-xs">
                               {t("no_problem")}
                             </span>
                           </div>
                         )}
                         <ChevronRight
-                          className={`w-5 h-5 transition-transform ${isSelected ? "text-blue-500 translate-x-1" : "text-gray-300"}`}
+                          className={`w-5 h-5 transition-transform ${isSelected ? "text-blue-500 translate-x-1" : "text-gray-300 dark:text-gray-600"}`}
                         />
                       </div>
                     </div>
@@ -7796,6 +8016,37 @@ export default function App() {
   const [previewModalImg, setPreviewModalImg] = useState(null);
   const [previewModalTitle, setPreviewModalTitle] = useState("");
 
+  // Optional Sound Alerts (Defaults to enabled)
+  const [soundAlerts, setSoundAlerts] = useState(() => {
+    return localStorage.getItem("isg_sound_alerts") !== "false";
+  });
+
+  const toggleSoundAlerts = useCallback(() => {
+    setSoundAlerts((prev) => {
+      const next = !prev;
+      localStorage.setItem("isg_sound_alerts", next ? "true" : "false");
+      setTimeout(() => {
+        if (next) {
+          playNotificationSound("critical_alarm");
+          toast.success(
+            lang === "tr"
+              ? "🔊 Sesli uyarılar açıldı (Örnek ses çalındı)"
+              : "🔊 Sound alerts enabled (Sample played)",
+            { id: "sound-toggle" },
+          );
+        } else {
+          toast(
+            lang === "tr"
+              ? "🔇 Sesli uyarılar sessize alındı"
+              : "🔇 Sound alerts muted",
+            { id: "sound-toggle" },
+          );
+        }
+      }, 0);
+      return next;
+    });
+  }, [lang]);
+
   const t = useCallback((key) => DICT[lang][key] || key, [lang]);
 
   const toggleLang = useCallback(() => {
@@ -7996,15 +8247,77 @@ export default function App() {
                 if (!oldTask) {
                   const isTargetUser =
                     (notifRole === "sef" && notifDept === newTask.dept) ||
-                    notifRole === "admin";
+                    notifRole === "admin" ||
+                    notifRole === "mod";
                   if (isTargetUser) {
-                    triggerClientNotification(
-                      localLang === "tr" ? "Yeni İSG İhlali" : "New OHS Violation",
-                      {
-                        body: newTask.desc || newTask.subject || "Yeni bir ihlal kaydı açıldı.",
-                        tag: `new-task-${newTask.id}`,
-                      },
-                    );
+                    const isCritical =
+                      newTask.priority === "kritik" ||
+                      newTask.priority === "yuksek" ||
+                      (newTask.subject &&
+                        (newTask.subject.toLowerCase().includes("yangın") ||
+                          newTask.subject.toLowerCase().includes("acil") ||
+                          newTask.subject.toLowerCase().includes("patlama") ||
+                          newTask.subject.toLowerCase().includes("gaz") ||
+                          newTask.subject.toLowerCase().includes("çökme")));
+
+                    if (isCritical) {
+                      // 1. Play the crisp, distinct industrial critical alarm chime
+                      playNotificationSound("critical_alarm");
+
+                      // 2. High-visibility open-screen emergency toast (deferred to avoid render collision)
+                      setTimeout(() => {
+                        toast.custom(
+                          (t) => (
+                            <div
+                              className={`${
+                                t.visible ? "animate-slide-down" : "animate-fade-out"
+                              } max-w-md w-full bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-2xl rounded-2xl p-4 flex items-center space-x-3 border-2 border-red-300 pointer-events-auto`}
+                            >
+                              <div className="p-2.5 bg-white/20 rounded-xl animate-pulse shrink-0">
+                                <AlertTriangle className="w-6 h-6 text-yellow-300" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-extrabold text-sm uppercase tracking-wide flex items-center gap-1.5">
+                                  <span className="w-2 h-2 rounded-full bg-yellow-300 animate-ping"></span>
+                                  🚨 Acil / Kritik İSG Bildirimi!
+                                </p>
+                                <p className="text-xs text-red-100 font-medium truncate mt-0.5">
+                                  <span className="font-bold underline">{newTask.dept}:</span>{" "}
+                                  {newTask.subject || newTask.desc || "Acil müdahale gerektiren durum."}
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => toast.dismiss(t.id)}
+                                className="p-1.5 hover:bg-white/20 rounded-lg text-white/80 hover:text-white transition-colors shrink-0"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          ),
+                          { duration: 9000, id: `critical-toast-${newTask.id}` }
+                        );
+                      }, 0);
+
+                      // 3. System notification
+                      triggerClientNotification(
+                        localLang === "tr"
+                          ? "🚨 KRİTİK İSG İHLALİ!"
+                          : "🚨 CRITICAL OHS ALERT!",
+                        {
+                          body: `${newTask.dept}: ${newTask.subject || newTask.desc || "Acil müdahale gerektiren durum."}`,
+                          tag: `critical-task-${newTask.id}`,
+                          soundType: "critical_alarm",
+                        },
+                      );
+                    } else {
+                      triggerClientNotification(
+                        localLang === "tr" ? "Yeni İSG İhlali" : "New OHS Violation",
+                        {
+                          body: newTask.desc || newTask.subject || "Yeni bir ihlal kaydı açıldı.",
+                          tag: `new-task-${newTask.id}`,
+                        },
+                      );
+                    }
                   }
                 } else if (oldTask.status !== newTask.status) {
                   const isTargetAdmin =
@@ -8731,6 +9044,8 @@ export default function App() {
       requestNotificationPermission,
       showPdfReportModal,
       setShowPdfReportModal,
+      soundAlerts,
+      toggleSoundAlerts,
       DEPARTMENTS,
       getDeptKey,
     }),
@@ -8764,6 +9079,8 @@ export default function App() {
       notificationStatus,
       requestNotificationPermission,
       showPdfReportModal,
+      soundAlerts,
+      toggleSoundAlerts,
     ],
   );
 
