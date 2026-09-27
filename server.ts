@@ -665,6 +665,31 @@ app.post(["/api/admin/update-user", "/admin/update-user"], async (req, res) => {
   }
 });
 
+// Admin: Kullanıcı silme (hem users koleksiyonundan hem de user_secrets koleksiyonundan temizler)
+app.post(["/api/admin/delete-user", "/admin/delete-user"], async (req, res) => {
+  const user = verifyUserToken(req);
+  if (!user || user.role !== "admin") {
+    return res.status(403).json({ error: "Yetkisiz işlem: Yalnızca admin kullanıcı silebilir." });
+  }
+
+  const { id } = req.body || {};
+  if (!id) {
+    return res.status(400).json({ error: "Kullanıcı ID zorunludur." });
+  }
+
+  if (String(id) === "1") {
+    return res.status(400).json({ error: "Ana yönetici hesabı silinemez!" });
+  }
+
+  try {
+    await getFirestore().collection("user_secrets").doc(String(id)).delete().catch(() => {});
+    await getFirestore().collection("users").doc(String(id)).delete();
+    return res.json({ success: true, message: "Kullanıcı başarıyla silindi." });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message || "Kullanıcı silinemedi." });
+  }
+});
+
 app.post(["/api/notify", "/notify"], async (req, res) => {
   if (!isFirebaseAdminInitialized) {
     return res.status(500).json({ error: "Firebase Admin is not configured." });
@@ -1048,7 +1073,7 @@ app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
     return res.json({
       success: true,
       removedCount,
-      totalTested: tokens.length,
+      totalTested: uniqueTokens.length,
     });
   } catch (error) {
     console.error("Cleanup Error:", error);

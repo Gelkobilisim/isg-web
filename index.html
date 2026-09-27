@@ -4,19 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/jpeg" href="/adsmetal_logo.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#1e293b" />
+    <meta name="theme-color" content="#0f172a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ADS Takip" />
+
+    <!-- Search Engine Indexing Directives -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
 
     <!-- SEO Meta Tags -->
     <title>ADS Takip - İSG ve Sevkiyat Yönetim Portalı</title>
     <meta
       name="description"
-      content="ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi."
+      content="ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi. Dijital denetim, anlık bildirimler ve resmi raporlama."
     />
     <meta name="author" content="ADS Metal A.Ş." />
-    <meta name="keywords" content="ADS Metal, ADS Takip, İSG, İş Sağlığı ve Güvenliği, Sevkiyat Takip, Fabrika Lojistik, Kalite Denetim" />
+    <meta name="keywords" content="ADS Metal, ADS Takip, adstakip, İSG, İş Sağlığı ve Güvenliği, Sevkiyat Takip, Fabrika Lojistik, Kalite Denetim, Saha Denetimi, İş Güvenliği Portalı" />
 
     <!-- Open Graph / Facebook / WhatsApp / LinkedIn -->
     <meta property="og:type" content="website" />
@@ -24,7 +28,7 @@
     <meta property="og:title" content="ADS Takip - İSG ve Sevkiyat Yönetim Portalı" />
     <meta
       property="og:description"
-      content="ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi."
+      content="ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi. Dijital denetim, anlık bildirimler ve resmi raporlama."
     />
     <meta property="og:image" content="/adsmetal_logo.jpg" />
 
@@ -33,7 +37,7 @@
     <meta name="twitter:title" content="ADS Takip - İSG ve Sevkiyat Yönetim Portalı" />
     <meta
       name="twitter:description"
-      content="ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi."
+      content="ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi. Dijital denetim, anlık bildirimler ve resmi raporlama."
     />
     <meta name="twitter:image" content="/adsmetal_logo.jpg" />
 
@@ -41,16 +45,31 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "ADS Takip",
-      "alternateName": "ADS Metal İSG ve Sevkiyat Yönetim Portalı",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "All",
-      "description": "ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi.",
-      "author": {
-        "@type": "Organization",
-        "name": "ADS Metal A.Ş."
-      }
+      "@graph": [
+        {
+          "@type": "WebApplication",
+          "name": "ADS Takip",
+          "alternateName": ["ADS Metal İSG ve Sevkiyat Yönetim Portalı", "adstakip", "ADS Takip Sistemi"],
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "All",
+          "description": "ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi.",
+          "inLanguage": "tr",
+          "publisher": {
+            "@type": "Organization",
+            "name": "ADS Metal A.Ş.",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "/adsmetal_logo.jpg"
+            }
+          }
+        },
+        {
+          "@type": "Organization",
+          "name": "ADS Metal A.Ş.",
+          "logo": "/adsmetal_logo.jpg",
+          "description": "ADS Metal A.Ş. endüstriyel üretim, çelik imalat ve lojistik çözümleri."
+        }
+      ]
     }
     </script>
 
@@ -59,7 +78,38 @@
     <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Fallback for search engine crawlers and non-JS clients -->
+    <noscript>
+      <div style="font-family: system-ui, -apple-system, sans-serif; padding: 40px 20px; max-width: 600px; margin: 40px auto; background: #0f172a; color: #f8fafc; border-radius: 16px; text-align: center; border: 1px solid #1e293b;">
+        <img src="/adsmetal_logo.jpg" alt="ADS Metal" style="width: 72px; height: 72px; border-radius: 14px; margin-bottom: 16px;" />
+        <h1 style="font-size: 22px; font-weight: 800; margin-bottom: 8px;">ADS Metal A.Ş.</h1>
+        <h2 style="font-size: 15px; font-weight: 600; color: #38bdf8; margin-bottom: 16px;">İSG ve Sevkiyat Yönetim Portalı</h2>
+        <p style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin-bottom: 20px;">
+          ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi.
+        </p>
+        <p style="font-size: 13px; color: #64748b;">
+          Portala erişmek ve sistemi kullanmak için lütfen tarayıcınızda JavaScript'i etkinleştirin.
+        </p>
+      </div>
+    </noscript>
+
+    <!-- React App Root Container with Pre-rendered Semantic Content for Googlebot -->
+    <div id="root">
+      <main style="min-height: 100vh; background-color: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; font-family: system-ui, -apple-system, sans-serif;">
+        <header style="text-align: center; max-width: 540px; margin: 0 auto;">
+          <img src="/adsmetal_logo.jpg" alt="ADS Metal Logo" style="width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.5);" />
+          <h1 style="font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #ffffff; margin: 0 0 6px 0;">ADS Metal A.Ş.</h1>
+          <p style="font-size: 15px; font-weight: 700; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 14px 0;">İSG ve Sevkiyat Yönetim Portalı</p>
+          <p style="font-size: 14px; line-height: 1.6; color: #cbd5e1; margin: 0 0 24px 0;">
+            ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi. Yetkili personel, bölüm şefleri ve fabrika yönetimi için dijital denetim ve operasyon platformu.
+          </p>
+        </header>
+        <section style="display: flex; gap: 8px; align-items: center; font-size: 12px; color: #94a3b8; background: #1e293b; padding: 8px 16px; border-radius: 999px; border: 1px solid #334155;">
+          <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #10b981;"></span>
+          <span>Sistem Aktif &bull; Yetkili Giriş Portalı Yükleniyor...</span>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

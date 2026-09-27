@@ -18,10 +18,12 @@ service cloud.firestore {
     }
 
     // Users: Readable by application users.
-    // Write permitted for user profiles and tokens, but client cannot write/overwrite passwords directly.
+    // Write permitted for user profiles and tokens, but client cannot write/overwrite passwords directly,
+    // nor can an existing user's role be altered from client-side to prevent privilege escalation.
     match /users/{userId} {
       allow read: if true;
-      allow write: if !('password' in request.resource.data);
+      allow write: if !('password' in request.resource.data) &&
+                      (!('role' in request.resource.data) || resource == null || request.resource.data.role == resource.data.role);
     }
 
     // Tasks (İSG İhlal ve Aksiyon Kayıtları): Full access for application management

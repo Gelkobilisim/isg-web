@@ -35,8 +35,6 @@ import {
   ArrowDownRight,
   ChevronRight,
   ChevronLeft,
-  ChevronsLeft,
-  ChevronsRight,
   ChevronUp,
   ChevronDown,
   ArrowLeft,
@@ -4681,9 +4679,12 @@ const AdminDashboard = () => {
       return () => clearInterval(interval);
     }
   }, [adminViewMode, currentUser, fetchLockedAccounts]);
-  const [isgCalendarDate, setIsgCalendarDate] = useState(() => new Date());
-  const isgCalendarMonth = isgCalendarDate.getMonth();
-  const isgCalendarYear = isgCalendarDate.getFullYear();
+  const [isgCalendarView, setIsgCalendarView] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+  const isgCalendarMonth = isgCalendarView.month;
+  const isgCalendarYear = isgCalendarView.year;
 
   const [historyFilter, setHistoryFilter] = useState("1");
   const [pointLogsFilter, setPointLogsFilter] = useState("all");
@@ -4765,9 +4766,12 @@ const AdminDashboard = () => {
   const [expandedLoadId, setExpandedLoadId] = useState(null);
   const [yuklemeAnaTab, setYuklemeAnaTab] = useState("list");
   const [yuklemeListFilter, setYuklemeListFilter] = useState("all");
-  const [yuklemeCalendarDate, setYuklemeCalendarDate] = useState(() => new Date());
-  const yuklemeCalendarMonth = yuklemeCalendarDate.getMonth();
-  const yuklemeCalendarYear = yuklemeCalendarDate.getFullYear();
+  const [yuklemeCalendarView, setYuklemeCalendarView] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+  const yuklemeCalendarMonth = yuklemeCalendarView.month;
+  const yuklemeCalendarYear = yuklemeCalendarView.year;
   const [selectedYuklemeCountry, setSelectedYuklemeCountry] = useState(null);
   const [selectedYuklemeCompany, setSelectedYuklemeCompany] = useState(null);
 
@@ -4798,44 +4802,80 @@ const AdminDashboard = () => {
     return () => clearTimeout(timer);
   }, [showResetModal, resetCountdown]);
 
-  const handleIsgPrevYear = useCallback(() => {
-    setIsgCalendarDate((d) => new Date(d.getFullYear() - 1, d.getMonth(), 1));
-  }, []);
-
-  const handleIsgNextYear = useCallback(() => {
-    setIsgCalendarDate((d) => new Date(d.getFullYear() + 1, d.getMonth(), 1));
-  }, []);
-
+  // Deterministic ISG Calendar Month & Year handlers
   const handleIsgPrevMonth = useCallback(() => {
-    setIsgCalendarDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    setIsgCalendarView((prev) => {
+      if (prev.month === 0) {
+        return { year: prev.year - 1, month: 11 };
+      }
+      return { year: prev.year, month: prev.month - 1 };
+    });
   }, []);
 
   const handleIsgNextMonth = useCallback(() => {
-    setIsgCalendarDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+    setIsgCalendarView((prev) => {
+      if (prev.month === 11) {
+        return { year: prev.year + 1, month: 0 };
+      }
+      return { year: prev.year, month: prev.month + 1 };
+    });
   }, []);
 
   const handleIsgToday = useCallback(() => {
-    setIsgCalendarDate(new Date());
+    const now = new Date();
+    setIsgCalendarView({ year: now.getFullYear(), month: now.getMonth() });
   }, []);
 
-  const handleYuklemePrevYear = useCallback(() => {
-    setYuklemeCalendarDate((d) => new Date(d.getFullYear() - 1, d.getMonth(), 1));
+  const handleIsgSelectMonth = useCallback((m) => {
+    const monthNum = parseInt(m, 10);
+    if (!isNaN(monthNum) && monthNum >= 0 && monthNum <= 11) {
+      setIsgCalendarView((prev) => ({ ...prev, month: monthNum }));
+    }
   }, []);
 
-  const handleYuklemeNextYear = useCallback(() => {
-    setYuklemeCalendarDate((d) => new Date(d.getFullYear() + 1, d.getMonth(), 1));
+  const handleIsgSelectYear = useCallback((y) => {
+    const yearNum = parseInt(y, 10);
+    if (!isNaN(yearNum)) {
+      setIsgCalendarView((prev) => ({ ...prev, year: yearNum }));
+    }
   }, []);
 
+  // Deterministic Yukleme Calendar Month & Year handlers
   const handleYuklemePrevMonth = useCallback(() => {
-    setYuklemeCalendarDate((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+    setYuklemeCalendarView((prev) => {
+      if (prev.month === 0) {
+        return { year: prev.year - 1, month: 11 };
+      }
+      return { year: prev.year, month: prev.month - 1 };
+    });
   }, []);
 
   const handleYuklemeNextMonth = useCallback(() => {
-    setYuklemeCalendarDate((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+    setYuklemeCalendarView((prev) => {
+      if (prev.month === 11) {
+        return { year: prev.year + 1, month: 0 };
+      }
+      return { year: prev.year, month: prev.month + 1 };
+    });
   }, []);
 
   const handleYuklemeToday = useCallback(() => {
-    setYuklemeCalendarDate(new Date());
+    const now = new Date();
+    setYuklemeCalendarView({ year: now.getFullYear(), month: now.getMonth() });
+  }, []);
+
+  const handleYuklemeSelectMonth = useCallback((m) => {
+    const monthNum = parseInt(m, 10);
+    if (!isNaN(monthNum) && monthNum >= 0 && monthNum <= 11) {
+      setYuklemeCalendarView((prev) => ({ ...prev, month: monthNum }));
+    }
+  }, []);
+
+  const handleYuklemeSelectYear = useCallback((y) => {
+    const yearNum = parseInt(y, 10);
+    if (!isNaN(yearNum)) {
+      setYuklemeCalendarView((prev) => ({ ...prev, year: yearNum }));
+    }
   }, []);
 
   const handleCreateUser = async (e) => {
@@ -4947,8 +4987,25 @@ const AdminDashboard = () => {
 
   const confirmDeleteUser = async () => {
     if (!userToDelete || deleteUserCountdown > 0) return;
-    await deleteDoc(doc(db, "user_secrets", userToDelete));
-    await deleteDoc(doc(db, "users", userToDelete));
+    try {
+      const token = localStorage.getItem("isg_auth_token");
+      const res = await fetch("/api/admin/delete-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ id: userToDelete })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data?.error || "Kullanıcı silinemedi.");
+      }
+      toast.success("Kullanıcı başarıyla silindi.");
+    } catch (apiErr) {
+      console.warn("API delete user fallback:", apiErr);
+      await deleteDoc(doc(db, "users", userToDelete)).catch(() => {});
+    }
     setShowDeleteUserModal(false);
     setUserToDelete(null);
   };
@@ -4965,12 +5022,12 @@ const AdminDashboard = () => {
 
   const submitCustomBonus = async () => {
     if (!bonusAmount || !bonusReason) {
-      alert(t("err_fill_all") || "Lütfen tüm alanları doldurun.");
+      toast.error(t("err_fill_all") || "Lütfen tüm alanları doldurun.");
       return;
     }
     const num = parseInt(bonusAmount, 10);
     if (isNaN(num) || num <= 0) {
-      alert(
+      toast.error(
         t("err_valid_bonus") || "Geçerli ve pozitif bir puan miktarı girin.",
       );
       return;
@@ -6629,45 +6686,61 @@ const AdminDashboard = () => {
             <div>
               <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
                 <div>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <h3 className="font-extrabold text-gray-800 dark:text-gray-100 text-xl flex items-center">
-                      <CalendarDays className="w-6 h-6 mr-3 text-orange-500" />{" "}
-                      {monthNames[currentMonth]} {currentYear}
-                    </h3>
-                    <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shadow-inner">
+                  <div className="flex flex-wrap items-center justify-between gap-4 w-full">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="w-6 h-6 text-orange-500 shrink-0" />
+                      <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 gap-1 border border-gray-200 dark:border-gray-600 shadow-sm">
+                        <select
+                          value={currentMonth}
+                          onChange={(e) => handleYuklemeSelectMonth(e.target.value)}
+                          className="bg-transparent font-extrabold text-sm sm:text-base text-gray-800 dark:text-gray-100 px-2.5 py-1 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                        >
+                          {monthNames.map((name, idx) => (
+                            <option key={idx} value={idx} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-gray-400 font-bold">/</span>
+                        <select
+                          value={currentYear}
+                          onChange={(e) => handleYuklemeSelectYear(e.target.value)}
+                          className="bg-transparent font-extrabold text-sm sm:text-base text-gray-800 dark:text-gray-100 px-2.5 py-1 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                        >
+                          {Array.from({ length: 12 }, (_, i) => 2022 + i).map((y) => (
+                            <option key={y} value={y} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 shadow-inner border border-gray-200 dark:border-gray-600">
                       <button
-                        onClick={handleYuklemePrevYear}
-                        className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                        title="Önceki Yıl (-1 Yıl)"
-                      >
-                        <ChevronsLeft className="w-4 h-4" />
-                      </button>
-                      <button
+                        type="button"
                         onClick={handleYuklemePrevMonth}
-                        className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-700 dark:text-gray-200"
+                        className="px-2.5 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold shadow-sm"
                         title="Önceki Ay"
                       >
-                        <ChevronLeft className="w-5 h-5" />
+                        <ChevronLeft className="w-4 h-4" />
+                        <span className="hidden sm:inline">Önceki</span>
                       </button>
                       <button
+                        type="button"
                         onClick={handleYuklemeToday}
-                        className="px-2.5 py-1 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors"
+                        className="px-3 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all shadow-sm"
                       >
                         {t("filter_today") || "Bugün"}
                       </button>
                       <button
+                        type="button"
                         onClick={handleYuklemeNextMonth}
-                        className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-700 dark:text-gray-200"
+                        className="px-2.5 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold shadow-sm"
                         title="Sonraki Ay"
                       >
-                        <ChevronRight className="w-5 h-5" />
-                      </button>
-                      <button
-                        onClick={handleYuklemeNextYear}
-                        className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                        title="Sonraki Yıl (+1 Yıl)"
-                      >
-                        <ChevronsRight className="w-4 h-4" />
+                        <span className="hidden sm:inline">Sonraki</span>
+                        <ChevronRight className="w-4 h-4" />
                       </button>
                     </div>
                   </div>
@@ -7183,45 +7256,61 @@ const AdminDashboard = () => {
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
         <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
           <div>
-            <div className="flex flex-wrap items-center gap-3">
-              <h3 className="font-extrabold text-gray-800 dark:text-gray-100 text-2xl flex items-center">
-                <CalendarDays className="w-7 h-7 mr-3 text-blue-600" />{" "}
-                {monthNames[currentMonth]} {currentYear}
-              </h3>
-              <div className="flex items-center space-x-1 bg-gray-100 dark:bg-gray-700 rounded-xl p-1 shadow-inner">
+            <div className="flex flex-wrap items-center justify-between gap-4 w-full">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="w-7 h-7 text-blue-600 dark:text-blue-400 shrink-0" />
+                <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 gap-1 border border-gray-200 dark:border-gray-600 shadow-sm">
+                  <select
+                    value={currentMonth}
+                    onChange={(e) => handleIsgSelectMonth(e.target.value)}
+                    className="bg-transparent font-extrabold text-sm sm:text-base text-gray-800 dark:text-gray-100 px-2.5 py-1 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                  >
+                    {monthNames.map((name, idx) => (
+                      <option key={idx} value={idx} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-gray-400 font-bold">/</span>
+                  <select
+                    value={currentYear}
+                    onChange={(e) => handleIsgSelectYear(e.target.value)}
+                    className="bg-transparent font-extrabold text-sm sm:text-base text-gray-800 dark:text-gray-100 px-2.5 py-1 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                  >
+                    {Array.from({ length: 12 }, (_, i) => 2022 + i).map((y) => (
+                      <option key={y} value={y} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+                        {y}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 shadow-inner border border-gray-200 dark:border-gray-600">
                 <button
-                  onClick={handleIsgPrevYear}
-                  className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                  title="Önceki Yıl (-1 Yıl)"
-                >
-                  <ChevronsLeft className="w-4 h-4" />
-                </button>
-                <button
+                  type="button"
                   onClick={handleIsgPrevMonth}
-                  className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-700 dark:text-gray-200"
+                  className="px-2.5 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold shadow-sm"
                   title="Önceki Ay"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Önceki</span>
                 </button>
                 <button
+                  type="button"
                   onClick={handleIsgToday}
-                  className="px-2.5 py-1 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors"
+                  className="px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all shadow-sm"
                 >
                   {t("filter_today") || "Bugün"}
                 </button>
                 <button
+                  type="button"
                   onClick={handleIsgNextMonth}
-                  className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-700 dark:text-gray-200"
+                  className="px-2.5 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold shadow-sm"
                   title="Sonraki Ay"
                 >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={handleIsgNextYear}
-                  className="p-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-lg transition-colors text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
-                  title="Sonraki Yıl (+1 Yıl)"
-                >
-                  <ChevronsRight className="w-4 h-4" />
+                  <span className="hidden sm:inline">Sonraki</span>
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -8137,8 +8226,17 @@ export default function App() {
           if (targetUserId) {
             const autoUser = usersData.find((u) => u.id === targetUserId);
             if (autoUser) {
-              // For admin users, verify session security with backend once if token exists
-              if (!sessionVerifiedRef.current && autoUser.role === "admin" && savedAuthToken) {
+              // SECURITY: Session restoration requires a valid cryptographic JWT token.
+              // If token is missing, prevent auto-login to eliminate localStorage spoofing.
+              if (!savedAuthToken) {
+                localStorage.removeItem("isg_logged_in_user");
+                localStorage.removeItem("isg_auth_token");
+                setCurrentUser(null);
+                return;
+              }
+
+              // Verify session security with backend
+              if (!sessionVerifiedRef.current) {
                 sessionVerifiedRef.current = true;
                 fetch("/api/verify-session", {
                   method: "POST",
@@ -8153,6 +8251,9 @@ export default function App() {
                       setCurrentUser(null);
                     } else if (verifyData && verifyData.token) {
                       localStorage.setItem("isg_auth_token", verifyData.token);
+                      if (verifyData.user) {
+                        setCurrentUser(verifyData.user);
+                      }
                     }
                   })
                   .catch(() => {});

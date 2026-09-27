@@ -19,7 +19,7 @@ export const DICT = {
     err_wrong_cred: "Kullanıcı adı veya şifre hatalı!",
     err_isg_module: "Yükleme personeli İSG modülünden giriş yapamaz!",
     err_yukleme_module: "İSG personeli Yükleme modülünden giriş yapamaz!",
-    loading_server: "Sunucuya bağlanılıyor...",
+    loading_server: "Sistem hazırlanıyor...",
     logout: "Çıkış Yap",
     
     // Priorities & Statuses
@@ -223,7 +223,7 @@ export const DICT = {
     err_wrong_cred: "Invalid username or password!",
     err_isg_module: "Loading personnel cannot login from OHS module!",
     err_yukleme_module: "OHS personnel cannot login from Loading module!",
-    loading_server: "Connecting to server...",
+    loading_server: "Preparing system...",
     logout: "Logout",
     
     // Priorities & Statuses
