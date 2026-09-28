@@ -1227,13 +1227,13 @@ export default function PdfReportModal({
             <div className="flex bg-gray-100 dark:bg-gray-700/60 p-1 rounded-xl">
               <button
                 onClick={() => setActivePreviewPage(1)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${activePreviewPage === 1 ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:text-gray-900"}`}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${activePreviewPage === 1 ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}`}
               >
                 {isEn ? "Page 1 (Summary)" : "Sayfa 1 (Özet)"}
               </button>
               <button
                 onClick={() => setActivePreviewPage(2)}
-                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${activePreviewPage === 2 ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:text-gray-900"}`}
+                className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${activePreviewPage === 2 ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"}`}
               >
                 {isEn ? "Page 2 (Signatures)" : "Sayfa 2 (İmzalar)"}
               </button>

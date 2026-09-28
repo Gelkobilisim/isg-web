@@ -73,6 +73,19 @@ import {
   KeyRound,
   Volume2,
   VolumeX,
+  LayoutDashboard,
+  Trophy,
+  CheckCircle2,
+  Search,
+  Key,
+  UserCheck,
+  UserPlus,
+  RefreshCw,
+  HardHat,
+  TrendingDown,
+  Award,
+  History,
+  Medal,
 } from "lucide-react";
 
 import { motion, AnimatePresence } from "motion/react";
@@ -237,54 +250,87 @@ const COUNTRIES = [
   "Özbekistan",
   "Diğer",
 ];
+
+const COUNTRY_FLAGS = {
+  "Türkiye": "🇹🇷",
+  "Almanya": "🇩🇪",
+  "İngiltere": "🇬🇧",
+  "Fransa": "🇫🇷",
+  "İtalya": "🇮🇹",
+  "İspanya": "🇪🇸",
+  "Hollanda": "🇳🇱",
+  "Belçika": "🇧🇪",
+  "İsveç": "🇸🇪",
+  "Polonya": "🇵🇱",
+  "Romanya": "🇷🇴",
+  "Bulgaristan": "🇧🇬",
+  "Yunanistan": "🇬🇷",
+  "Rusya": "🇷🇺",
+  "ABD": "🇺🇸",
+  "Kanada": "🇨🇦",
+  "BAE": "🇦🇪",
+  "Suudi Arabistan": "🇸🇦",
+  "Katar": "🇶🇦",
+  "Irak": "🇮🇶",
+  "İran": "🇮🇷",
+  "Azerbaycan": "🇦🇿",
+  "Özbekistan": "🇺🇿",
+  "Diğer": "🌐",
+};
+
 const PRIORITIES = {
   basit: {
     label_key: "pri_basit",
     multiplier: 1,
-    color: "bg-blue-100 text-blue-800",
+    color: "bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-300",
   },
   orta: {
     label_key: "pri_orta",
     multiplier: 2,
-    color: "bg-yellow-100 text-yellow-800",
+    color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300",
   },
   kritik: {
     label_key: "pri_kritik",
     multiplier: 5,
-    color: "bg-red-100 text-red-800",
+    color: "bg-red-100 text-red-800 dark:bg-red-950/50 dark:text-red-300",
   },
 };
 
 const STATUS_INFO = {
   cozuldu: {
     label_key: "stat_cozuldu",
-    color: "bg-green-100 text-green-800 border-green-500",
+    color:
+      "bg-green-100 text-green-800 border-green-500 dark:bg-green-950/50 dark:text-green-300 dark:border-green-600/50",
     icon: CheckCircle,
   },
   onay_bekliyor: {
     label_key: "stat_onay",
-    color: "bg-yellow-100 text-yellow-800 border-yellow-500",
+    color:
+      "bg-yellow-100 text-yellow-800 border-yellow-500 dark:bg-yellow-950/50 dark:text-yellow-300 dark:border-yellow-600/50",
     icon: Clock,
   },
   acik: {
     label_key: "stat_acik",
-    color: "bg-red-100 text-red-800 border-red-500",
+    color:
+      "bg-red-100 text-red-800 border-red-500 dark:bg-red-950/50 dark:text-red-300 dark:border-red-600/50",
     icon: AlertTriangle,
   },
   itiraz_edildi: {
     label_key: "stat_itiraz",
-    color: "bg-red-100 text-red-800 border-red-500",
+    color:
+      "bg-orange-100 text-orange-800 border-orange-500 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-600/50",
     icon: AlertTriangle,
   },
   iptal: {
     label_key: "stat_iptal",
     color:
-      "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border-gray-400",
+      "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-400 dark:border-gray-600",
     icon: XCircle,
   },
   kapatildi: {
     label_key: "stat_kapatildi",
-    color: "bg-emerald-100 text-emerald-800 border-emerald-500",
+    color:
+      "bg-emerald-100 text-emerald-800 border-emerald-500 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-600/50",
     icon: CheckCircle,
   },
 };
@@ -1431,28 +1477,51 @@ const LoginScreen = () => {
               </h2>
 
               <p className="text-base sm:text-lg font-bold text-gray-200 mb-1">
-                {t("dear_salutation") || "Sayın"} <span className="text-blue-400 font-extrabold">{welcomeState.user.name || welcomeState.user.username}</span>
+                {t("dear_salutation") || "Sayın"}{" "}
+                <span className="text-blue-400 font-extrabold inline-block pb-1">
+                  {welcomeState.user.name || welcomeState.user.username}
+                </span>
               </p>
 
               {/* Role badge */}
               <div className="mt-1 mb-6">
-                <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-extrabold bg-white/5 border border-white/10 text-gray-300">
-                  {welcomeState.user.role === "admin"
-                    ? `🛡️ ${t("role_admin") || "Sistem Yöneticisi"}`
-                    : welcomeState.user.role === "mod"
-                    ? `⛑️ ${t("role_mod") || "İSG Uzmanı"}`
-                    : welcomeState.user.role === "sef"
-                    ? `🏢 ${welcomeState.user.dept ? t(getDeptKey(welcomeState.user.dept)) + " " : ""}${t("role_sef") || "Birim Şefi"}`
-                    : welcomeState.user.role === "yuklemeci"
-                    ? `🚚 ${t("role_yuklemeci") || "Yükleme Sorumlusu"}`
-                    : `👷 ${t("role_guest") || "Personel / Yüklenici"}`}
+                <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-white/5 border border-white/10 text-gray-200 shadow-xs">
+                  {welcomeState.user.role === "admin" ? (
+                    <>
+                      <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>{t("role_admin") || "Sistem Yöneticisi"}</span>
+                    </>
+                  ) : welcomeState.user.role === "mod" ? (
+                    <>
+                      <HardHat className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span>{t("role_mod") || "İSG Uzmanı"}</span>
+                    </>
+                  ) : welcomeState.user.role === "sef" ? (
+                    <>
+                      <Building2 className="w-4 h-4 text-blue-400 shrink-0" />
+                      <span>
+                        {welcomeState.user.dept ? t(getDeptKey(welcomeState.user.dept)) + " " : ""}
+                        {t("role_sef") || "Birim Şefi"}
+                      </span>
+                    </>
+                  ) : welcomeState.user.role === "yuklemeci" ? (
+                    <>
+                      <Truck className="w-4 h-4 text-orange-400 shrink-0" />
+                      <span>{t("role_yuklemeci") || "Yükleme Sorumlusu"}</span>
+                    </>
+                  ) : (
+                    <>
+                      <User className="w-4 h-4 text-gray-400 shrink-0" />
+                      <span>{t("role_guest") || "Personel / Yüklenici"}</span>
+                    </>
+                  )}
                 </span>
               </div>
 
               {/* Dynamic Step Text & Micro-spinner */}
               <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 mb-6">
                 <div className="flex items-center justify-center gap-2 text-sm font-bold text-blue-300 mb-3">
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-400 shrink-0" />
                   <span>
                     {welcomeState.step === 0 && (t("welcome_step_0") || "Kimlik doğrulandı, oturum açılıyor...")}
                     {welcomeState.step === 1 && (t("welcome_step_1") || "Çalışma alanı ve izinler hazırlanıyor...")}
@@ -1477,14 +1546,25 @@ const LoginScreen = () => {
 
                 {/* 3 Step Indicator Badges */}
                 <div className="grid grid-cols-3 gap-2 mt-3 text-[11px] font-semibold text-gray-400">
-                  <span className={welcomeState.step >= 0 ? "text-emerald-400 font-bold" : ""}>
-                    ✓ {t("step_verification") || "Doğrulama"}
+                  <span className={`inline-flex items-center justify-center gap-1.5 ${welcomeState.step >= 0 ? "text-emerald-400 font-bold" : ""}`}>
+                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    <span>{t("step_verification") || "Doğrulama"}</span>
                   </span>
-                  <span className={welcomeState.step >= 1 ? "text-emerald-400 font-bold" : ""}>
-                    {welcomeState.step >= 1 ? "✓ " : "• "}{t("step_preparation") || "Hazırlık"}
+                  <span className={`inline-flex items-center justify-center gap-1.5 ${welcomeState.step >= 1 ? "text-emerald-400 font-bold" : ""}`}>
+                    {welcomeState.step >= 1 ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0" />
+                    )}
+                    <span>{t("step_preparation") || "Hazırlık"}</span>
                   </span>
-                  <span className={welcomeState.step >= 2 ? "text-blue-400 font-bold" : ""}>
-                    {welcomeState.step >= 2 ? "🚀 " : "• "}{t("step_launching") || "Başlatılıyor"}
+                  <span className={`inline-flex items-center justify-center gap-1.5 ${welcomeState.step >= 2 ? "text-blue-400 font-bold" : ""}`}>
+                    {welcomeState.step >= 2 ? (
+                      <Sparkles className="w-3.5 h-3.5 text-blue-400 shrink-0 animate-pulse" />
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-500 shrink-0" />
+                    )}
+                    <span>{t("step_launching") || "Başlatılıyor"}</span>
                   </span>
                 </div>
               </div>
@@ -1798,6 +1878,28 @@ const MainLayout = ({ theme = "blue", children }) => {
             {t("main_menu") || "Ana Menü"}
           </div>
 
+          {(currentUser.role === "admin" ||
+            currentUser.role === "yonetici" ||
+            currentUser.username === "agiradar" ||
+            currentUser.username === "agiradarsahin") && (
+            <button
+              onClick={() => {
+                navigate("/");
+                setAdminSystemMode("home");
+                setSelectedAdminDept(null);
+                setSidebarOpen(false);
+              }}
+              className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-all ${
+                adminSystemMode === "home"
+                  ? "bg-blue-600 text-white shadow-md shadow-blue-500/20"
+                  : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+              }`}
+            >
+              <LayoutDashboard className="w-5 h-5 mr-3 shrink-0" />
+              <span>{t("executive_hub") || "Genel Bakış & Ana Menü"}</span>
+            </button>
+          )}
+
           {currentUser.role !== "yuklemeci" && (
             <button
               onClick={() => {
@@ -1902,22 +2004,6 @@ const MainLayout = ({ theme = "blue", children }) => {
             >
               <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
               <span>{t("incoming_notifications") || "Gelen Bildirimler"}</span>
-            </button>
-          )}
-
-          {(currentUser.role === "admin" ||
-            currentUser.role === "yonetici" ||
-            currentUser.username === "agiradar" ||
-            currentUser.username === "agiradarsahin") && (
-            <button
-              onClick={() => {
-                setShowPdfReportModal(true);
-                setSidebarOpen(false);
-              }}
-              className="w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-all text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 cursor-pointer"
-            >
-              <FileText className="w-5 h-5 mr-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <span>{t("create_report_pdf") || "Rapor Oluştur (PDF)"}</span>
             </button>
           )}
         </nav>
@@ -2081,11 +2167,11 @@ const MainLayout = ({ theme = "blue", children }) => {
 
           <div className="flex items-center space-x-3">
             <div className="flex items-center gap-2 bg-gray-100/70 dark:bg-gray-800/70 px-3 py-1.5 rounded-xl border border-gray-200/60 dark:border-gray-700/60 text-xs">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-              <span className="font-bold text-gray-800 dark:text-gray-100">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></div>
+              <span className="font-bold text-gray-800 dark:text-gray-100 truncate pb-0.5 max-w-[160px]">
                 {currentUser?.name || "Kullanıcı"}
               </span>
-              <span className="text-[10px] text-gray-400">({roleText})</span>
+              <span className="text-[10px] text-gray-400 shrink-0">({roleText})</span>
             </div>
             <button
               onClick={toggleSoundAlerts}
@@ -2709,7 +2795,7 @@ const YuklemeciDashboard = () => {
   };
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 bg-orange-50/30">
+    <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 bg-orange-50/30 dark:bg-transparent">
       <div className="bg-gradient-to-r from-orange-600 to-amber-700 p-6 md:p-8 rounded-3xl text-white shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center relative overflow-hidden mb-8 gap-4">
         <div className="z-10">
           <h1 className="text-3xl font-extrabold mb-2 flex items-center">
@@ -2718,20 +2804,8 @@ const YuklemeciDashboard = () => {
           <p className="text-orange-100 font-medium">{t("yuk_desc")}</p>
         </div>
         <div className="z-10 flex flex-wrap items-center gap-3">
-          {(currentUser?.role === "admin" ||
-            currentUser?.role === "yonetici" ||
-            currentUser?.username === "agiradar" ||
-            currentUser?.username === "agiradarsahin") && (
-            <button
-              onClick={() => setShowPdfReportModal(true)}
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/30 text-white font-bold text-sm flex items-center space-x-2 transition-all cursor-pointer shadow-sm"
-            >
-              <FileText className="w-4 h-4" />
-              <span>Sevkiyat Raporu (PDF)</span>
-            </button>
-          )}
-          <div className="bg-white dark:bg-gray-800/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex items-center space-x-3">
-            <div className="bg-white dark:bg-gray-800/20 p-2 rounded-xl">
+          <div className="bg-white/10 dark:bg-black/20 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex items-center space-x-3">
+            <div className="bg-white/10 dark:bg-white/15 p-2 rounded-xl">
               <Scale className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -2753,9 +2827,9 @@ const YuklemeciDashboard = () => {
       {!isCreating && (
         <button
           onClick={() => setIsCreating(true)}
-          className="w-full bg-white dark:bg-gray-800 border-2 border-dashed border-orange-300 hover:border-orange-500 text-orange-700 py-6 rounded-2xl font-bold shadow-sm hover:shadow-md transition-all flex justify-center items-center space-x-3 mb-8 group"
+          className="w-full bg-white dark:bg-gray-800 border-2 border-dashed border-orange-300 dark:border-orange-500/40 hover:border-orange-500 dark:hover:border-orange-400 text-orange-700 dark:text-orange-400 py-6 rounded-2xl font-bold shadow-sm hover:shadow-md transition-all flex justify-center items-center space-x-3 mb-8 group cursor-pointer"
         >
-          <div className="bg-orange-100 p-2 rounded-full group-hover:scale-110 transition-transform">
+          <div className="bg-orange-100 dark:bg-orange-950/50 text-orange-700 dark:text-orange-300 p-2 rounded-full group-hover:scale-110 transition-transform">
             <Plus className="w-6 h-6" />
           </div>
           <span className="text-lg">{t("new_load_btn")}</span>
@@ -2763,7 +2837,7 @@ const YuklemeciDashboard = () => {
       )}
 
       {isCreating && (
-        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-orange-100 mb-8 animate-slide-up">
+        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-orange-100 dark:border-gray-700 mb-8 animate-slide-up">
           <div className="flex justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-700 pb-4">
             <h3 className="font-bold text-xl text-gray-800 dark:text-gray-100 flex items-center">
               <Truck className="w-6 h-6 mr-2 text-orange-500" />{" "}
@@ -2784,7 +2858,7 @@ const YuklemeciDashboard = () => {
                   not: "",
                 });
               }}
-              className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:text-gray-200"
+              className="text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
             >
               <X className="w-6 h-6" />
             </button>
@@ -3028,49 +3102,54 @@ const YuklemeciDashboard = () => {
                   : "status-rail-amber"
               }`}
             >
-              <div className="bg-gray-50 dark:bg-gray-900 p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                <div>
-                  <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-1">
-                    {t("plate")}
-                  </span>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
+              <div className="bg-gray-50 dark:bg-gray-900 p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center gap-3">
+                <div className="flex items-center gap-3">
+                  {/* Embossed Turkish Plate */}
+                  <div className="shrink-0 flex items-center bg-gray-950 text-white rounded-xl border border-gray-900 dark:border-gray-600 shadow-xs overflow-hidden font-mono text-xs">
+                    <div className="bg-blue-600 px-1.5 py-1.5 text-white font-extrabold text-[9px] flex items-center justify-center border-r border-blue-700 shrink-0 select-none">
+                      TR
+                    </div>
+                    <span className="px-2.5 py-1 bg-white text-gray-950 dark:bg-gray-900 dark:text-white font-black tracking-wider uppercase whitespace-nowrap">
                       {load.plaka}
                     </span>
+                  </div>
+
+                  <div>
                     {load.status === "yukleniyor" ? (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
                         Yükleniyor
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                        <Clock className="w-3 h-3 text-amber-600" />
+                        <Clock className="w-3 h-3 text-amber-600 shrink-0" />
                         Beklemede
                       </span>
                     )}
                   </div>
                 </div>
+
                 <div className="text-right">
-                  <span className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block mb-1">
+                  <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
                     {t("entry_time")}
                   </span>
-                  <span className="text-lg font-bold text-blue-600">
+                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
                     {load.createdAtTime}
                   </span>
                 </div>
               </div>
               <div className="p-5 flex-1 flex flex-col space-y-3">
                 {load.sofor && (
-                  <p className="text-xs text-gray-600 dark:text-gray-300 font-medium">
-                    <User className="w-3.5 h-3.5 inline mr-1 text-gray-400 dark:text-gray-500" />{" "}
-                    {t("driver")}:{" "}
+                  <p className="text-xs text-gray-600 dark:text-gray-300 font-medium flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 shrink-0 text-gray-400 dark:text-gray-500" />
+                    <span>{t("driver")}:</span>
                     <span className="text-gray-800 dark:text-gray-100 font-bold">
                       {load.sofor}
                     </span>
                   </p>
                 )}
 
-                <div className="grid grid-cols-2 gap-2 text-xs bg-orange-50/60 p-3 rounded-xl border border-orange-100">
+                <div className="grid grid-cols-2 gap-2 text-xs bg-orange-50/60 dark:bg-orange-950/20 p-3 rounded-xl border border-orange-100 dark:border-orange-900/30">
                   <div>
                     <span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">
                       {t("dest_country")}
@@ -4222,13 +4301,13 @@ const SefDashboard = () => {
           <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
             <button
               onClick={() => setActiveTab("open")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "open" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "open" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
               Açık İhlaller ({openCount})
             </button>
             <button
               onClick={() => setActiveTab("completed")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "completed" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "completed" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
               Düzeltilenler
             </button>
@@ -4286,7 +4365,7 @@ const SefDashboard = () => {
               <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex flex-col gap-1.5">
                   <span
-                    className={`text-xs font-bold px-2 py-1 rounded-md uppercase self-start ${task.priority === "yuksek" ? "bg-red-100 text-red-700" : task.priority === "orta" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}
+                    className={`text-xs font-bold px-2 py-1 rounded-md uppercase self-start ${task.priority === "yuksek" ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" : task.priority === "orta" ? "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300" : "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"}`}
                   >
                     {task.priority}
                   </span>
@@ -4374,7 +4453,7 @@ const SefDashboard = () => {
                           type: "fix",
                         })
                       }
-                      className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+                      className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-950/40 dark:hover:bg-green-900/40 dark:text-green-300 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm cursor-pointer"
                     >
                       {t("i_fixed_it") || "Düzelttim"}
                     </button>
@@ -4386,7 +4465,7 @@ const SefDashboard = () => {
                           type: "object",
                         })
                       }
-                      className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm"
+                      className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/40 dark:hover:bg-red-900/40 dark:text-red-300 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm cursor-pointer"
                     >
                       {t("object_btn") || "İtiraz Et"}
                     </button>
@@ -4500,7 +4579,8 @@ const SefDashboard = () => {
 
 const FeedbacksAdmin = () => {
   const ctx = useAppContext();
-  const { db } = ctx;
+  const { db, setAdminSystemMode, t } = ctx;
+  const navigate = useNavigate();
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -4547,16 +4627,29 @@ const FeedbacksAdmin = () => {
 
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 lg:p-8 animate-slide-up">
+      <div className="mb-4">
+        <button
+          onClick={() => {
+            navigate("/");
+            setAdminSystemMode("home");
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold text-sm transition-all shadow-sm group cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span>{t("back_to_menu") || "Ana Menüye Dön"}</span>
+        </button>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex items-center">
         <MessageSquare className="w-8 h-8 text-pink-500 mr-4" />
         <h2 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100">
-          Gelen Bildirimler & Hatalar
+          {t("feedbacks_admin_title") || "Gelen Bildirimler & Hatalar"}
         </h2>
       </div>
 
       {feedbacks.length === 0 ? (
         <div className="bg-white dark:bg-gray-800 p-10 rounded-3xl text-center text-gray-500 shadow-sm">
-          Henüz hiç geri bildirim veya hata raporu bulunmuyor.
+          {t("no_feedbacks_admin") || "Henüz hiç geri bildirim veya hata raporu bulunmuyor."}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -4584,7 +4677,7 @@ const FeedbacksAdmin = () => {
                   }
                 }}
                 onClick={() => markAsRead(f.id, f.status)}
-                className={`p-5 rounded-2xl border transition-colors cursor-pointer ${f.status === "new" ? "bg-pink-50 border-pink-200 dark:bg-pink-900/10 dark:border-pink-900/30" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-750"}`}
+                className={`p-5 rounded-2xl border transition-colors cursor-pointer ${f.status === "new" ? "bg-pink-50 border-pink-200 dark:bg-pink-900/10 dark:border-pink-900/30" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"}`}
               >
                 <div className="flex justify-between items-start mb-2">
                   <div>
@@ -4698,6 +4791,10 @@ const AdminDashboard = () => {
   const [accountTab, setAccountTab] = useState("isg");
   const [lockedAccounts, setLockedAccounts] = useState([]);
   const [loadingLocked, setLoadingLocked] = useState(false);
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userRoleFilter, setUserRoleFilter] = useState("all");
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [userToEditModal, setUserToEditModal] = useState(null);
 
   const fetchLockedAccounts = useCallback(async () => {
     const token = localStorage.getItem("isg_auth_token");
@@ -4765,8 +4862,29 @@ const AdminDashboard = () => {
   const [analysisFilter, setAnalysisFilter] = useState("month");
   const [selectedAnalysisDept, setSelectedAnalysisDept] = useState(null);
   const [expandedAnalysisTaskId, setExpandedAnalysisTaskId] = useState(null);
+  const [analysisSubTab, setAnalysisSubTab] = useState("overview");
+  const [analysisSearchQuery, setAnalysisSearchQuery] = useState("");
+  const [analysisPriorityFilter, setAnalysisPriorityFilter] = useState("all");
+  const [analysisStatusFilter, setAnalysisStatusFilter] = useState("all");
+  const [analysisDeptFilter, setAnalysisDeptFilter] = useState("all");
+  const [deptDetailSearch, setDeptDetailSearch] = useState("");
+  const [deptDetailPriorityFilter, setDeptDetailPriorityFilter] = useState("all");
+  const [deptDetailStatusFilter, setDeptDetailStatusFilter] = useState("all");
   const [adminDeptFilter, setAdminDeptFilter] = useState("all");
   const [expandedAdminTaskId, setExpandedAdminTaskId] = useState(null);
+
+  const [isgAnaTab, setIsgAnaTab] = useState("tasks"); // "tasks" | "risk" | "calendar"
+  const [isgSearchQuery, setIsgSearchQuery] = useState("");
+  const [isgPriorityFilter, setIsgPriorityFilter] = useState("all");
+  const [isgStatusFilter, setIsgStatusFilter] = useState("all");
+  const [isgDeptFilter, setIsgDeptFilter] = useState("all");
+  const [isgTimeFilter, setIsgTimeFilter] = useState("all");
+
+  const [leaderboardTab, setLeaderboardTab] = useState("ranking"); // "ranking" | "logs" | "history"
+  const [leaderboardSearch, setLeaderboardSearch] = useState("");
+  const [leaderboardScoreFilter, setLeaderboardScoreFilter] = useState("all"); // "all" | "high" | "mid" | "low"
+  const [leaderboardLogType, setLeaderboardLogType] = useState("all"); // "all" | "bonus" | "penalty"
+  const [leaderboardLogSearch, setLeaderboardLogSearch] = useState("");
 
   const [adminTasksLimit, setAdminTasksLimit] = useState(12);
   const [isAdminTasksPaginating, setIsAdminTasksPaginating] = useState(false);
@@ -4775,7 +4893,17 @@ const AdminDashboard = () => {
 
   useEffect(() => {
     setAdminTasksLimit(12);
-  }, [adminDeptFilter, selectedAdminDept, selectedAdminDate]);
+  }, [
+    adminDeptFilter,
+    selectedAdminDept,
+    selectedAdminDate,
+    isgAnaTab,
+    isgSearchQuery,
+    isgPriorityFilter,
+    isgStatusFilter,
+    isgDeptFilter,
+    isgTimeFilter,
+  ]);
 
   useEffect(() => {
     setAdminLoadingsLimit(15);
@@ -4805,7 +4933,11 @@ const AdminDashboard = () => {
         setSelectedAnalysisDept(dept);
         setAnalysisFilter("all");
       }
-    } else if (path === "/" || path === "/isg") {
+    } else if (path === "/") {
+      setAdminSystemMode("home");
+      setSelectedAdminDept(null);
+      setSelectedAnalysisDept(null);
+    } else if (path === "/isg") {
       setAdminSystemMode("isg");
       setSelectedAdminDept(null);
       setSelectedAnalysisDept(null);
@@ -4825,6 +4957,10 @@ const AdminDashboard = () => {
       setAdminSystemMode("analysis");
       setSelectedAdminDept(null);
       setSelectedAnalysisDept(null);
+    } else if (path === "/feedbacks") {
+      setAdminSystemMode("feedbacks");
+      setSelectedAdminDept(null);
+      setSelectedAnalysisDept(null);
     }
   }, [location.pathname, setAdminSystemMode]);
   const [bonusModalOpen, setBonusModalOpen] = useState(false);
@@ -4840,6 +4976,8 @@ const AdminDashboard = () => {
   const [expandedLoadId, setExpandedLoadId] = useState(null);
   const [yuklemeAnaTab, setYuklemeAnaTab] = useState("list");
   const [yuklemeListFilter, setYuklemeListFilter] = useState("all");
+  const [yuklemeSearchQuery, setYuklemeSearchQuery] = useState("");
+  const [yuklemeStatusFilter, setYuklemeStatusFilter] = useState("all");
   const [yuklemeCalendarView, setYuklemeCalendarView] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
@@ -5006,6 +5144,7 @@ const AdminDashboard = () => {
       role: "sef",
       dept: DEPARTMENTS[0],
     });
+    setShowAddUserModal(false);
   };
 
   const handleUpdateUserClick = (id) => {
@@ -5053,6 +5192,7 @@ const AdminDashboard = () => {
     setShowUpdateUserModal(false);
     setUserToUpdate(null);
     setEditingUserId(null);
+    setUserToEditModal(null);
   };
 
   const handleDeleteUserClick = (id) => {
@@ -5167,6 +5307,23 @@ const AdminDashboard = () => {
     setDeleteCountdown(10);
   };
 
+  const getRedTaskCount = useCallback(
+    (deptName) => {
+      return tasks.filter(
+        (t) =>
+          t.dept === deptName &&
+          (t.status === "acik" || t.status === "itiraz_edildi"),
+      ).length;
+    },
+    [tasks],
+  );
+
+  const sortedDeptsAdmin = useMemo(() => {
+    const depts =
+      currentUser.role === "sef" ? [currentUser.dept] : [...DEPARTMENTS];
+    return depts.sort((a, b) => getRedTaskCount(b) - getRedTaskCount(a));
+  }, [getRedTaskCount, currentUser]);
+
   const renderRightPanel = () => {
     const handleExportPDF = () => {
       // html2canvas (used by html2pdf) crashes with Tailwind v4 'oklch' colors.
@@ -5192,99 +5349,404 @@ const AdminDashboard = () => {
       ).getTime();
       const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
 
-      let filteredTasks = tasks;
+      let periodTasks = tasks;
       if (analysisFilter === "day")
-        filteredTasks = tasks.filter((t) => t.timestamp >= startOfDay);
-      if (analysisFilter === "week")
-        filteredTasks = tasks.filter((t) => t.timestamp >= startOfWeek);
-      if (analysisFilter === "month")
-        filteredTasks = tasks.filter((t) => t.timestamp >= startOfMonth);
-      if (analysisFilter === "year")
-        filteredTasks = tasks.filter((t) => t.timestamp >= startOfYear);
+        periodTasks = tasks.filter((t) => t.timestamp >= startOfDay);
+      else if (analysisFilter === "week")
+        periodTasks = tasks.filter((t) => t.timestamp >= startOfWeek);
+      else if (analysisFilter === "month")
+        periodTasks = tasks.filter((t) => t.timestamp >= startOfMonth);
+      else if (analysisFilter === "year")
+        periodTasks = tasks.filter((t) => t.timestamp >= startOfYear);
 
+      const periodLabel =
+        analysisFilter === "day"
+          ? (t("filter_today") || "Bugün")
+          : analysisFilter === "week"
+            ? (t("filter_this_week") || "Bu Hafta")
+            : analysisFilter === "month"
+              ? (t("filter_this_month") || "Bu Ay")
+              : analysisFilter === "year"
+                ? (t("filter_yearly") || "Bu Yıl")
+                : (t("filter_all") || "Tüm Zamanlar");
+
+      // Key Metrics
+      const totalViolations = periodTasks.length;
+      const resolvedTasks = periodTasks.filter(
+        (t) => t.status === "cozuldu" || t.status === "kapatildi",
+      );
+      const openTasks = periodTasks.filter(
+        (t) => t.status !== "cozuldu" && t.status !== "kapatildi",
+      );
+      const resolvedCount = resolvedTasks.length;
+      const openCount = openTasks.length;
+      const resolveRate =
+        totalViolations > 0
+          ? Math.round((resolvedCount / totalViolations) * 100)
+          : 100;
+
+      // Priorities
+      const highPriorityTasks = periodTasks.filter(
+        (t) => t.priority === "yuksek" || t.priority === "kritik",
+      );
+      const medPriorityTasks = periodTasks.filter(
+        (t) => t.priority === "orta",
+      );
+      const lowPriorityTasks = periodTasks.filter(
+        (t) => t.priority === "basit" || !t.priority,
+      );
+
+      const highCount = highPriorityTasks.length;
+      const medCount = medPriorityTasks.length;
+      const lowCount = lowPriorityTasks.length;
+      const highRate =
+        totalViolations > 0 ? Math.round((highCount / totalViolations) * 100) : 0;
+      const medRate =
+        totalViolations > 0 ? Math.round((medCount / totalViolations) * 100) : 0;
+      const lowRate =
+        totalViolations > 0 ? Math.round((lowCount / totalViolations) * 100) : 0;
+
+      // Department statistics
+      const deptStats = DEPARTMENTS.map((dept) => {
+        const dTasks = periodTasks.filter((t) => t.dept === dept);
+        const dResolved = dTasks.filter(
+          (t) => t.status === "cozuldu" || t.status === "kapatildi",
+        ).length;
+        const dOpen = dTasks.length - dResolved;
+        const dHigh = dTasks.filter(
+          (t) => t.priority === "yuksek" || t.priority === "kritik",
+        ).length;
+        const currentPoints = points[dept] ?? 100;
+        return {
+          name: dept,
+          total: dTasks.length,
+          resolved: dResolved,
+          open: dOpen,
+          high: dHigh,
+          points: currentPoints,
+          rate: dTasks.length > 0 ? Math.round((dResolved / dTasks.length) * 100) : 100,
+        };
+      }).sort((a, b) => b.total - a.total);
+
+      const maxCount = deptStats.length > 0 ? deptStats[0].total : 0;
+      const mostIssuesDept = deptStats.find((d) => d.total === maxCount && maxCount > 0);
+      const leastIssuesDept = [...deptStats].sort((a, b) => a.total - b.total)[0];
+
+      // Factory avg score
+      const deptPointsList = DEPARTMENTS.map((d) => points[d] ?? 100);
+      const avgScore =
+        deptPointsList.length > 0
+          ? Math.round(
+              deptPointsList.reduce((a, b) => a + b, 0) / deptPointsList.length,
+            )
+          : 100;
+
+      // Detailed View: Department Drill-Down
       if (selectedAnalysisDept) {
-        const deptTasks = filteredTasks
-          .filter((t) => t.dept === selectedAnalysisDept)
+        const deptAllTasks = periodTasks.filter((t) => t.dept === selectedAnalysisDept);
+        const deptResolvedCount = deptAllTasks.filter(
+          (t) => t.status === "cozuldu" || t.status === "kapatildi",
+        ).length;
+        const deptOpenCount = deptAllTasks.length - deptResolvedCount;
+        const deptHighCount = deptAllTasks.filter(
+          (t) => t.priority === "yuksek" || t.priority === "kritik",
+        ).length;
+        const deptCurrentPoints = points[selectedAnalysisDept] ?? 100;
+
+        const filteredDeptTasks = deptAllTasks
+          .filter((task) => {
+            if (
+              deptDetailPriorityFilter === "yuksek" &&
+              task.priority !== "yuksek" &&
+              task.priority !== "kritik"
+            )
+              return false;
+            if (deptDetailPriorityFilter === "orta" && task.priority !== "orta")
+              return false;
+            if (
+              deptDetailPriorityFilter === "basit" &&
+              task.priority !== "basit" &&
+              task.priority
+            )
+              return false;
+
+            const isTaskResolved =
+              task.status === "cozuldu" || task.status === "kapatildi";
+            if (deptDetailStatusFilter === "open" && isTaskResolved) return false;
+            if (deptDetailStatusFilter === "resolved" && !isTaskResolved)
+              return false;
+
+            if (deptDetailSearch.trim()) {
+              const q = deptDetailSearch.toLowerCase().trim();
+              const matchSub = task.subject?.toLowerCase().includes(q);
+              const matchDesc = task.desc?.toLowerCase().includes(q);
+              const matchUser = task.createdBy?.toLowerCase().includes(q);
+              if (!matchSub && !matchDesc && !matchUser) return false;
+            }
+            return true;
+          })
           .sort((a, b) => b.timestamp - a.timestamp);
+
         return (
           <div
             id="analysis-report-container"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up h-full flex flex-col print:shadow-none print:border-none print:p-0 print:h-auto print:block"
+            className="space-y-6 animate-slide-up print:p-0 print:space-y-4"
           >
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4 border-gray-100 dark:border-gray-700 print:border-b-2 print:pb-2">
+            {/* Header: Department Drill-Down Banner */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div>
                 <button
                   onClick={() => {
-                    navigate(-1);
-                    setTimeout(() => setSelectedAnalysisDept(null), 100);
+                    setSelectedAnalysisDept(null);
+                    setDeptDetailSearch("");
+                    setDeptDetailPriorityFilter("all");
+                    setDeptDetailStatusFilter("all");
                   }}
-                  className="mb-2 text-sm text-indigo-600 dark:text-indigo-400 hover:underline flex items-center print:hidden"
+                  className="mb-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 flex items-center transition-colors cursor-pointer group print:hidden"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-1" />{" "}
-                  {t("back_to_analysis") || "Analizlere Dön"}
+                  <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
+                  <span>{t("back_to_analysis") || "Tüm Analizlere Dön"}</span>
                 </button>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                  {t(getDeptKey(selectedAnalysisDept))} -{" "}
-                  {t("violation_details") || "İhlal Detayları"}
-                </h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {analysisFilter === "day"
-                    ? t("filter_today") || "Bugün"
-                    : analysisFilter === "week"
-                      ? t("filter_this_week") || "Bu Hafta"
-                      : analysisFilter === "month"
-                        ? t("filter_this_month") || "Bu Ay"
-                        : analysisFilter === "year"
-                          ? t("filter_yearly") || "Bu Yıl"
-                          : t("filter_all") || "Tümü"}
-                </p>
+
+                <div className="flex items-center gap-3 mt-1">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
+                    <Building2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">
+                        {t(getDeptKey(selectedAnalysisDept))}
+                      </h2>
+                      <span
+                        className={`text-xs font-extrabold px-3 py-1 rounded-full border ${
+                          deptCurrentPoints >= 90
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                            : deptCurrentPoints >= 70
+                              ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+                              : "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
+                        }`}
+                      >
+                        {deptCurrentPoints} İSG Puanı
+                      </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                      {periodLabel} dönemine ait birim ihlal detayları, tutanak geçmişi ve durum dökümü
+                    </p>
+                  </div>
+                </div>
               </div>
-              <button
-                onClick={handleExportPDF}
-                className="print:hidden px-4 py-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold rounded-lg hover:bg-indigo-100 transition-colors flex items-center"
-              >
-                <Printer className="w-4 h-4 mr-2" />{" "}
-                {t("export_pdf") || "PDF Olarak Kaydet"}
-              </button>
+
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  onClick={handleExportPDF}
+                  className="flex-1 sm:flex-initial px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs print:hidden"
+                  title="Sayfayı Yazdır"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Yazdır</span>
+                </button>
+                <button
+                  onClick={() => {
+                    triggerHaptic("medium");
+                    setShowPdfReportModal(true);
+                  }}
+                  className="flex-1 sm:flex-initial px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-xs sm:text-sm shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer print:hidden"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Resmi Rapor (PDF)</span>
+                </button>
+              </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto pr-2 print:overflow-visible">
-              {deptTasks.length === 0 ? (
-                <div className="text-center py-10 text-gray-500 dark:text-gray-400">
-                  {t("no_records") || "Kayıt bulunmamaktadır."}
+            {/* Department Metric Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div
+                onClick={() => setDeptDetailStatusFilter("all")}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                  deptDetailStatusFilter === "all"
+                    ? "bg-indigo-50/80 dark:bg-indigo-950/20 border-indigo-300 dark:border-indigo-700 ring-2 ring-indigo-500/20"
+                    : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  <span>Toplam İhlal</span>
+                  <Activity className="w-3.5 h-3.5 text-indigo-500" />
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2">
-                  {deptTasks.map((task) => {
-                    const isExpanded = expandedAnalysisTaskId === task.id;
-                    return (
-                      <div
-                        key={task.id}
-                        className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 p-4 rounded-xl print:break-inside-avoid print:border-gray-300"
-                      >
-                        <div
-                          className="flex justify-between items-start mb-2 cursor-pointer"
-                          onClick={() =>
-                            setExpandedAnalysisTaskId(
-                              isExpanded ? null : task.id,
-                            )
-                          }
-                        >
-                          <span
-                            className={`text-xs font-bold px-2 py-1 rounded-md ${(PRIORITIES[task.priority] || PRIORITIES["basit"]).color}`}
-                          >
-                            {t(
-                              (PRIORITIES[task.priority] || PRIORITIES["basit"])
-                                .label_key,
-                            )}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
-                            <Clock className="w-3 h-3 mr-1" />
-                            {new Date(task.timestamp).toLocaleString(
+                <p className="text-2xl font-black font-mono tabular-nums text-gray-900 dark:text-gray-100 mt-1">
+                  {deptAllTasks.length}
+                </p>
+                <span className="text-[11px] text-gray-400 font-medium">Birim Tutanakları</span>
+              </div>
+
+              <div
+                onClick={() => setDeptDetailStatusFilter("open")}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                  deptDetailStatusFilter === "open"
+                    ? "bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20"
+                    : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  <span>Açık Riskler</span>
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                </div>
+                <p className="text-2xl font-black font-mono tabular-nums text-amber-600 dark:text-amber-400 mt-1">
+                  {deptOpenCount}
+                </p>
+                <span className="text-[11px] text-gray-400 font-medium">Müdahale Bekleyen</span>
+              </div>
+
+              <div
+                onClick={() => setDeptDetailStatusFilter("resolved")}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                  deptDetailStatusFilter === "resolved"
+                    ? "bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-700 ring-2 ring-emerald-500/20"
+                    : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  <span>Çözülen İhlal</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                </div>
+                <p className="text-2xl font-black font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">
+                  {deptResolvedCount}
+                </p>
+                <span className="text-[11px] text-gray-400 font-medium">
+                  {deptAllTasks.length > 0
+                    ? `%{Math.round((deptResolvedCount / deptAllTasks.length) * 100)} Başarı`
+                    : "%100 Başarı"}
+                </span>
+              </div>
+
+              <div
+                onClick={() => setDeptDetailPriorityFilter("yuksek")}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                  deptDetailPriorityFilter === "yuksek"
+                    ? "bg-rose-50/80 dark:bg-rose-950/20 border-rose-300 dark:border-rose-700 ring-2 ring-rose-500/20"
+                    : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+                }`}
+              >
+                <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  <span>Yüksek Risk</span>
+                  <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+                </div>
+                <p className="text-2xl font-black font-mono tabular-nums text-rose-600 dark:text-rose-400 mt-1">
+                  {deptHighCount}
+                </p>
+                <span className="text-[11px] text-gray-400 font-medium">Acil / Kritik</span>
+              </div>
+            </div>
+
+            {/* Department Search & Filters Toolbar */}
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-3.5 print:hidden">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={deptDetailSearch}
+                    onChange={(e) => setDeptDetailSearch(e.target.value)}
+                    placeholder="Tutanak ara (konu, açıklama, denetleyen)..."
+                    className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  />
+                  {deptDetailSearch && (
+                    <button
+                      onClick={() => setDeptDetailSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Priority Selector */}
+                <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1 rounded-2xl border border-gray-200/80 dark:border-gray-600 shadow-inner flex-wrap gap-1">
+                  {[
+                    { id: "all", label: "Tümü" },
+                    { id: "yuksek", label: "Yüksek" },
+                    { id: "orta", label: "Orta" },
+                    { id: "basit", label: "Basit" },
+                  ].map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setDeptDetailPriorityFilter(p.id)}
+                      className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                        deptDetailPriorityFilter === p.id
+                          ? "bg-white dark:bg-gray-800 text-indigo-700 dark:text-indigo-300 shadow-sm"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Department Tasks List */}
+            {filteredDeptTasks.length === 0 ? (
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 text-center border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3.5">
+                  <CheckCircle className="w-7 h-7 text-emerald-500" />
+                </div>
+                <h4 className="font-extrabold text-gray-800 dark:text-gray-100 text-base">
+                  Filtrelere Uygun Tutanak Bulunamadı
+                </h4>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-sm mx-auto">
+                  Arama kriterlerinizi değiştirerek veya filtreleri temizleyerek diğer tutanakları görüntüleyebilirsiniz.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2">
+                {filteredDeptTasks.map((task) => {
+                  const isExpanded = expandedAnalysisTaskId === task.id;
+                  const isResolved =
+                    task.status === "cozuldu" || task.status === "kapatildi";
+                  const priorityMeta =
+                    PRIORITIES[task.priority] || PRIORITIES["basit"];
+
+                  return (
+                    <div
+                      key={task.id}
+                      className={`bg-white dark:bg-gray-800 rounded-2xl border transition-all duration-200 shadow-xs ${
+                        isExpanded
+                          ? "border-indigo-300 dark:border-indigo-500/60 ring-2 ring-indigo-500/10 shadow-md"
+                          : "border-gray-200/90 dark:border-gray-700/80 hover:border-indigo-200 dark:hover:border-indigo-600/50 hover:shadow-sm"
+                      }`}
+                    >
+                      <div className="p-4 sm:p-5">
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg ${priorityMeta.color}`}
+                            >
+                              {t(priorityMeta.label_key) ||
+                                (task.priority === "yuksek" || task.priority === "kritik"
+                                  ? "Yüksek Öncelik"
+                                  : task.priority === "orta"
+                                    ? "Orta Öncelik"
+                                    : "Basit Öncelik")}
+                            </span>
+                            <span
+                              className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg border ${
+                                isResolved
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                                  : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+                              }`}
+                            >
+                              {isResolved ? "Çözüldü" : "Açık İhlal"}
+                            </span>
+                          </div>
+
+                          <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center font-mono tabular-nums">
+                            <Clock className="w-3.5 h-3.5 mr-1" />
+                            {new Date(task.timestamp).toLocaleDateString(
                               lang === "tr" ? "tr-TR" : "en-US",
+                              { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" },
                             )}
                           </span>
                         </div>
+
                         <div
                           className="cursor-pointer"
                           onClick={() =>
@@ -5293,302 +5755,1184 @@ const AdminDashboard = () => {
                             )
                           }
                         >
-                          <h4 className="text-md font-bold text-gray-800 dark:text-gray-100 flex justify-between items-center mb-1">
-                            {task.subject ||
-                              (task.desc
-                                ? task.desc.substring(0, 40) + "..."
-                                : t("no_subject") || "Konu Belirtilmedi")}
+                          <h4 className="text-base font-extrabold text-gray-900 dark:text-gray-100 flex items-start justify-between gap-2">
+                            <span className="leading-snug">
+                              {task.subject ||
+                                (task.desc
+                                  ? task.desc.substring(0, 50) + "..."
+                                  : t("no_subject") || "İSG İhlal Tutanağı")}
+                            </span>
                             {isExpanded ? (
-                              <ChevronUp className="w-5 h-5 text-gray-400" />
+                              <ChevronUp className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
                             ) : (
-                              <ChevronDown className="w-5 h-5 text-gray-400" />
+                              <ChevronDown className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
                             )}
                           </h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                            {task.desc}
+                          </p>
                         </div>
+
+                        {/* Expandable Photo & Inspection Details */}
                         {isExpanded && (
-                          <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700 animate-fade-in">
-                            <p className="text-sm text-gray-800 dark:text-gray-100 font-medium mb-3">
+                          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/80 animate-fade-in space-y-3">
+                            <div className="bg-gray-50 dark:bg-gray-900/60 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
                               {task.desc}
-                            </p>
+                            </div>
+
                             {task.imgUrl && (
-                              <img
-                                loading="lazy"
-                                decoding="async"
-                                src={task.imgUrl}
-                                className="w-full h-40 object-cover rounded-xl mb-3 border border-gray-200 dark:border-gray-700"
-                                alt="İhlal Fotoğrafı"
-                              />
+                              <div
+                                className="relative group cursor-pointer overflow-hidden rounded-xl aspect-video bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
+                                onClick={() => setPreviewModalImg(task.imgUrl)}
+                              >
+                                <img
+                                  loading="lazy"
+                                  decoding="async"
+                                  src={task.imgUrl}
+                                  alt="İhlal Fotoğrafı"
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1.5 text-xs font-bold">
+                                  <Maximize2 className="w-4 h-4" />
+                                  <span>Büyük Görseli Aç</span>
+                                </div>
+                              </div>
                             )}
-                            <div className="flex items-center text-xs text-gray-600 dark:text-gray-400 mt-2">
-                              <User className="w-3.5 h-3.5 mr-1" />{" "}
-                              {task.createdBy}
+
+                            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1">
+                              <span className="flex items-center font-medium">
+                                <User className="w-3.5 h-3.5 mr-1 text-gray-400" />
+                                Denetleyen: {task.createdBy || "İSG Uzmanı"}
+                              </span>
+                              {task.resolvedAt && (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                  Çözüm: {new Date(task.resolvedAt).toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US")}
+                                </span>
+                              )}
                             </div>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      // Main Analysis View
+      const filteredRecords = periodTasks
+        .filter((task) => {
+          if (
+            analysisPriorityFilter === "yuksek" &&
+            task.priority !== "yuksek" &&
+            task.priority !== "kritik"
+          )
+            return false;
+          if (analysisPriorityFilter === "orta" && task.priority !== "orta")
+            return false;
+          if (
+            analysisPriorityFilter === "basit" &&
+            task.priority !== "basit" &&
+            task.priority
+          )
+            return false;
+
+          const isTaskResolved =
+            task.status === "cozuldu" || task.status === "kapatildi";
+          if (analysisStatusFilter === "open" && isTaskResolved) return false;
+          if (analysisStatusFilter === "resolved" && !isTaskResolved)
+            return false;
+
+          if (analysisDeptFilter !== "all" && task.dept !== analysisDeptFilter)
+            return false;
+
+          if (analysisSearchQuery.trim()) {
+            const q = analysisSearchQuery.toLowerCase().trim();
+            const matchSub = task.subject?.toLowerCase().includes(q);
+            const matchDesc = task.desc?.toLowerCase().includes(q);
+            const matchDept = task.dept?.toLowerCase().includes(q);
+            const matchUser = task.createdBy?.toLowerCase().includes(q);
+            if (!matchSub && !matchDesc && !matchDept && !matchUser)
+              return false;
+          }
+          return true;
+        })
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+      return (
+        <div
+          id="analysis-report-container"
+          className="space-y-6 animate-slide-up print:p-0 print:space-y-4"
+        >
+          {/* Executive Header & Action Bar */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+            <div>
+              <button
+                onClick={() => {
+                  navigate("/");
+                  setAdminSystemMode("home");
+                  setSelectedAdminDept(null);
+                  setSelectedAnalysisDept(null);
+                }}
+                className="flex items-center text-xs font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-2 transition-colors cursor-pointer group print:hidden"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>{t("back_to_menu") || "Ana Menüye Dön"}</span>
+              </button>
+
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-indigo-700 flex items-center justify-center text-white shadow-md shadow-indigo-500/20 shrink-0">
+                  <Activity className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">
+                    {t("module_analysis_title") || "Analiz & Yönetim Raporları"}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    İhlal dağılımları, risk seviyeleri, birim trendleri ve resmi denetim raporları
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Timeframe & PDF Actions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto print:hidden">
+              <button
+                onClick={handleExportPDF}
+                className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs"
+                title="Sayfayı Yazdır"
+              >
+                <Printer className="w-4 h-4" />
+                <span>Yazdır</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  triggerHaptic("medium");
+                  setShowPdfReportModal(true);
+                }}
+                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-xs sm:text-sm shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+                title="Resmi İSG ve Sevkiyat PDF Yönetim Raporu Oluşturucu"
+              >
+                <FileText className="w-4 h-4" />
+                <span>Resmi Yönetim Raporu (PDF)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Timeframe & Sub-Navigation Toolbar */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 bg-white dark:bg-gray-800 rounded-3xl p-3 sm:p-4 border border-gray-100 dark:border-gray-700/80 shadow-sm print:hidden">
+            {/* Timeframe Pills */}
+            <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1.5 rounded-2xl border border-gray-200/80 dark:border-gray-600 shadow-inner overflow-x-auto gap-1">
+              {[
+                { id: "day", label: t("filter_today") || "Bugün" },
+                { id: "week", label: t("filter_this_week") || "Bu Hafta" },
+                { id: "month", label: t("filter_this_month") || "Bu Ay" },
+                { id: "year", label: t("filter_yearly") || "Bu Yıl" },
+                { id: "all", label: t("filter_all") || "Tümü" },
+              ].map((filter) => (
+                <button
+                  key={filter.id}
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setAnalysisFilter(filter.id);
+                  }}
+                  className={`flex-1 sm:flex-initial px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                    analysisFilter === filter.id
+                      ? "bg-white dark:bg-gray-800 text-indigo-700 dark:text-indigo-300 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Segmented Sub-Tab Selector */}
+            <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1.5 rounded-2xl border border-gray-200/80 dark:border-gray-600 shadow-inner overflow-x-auto gap-1">
+              <button
+                onClick={() => {
+                  triggerHaptic("light");
+                  setAnalysisSubTab("overview");
+                }}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-1.5 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                  analysisSubTab === "overview"
+                    ? "bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5" />
+                <span>Birim Dağılımı</span>
+              </button>
+              <button
+                onClick={() => {
+                  triggerHaptic("light");
+                  setAnalysisSubTab("priorities");
+                }}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-1.5 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                  analysisSubTab === "priorities"
+                    ? "bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
+              >
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Risk & Öncelik</span>
+              </button>
+              <button
+                onClick={() => {
+                  triggerHaptic("light");
+                  setAnalysisSubTab("records");
+                }}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 py-1.5 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
+                  analysisSubTab === "records"
+                    ? "bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
+              >
+                <List className="w-3.5 h-3.5" />
+                <span>İhlal Tutanakları ({totalViolations})</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Quick Metrics Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div
+              onClick={() => {
+                triggerHaptic("light");
+                setAnalysisSubTab("overview");
+              }}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                analysisSubTab === "overview"
+                  ? "bg-indigo-50/80 dark:bg-indigo-950/20 border-indigo-300 dark:border-indigo-700 ring-2 ring-indigo-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Toplam İhlal</span>
+                <Activity className="w-3.5 h-3.5 text-indigo-500" />
+              </div>
+              <p className="text-2xl font-black font-mono tabular-nums text-gray-900 dark:text-gray-100 mt-1">
+                {totalViolations}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Kayıtlı İSG Tutanak</span>
+            </div>
+
+            <div
+              onClick={() => {
+                triggerHaptic("light");
+                setAnalysisSubTab("records");
+                setAnalysisStatusFilter("resolved");
+              }}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                analysisSubTab === "records" && analysisStatusFilter === "resolved"
+                  ? "bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-700 ring-2 ring-emerald-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Çözülenler</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              </div>
+              <p className="text-2xl font-black font-mono tabular-nums text-emerald-600 dark:text-emerald-400 mt-1">
+                {resolvedCount}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">%{resolveRate} Başarı Oranı</span>
+            </div>
+
+            <div
+              onClick={() => {
+                triggerHaptic("light");
+                setAnalysisSubTab("records");
+                setAnalysisStatusFilter("open");
+              }}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                analysisSubTab === "records" && analysisStatusFilter === "open"
+                  ? "bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Açık Riskler</span>
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+              </div>
+              <p className="text-2xl font-black font-mono tabular-nums text-amber-600 dark:text-amber-400 mt-1">
+                {openCount}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Müdahale Bekleyen</span>
+            </div>
+
+            <div
+              onClick={() => {
+                if (mostIssuesDept) {
+                  triggerHaptic("medium");
+                  setSelectedAnalysisDept(mostIssuesDept.name);
+                }
+              }}
+              className="p-4 rounded-2xl border bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-rose-300 dark:hover:border-rose-700 shadow-sm cursor-pointer transition-all"
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>En Riskli Birim</span>
+                <ShieldAlert className="w-3.5 h-3.5 text-rose-500" />
+              </div>
+              <p className="text-xl font-extrabold text-rose-600 dark:text-rose-400 mt-1 truncate">
+                {mostIssuesDept ? t(getDeptKey(mostIssuesDept.name)) : "Sıfır Risk"}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">
+                {mostIssuesDept ? `${maxCount} İhlal Kaydı` : "Tüm Birimler Temiz"}
+              </span>
+            </div>
+
+            <div className="col-span-2 sm:col-span-1 p-4 rounded-2xl border bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>İSG Skoru</span>
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-500" />
+              </div>
+              <p className="text-2xl font-black font-mono tabular-nums text-teal-600 dark:text-teal-400 mt-1">
+                {avgScore}
+                <span className="text-xs text-gray-400 font-bold ml-1">/100</span>
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Fabrika Ortalaması</span>
+            </div>
+          </div>
+
+          {/* Dedicated Official PDF Report Center Banner */}
+          <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 dark:from-emerald-950/30 dark:via-teal-950/30 dark:to-blue-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 print:hidden shadow-xs">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
+                <FileText className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-gray-900 dark:text-gray-100 text-base">
+                  Resmi Denetim & Sevkiyat Rapor Merkezi
+                </h3>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5 max-w-2xl leading-relaxed">
+                  Fabrika saha İSG denetimleri, açık ve çözülen ihlaller, kantar tonaj dökümleri ve departman puanlarını içeren 2 sayfalık resmi yönetim raporunu buradan oluşturup indirebilirsiniz.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                triggerHaptic("medium");
+                setShowPdfReportModal(true);
+              }}
+              className="w-full md:w-auto px-5 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-2xl font-bold text-sm shadow-md shadow-emerald-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Yönetim Raporunu Aç (PDF)</span>
+            </button>
+          </div>
+
+          {/* Sub-Tab 1: Department Distribution & Overview */}
+          {analysisSubTab === "overview" && (
+            <div className="space-y-6">
+              {totalViolations === 0 ? (
+                <div className="flex flex-col items-center justify-center py-16 px-4 text-center bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 shadow-sm">
+                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/60 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 shadow-sm">
+                    <ShieldCheck className="w-9 h-9" />
+                  </div>
+                  <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">
+                    Tebrikler! Seçilen Dönemde Sıfır İhlal Kaydı
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm max-w-md">
+                    Seçilen dönemde ({periodLabel}) herhangi bir iş güvenliği ihlali kaydedilmemiştir. Fabrika genelinde tüm birimler kurallara tam uyumlu çalıştı.
+                  </p>
+                  <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                    Sıfır Kaza & İhlal Standartları Karşılandı
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {/* Top Insights Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-rose-100 dark:border-rose-900/40 shadow-xs">
+                      <div className="flex items-center justify-between text-xs font-bold text-rose-500 uppercase tracking-wider mb-2">
+                        <span>En Yüksek Risk Odağı</span>
+                        <ShieldAlert className="w-4 h-4" />
+                      </div>
+                      <p className="text-lg font-black text-gray-900 dark:text-gray-100 truncate">
+                        {mostIssuesDept ? t(getDeptKey(mostIssuesDept.name)) : "-"}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>Toplam {maxCount} İhlal</span>
+                        <span className="font-bold text-rose-600 dark:text-rose-400">
+                          {totalViolations > 0 ? `%{Math.round((maxCount / totalViolations) * 100)} Pay` : "%0"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-emerald-100 dark:border-emerald-900/40 shadow-xs">
+                      <div className="flex items-center justify-between text-xs font-bold text-emerald-500 uppercase tracking-wider mb-2">
+                        <span>En Güvenli / Uyumlu Birim</span>
+                        <ShieldCheck className="w-4 h-4" />
+                      </div>
+                      <p className="text-lg font-black text-gray-900 dark:text-gray-100 truncate">
+                        {leastIssuesDept ? t(getDeptKey(leastIssuesDept.name)) : "-"}
+                      </p>
+                      <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>{leastIssuesDept?.total ?? 0} İhlal</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                          {leastIssuesDept?.points ?? 100} İSG Puanı
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-indigo-100 dark:border-indigo-900/40 shadow-xs">
+                      <div className="flex items-center justify-between text-xs font-bold text-indigo-500 uppercase tracking-wider mb-2">
+                        <span>Çözüm ve Kapatma Hızı</span>
+                        <CheckCircle2 className="w-4 h-4" />
+                      </div>
+                      <p className="text-lg font-black text-gray-900 dark:text-gray-100">
+                        %{resolveRate} Kapatma Oranı
+                      </p>
+                      <div className="mt-2 flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                        <span>{resolvedCount} / {totalViolations} İhlal</span>
+                        <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                          {openCount} Açık Risk
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Recharts BarChart Card */}
+                  <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700/80 shadow-sm">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-6">
+                      <div>
+                        <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">
+                          Birimler Arası İhlal Dağılımı ({periodLabel})
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Departman bazında tespit edilen iş güvenliği ihlal sayıları
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs font-medium text-gray-500 dark:text-gray-400">
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                          En Çok İhlal
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                          Aktif İhlal
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                          Sıfır İhlal
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="w-full overflow-x-auto pb-2">
+                      <div className="h-80 min-w-[500px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            data={deptStats.map((item) => ({
+                              name: t(getDeptKey(item.name)),
+                              total: item.total,
+                              resolved: item.resolved,
+                              open: item.open,
+                              fullName: item.name,
+                            }))}
+                            margin={{ top: 10, right: 10, left: -20, bottom: 60 }}
+                          >
+                            <CartesianGrid
+                              strokeDasharray="3 3"
+                              vertical={false}
+                              stroke={darkMode ? "#374151" : "#F3F4F6"}
+                            />
+                            <XAxis
+                              dataKey="name"
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{
+                                fill: darkMode ? "#9CA3AF" : "#6B7280",
+                                fontSize: 11,
+                                fontWeight: 600,
+                              }}
+                              angle={-35}
+                              textAnchor="end"
+                              interval={0}
+                            />
+                            <YAxis
+                              allowDecimals={false}
+                              axisLine={false}
+                              tickLine={false}
+                              tick={{
+                                fill: darkMode ? "#9CA3AF" : "#6B7280",
+                                fontSize: 11,
+                              }}
+                            />
+                            <Tooltip
+                              cursor={{ fill: darkMode ? "#1F2937" : "#F8FAFC" }}
+                              contentStyle={{
+                                backgroundColor: darkMode ? "#1F2937" : "#FFFFFF",
+                                borderRadius: "16px",
+                                border: darkMode ? "1px solid #374151" : "1px solid #E5E7EB",
+                                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1)",
+                              }}
+                              formatter={(value) => [value, "İhlal Sayısı"]}
+                              labelStyle={{
+                                color: darkMode ? "#F3F4F6" : "#111827",
+                                fontWeight: 800,
+                                marginBottom: "4px",
+                              }}
+                            />
+                            <Bar
+                              dataKey="total"
+                              radius={[6, 6, 0, 0]}
+                              onClick={(entry) => {
+                                if (entry?.fullName) {
+                                  setSelectedAnalysisDept(entry.fullName);
+                                }
+                              }}
+                              className="cursor-pointer"
+                            >
+                              {deptStats.map((entry, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={
+                                    entry.total === maxCount && maxCount > 0
+                                      ? "#EF4444"
+                                      : entry.total > 0
+                                        ? "#6366F1"
+                                        : "#10B981"
+                                  }
+                                />
+                              ))}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Department Ranking & Comparison Table */}
+                  <div className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-gray-100 dark:border-gray-700/80 flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-black text-gray-900 dark:text-gray-100">
+                          Birim Sıralaması & Detaylı Karşılaştırma
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Tüm fabrikadaki birimlerin risk oranları ve başarı durumları
+                        </p>
+                      </div>
+
+                      <span className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                        {DEPARTMENTS.length} Birim
+                      </span>
+                    </div>
+
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700/60">
+                      {deptStats.map((item, index) => {
+                        const isZero = item.total === 0;
+                        const isHigh = item.total === maxCount && maxCount > 0;
+                        const widthPct = maxCount > 0 ? (item.total / maxCount) * 100 : 0;
+
+                        return (
+                          <div
+                            key={item.name}
+                            onClick={() => setSelectedAnalysisDept(item.name)}
+                            className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 hover:bg-gray-50/80 dark:hover:bg-gray-750 transition-colors cursor-pointer group"
+                          >
+                            <div className="flex items-center gap-3.5 flex-1 min-w-0">
+                              <span
+                                className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
+                                  index === 0 && maxCount > 0
+                                    ? "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"
+                                    : isZero
+                                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300"
+                                      : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                #{index + 1}
+                              </span>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2 flex-wrap mb-1">
+                                  <span className="text-base font-extrabold text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                    {t(getDeptKey(item.name))}
+                                  </span>
+                                  <span
+                                    className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                                      item.points >= 90
+                                        ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                        : item.points >= 70
+                                          ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+                                          : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"
+                                    }`}
+                                  >
+                                    {item.points} Puan
+                                  </span>
+                                </div>
+
+                                {/* Progress meter */}
+                                <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 max-w-md overflow-hidden">
+                                  <div
+                                    className={`h-2 rounded-full transition-all duration-500 ${
+                                      isZero
+                                        ? "bg-emerald-500"
+                                        : isHigh
+                                          ? "bg-rose-500"
+                                          : item.total <= 2
+                                            ? "bg-amber-500"
+                                            : "bg-indigo-500"
+                                    }`}
+                                    style={{ width: `${Math.max(widthPct, isZero ? 100 : 8)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Right side stats & action */}
+                            <div className="flex items-center justify-between md:justify-end gap-6 text-xs shrink-0">
+                              <div className="text-left md:text-right">
+                                <span className="font-extrabold text-sm text-gray-900 dark:text-gray-100 font-mono tabular-nums block">
+                                  {item.total} İhlal
+                                </span>
+                                <span className="text-gray-400 font-medium">
+                                  {item.open} Açık · {item.resolved} Çözüldü
+                                </span>
+                              </div>
+
+                              <div className="flex items-center text-indigo-600 dark:text-indigo-400 font-bold group-hover:translate-x-1 transition-transform">
+                                <span className="hidden sm:inline mr-1">Detay</span>
+                                <ChevronRight className="w-4 h-4" />
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Sub-Tab 2: Priorities & Risk Matrix */}
+          {analysisSubTab === "priorities" && (
+            <div className="space-y-6">
+              {/* Severity Breakdown Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Yüksek Öncelik */}
+                <div
+                  onClick={() => {
+                    setAnalysisSubTab("records");
+                    setAnalysisPriorityFilter("yuksek");
+                  }}
+                  className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-rose-200/80 dark:border-rose-900/60 shadow-sm hover:border-rose-400 dark:hover:border-rose-600 transition-all cursor-pointer flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 flex items-center justify-center shadow-xs">
+                        <AlertTriangle className="w-6 h-6" />
+                      </div>
+                      <span className="text-xs font-black px-3 py-1 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800">
+                        3x Ceza Katsayısı
+                      </span>
+                    </div>
+
+                    <h4 className="text-lg font-black text-gray-900 dark:text-gray-100">
+                      Yüksek Risk (Acil İSG)
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                      Hayati tehlike, uzuv kaybı riski, yangın veya yüksekten düşme tehlikesi gibi acil müdahale gerektiren durumlar.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-end justify-between">
+                    <div>
+                      <span className="text-3xl font-black font-mono tabular-nums text-rose-600 dark:text-rose-400">
+                        {highCount}
+                      </span>
+                      <span className="text-xs text-gray-400 block mt-0.5">
+                        %{highRate} Pay
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                      Kayıtları Gör <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Orta Öncelik */}
+                <div
+                  onClick={() => {
+                    setAnalysisSubTab("records");
+                    setAnalysisPriorityFilter("orta");
+                  }}
+                  className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-amber-200/80 dark:border-amber-900/60 shadow-sm hover:border-amber-400 dark:hover:border-amber-600 transition-all cursor-pointer flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400 flex items-center justify-center shadow-xs">
+                        <AlertCircle className="w-6 h-6" />
+                      </div>
+                      <span className="text-xs font-black px-3 py-1 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                        2x Ceza Katsayısı
+                      </span>
+                    </div>
+
+                    <h4 className="text-lg font-black text-gray-900 dark:text-gray-100">
+                      Orta Risk (Önemli Uyarı)
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                      KKD eksikliği, nizami olmayan istifleme, makine koruyucu eksikliği veya geçici güvensiz davranışlar.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-end justify-between">
+                    <div>
+                      <span className="text-3xl font-black font-mono tabular-nums text-amber-600 dark:text-amber-400">
+                        {medCount}
+                      </span>
+                      <span className="text-xs text-gray-400 block mt-0.5">
+                        %{medRate} Pay
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      Kayıtları Gör <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </div>
+
+                {/* Basit Öncelik */}
+                <div
+                  onClick={() => {
+                    setAnalysisSubTab("records");
+                    setAnalysisPriorityFilter("basit");
+                  }}
+                  className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-blue-200/80 dark:border-blue-900/60 shadow-sm hover:border-blue-400 dark:hover:border-blue-600 transition-all cursor-pointer flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="w-12 h-12 rounded-2xl bg-blue-100 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 flex items-center justify-center shadow-xs">
+                        <CheckCircle className="w-6 h-6" />
+                      </div>
+                      <span className="text-xs font-black px-3 py-1 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                        1x Ceza Katsayısı
+                      </span>
+                    </div>
+
+                    <h4 className="text-lg font-black text-gray-900 dark:text-gray-100">
+                      Basit Risk (Tertip & Düzen)
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                      Saha temizliği, malzeme dağınıklığı, uyarı levhası eksikliği veya genel düzen ile ilgili hafif durumlar.
+                    </p>
+                  </div>
+
+                  <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-end justify-between">
+                    <div>
+                      <span className="text-3xl font-black font-mono tabular-nums text-blue-600 dark:text-blue-400">
+                        {lowCount}
+                      </span>
+                      <span className="text-xs text-gray-400 block mt-0.5">
+                        %{lowRate} Pay
+                      </span>
+                    </div>
+                    <span className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                      Kayıtları Gör <ArrowRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Visual Distribution Gauge */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                  <div>
+                    <h3 className="text-base font-black text-gray-900 dark:text-gray-100">
+                      Risk Dağılım Ölçeği ({periodLabel})
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Toplam {totalViolations} ihlalin öncelik seviyelerine göre orantısal payı
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-gray-400">
+                    Ağırlıklı Ceza Katsayısı: 3x · 2x · 1x
+                  </span>
+                </div>
+
+                <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-2xl h-4 overflow-hidden flex shadow-inner">
+                  {highRate > 0 && (
+                    <div
+                      className="bg-rose-500 h-full transition-all duration-500"
+                      style={{ width: `${highRate}%` }}
+                      title={`Yüksek Risk: ${highCount} (${highRate}%)`}
+                    />
+                  )}
+                  {medRate > 0 && (
+                    <div
+                      className="bg-amber-500 h-full transition-all duration-500"
+                      style={{ width: `${medRate}%` }}
+                      title={`Orta Risk: ${medCount} (${medRate}%)`}
+                    />
+                  )}
+                  {lowRate > 0 && (
+                    <div
+                      className="bg-blue-500 h-full transition-all duration-500"
+                      style={{ width: `${lowRate}%` }}
+                      title={`Basit Risk: ${lowCount} (${lowRate}%)`}
+                    />
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1 flex-wrap gap-2">
+                  <span className="flex items-center gap-1.5 font-bold text-rose-600 dark:text-rose-400">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    Yüksek Risk: {highCount} adet (%{highRate})
+                  </span>
+                  <span className="flex items-center gap-1.5 font-bold text-amber-600 dark:text-amber-400">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    Orta Risk: {medCount} adet (%{medRate})
+                  </span>
+                  <span className="flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                    Basit Risk: {lowCount} adet (%{lowRate})
+                  </span>
+                </div>
+              </div>
+
+              {/* High Priority Urgent Action Panel */}
+              {highPriorityTasks.length > 0 && (
+                <div className="bg-rose-50/50 dark:bg-rose-950/20 rounded-3xl p-6 border border-rose-200/80 dark:border-rose-900/60 shadow-xs">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center shadow-xs">
+                        <ShieldAlert className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-black text-rose-900 dark:text-rose-200 text-base">
+                          Acil Müdahale Gerektiren Yüksek Riskli İhlaller
+                        </h4>
+                        <p className="text-xs text-rose-700 dark:text-rose-400 mt-0.5">
+                          Aşağıdaki maddeler derhal giderilmelidir ve 3x ceza katsayısına tabidir.
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-black px-3 py-1 bg-rose-200 dark:bg-rose-900 text-rose-800 dark:text-rose-200 rounded-full">
+                      {highPriorityTasks.length} Tutanak
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+                    {highPriorityTasks.slice(0, 6).map((task) => (
+                      <div
+                        key={task.id}
+                        onClick={() => setSelectedAnalysisDept(task.dept)}
+                        className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/40 shadow-xs hover:border-rose-300 dark:hover:border-rose-700 transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">
+                            {t(getDeptKey(task.dept))}
+                          </span>
+                          <span className="text-[11px] text-gray-400 font-mono tabular-nums">
+                            {new Date(task.timestamp).toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US")}
+                          </span>
+                        </div>
+                        <h5 className="font-extrabold text-sm text-gray-900 dark:text-gray-100 line-clamp-1">
+                          {task.subject || task.desc}
+                        </h5>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">
+                          {task.desc}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sub-Tab 3: Full Detailed Incident Logs & Search */}
+          {analysisSubTab === "records" && (
+            <div className="space-y-4">
+              {/* Search & Filter Bar */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-3.5 print:hidden">
+                <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+                  <div className="relative flex-1">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={analysisSearchQuery}
+                      onChange={(e) => setAnalysisSearchQuery(e.target.value)}
+                      placeholder="Tutanaklarda ara (konu, açıklama, birim, denetleyen)..."
+                      className="w-full pl-10 pr-4 py-2.5 text-xs sm:text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    />
+                    {analysisSearchQuery && (
+                      <button
+                        onClick={() => setAnalysisSearchQuery("")}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Department Select Dropdown */}
+                  <div className="w-full md:w-56 shrink-0">
+                    <select
+                      value={analysisDeptFilter}
+                      onChange={(e) => setAnalysisDeptFilter(e.target.value)}
+                      className="w-full px-3.5 py-2.5 text-xs sm:text-sm bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-gray-800 dark:text-gray-200 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-semibold"
+                    >
+                      <option value="all">Tüm Birimler ({DEPARTMENTS.length})</option>
+                      {DEPARTMENTS.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {t(getDeptKey(dept))}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Priority & Status Filters */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-gray-100 dark:border-gray-700/60">
+                  {/* Priority selector */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-bold text-gray-400 mr-1">Öncelik:</span>
+                    {[
+                      { id: "all", label: "Tümü" },
+                      { id: "yuksek", label: "Yüksek" },
+                      { id: "orta", label: "Orta" },
+                      { id: "basit", label: "Basit" },
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => setAnalysisPriorityFilter(p.id)}
+                        className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          analysisPriorityFilter === p.id
+                            ? "bg-indigo-600 text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Status selector */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-bold text-gray-400 mr-1">Durum:</span>
+                    {[
+                      { id: "all", label: "Tümü" },
+                      { id: "open", label: "Açık Riskler" },
+                      { id: "resolved", label: "Çözülenler" },
+                    ].map((s) => (
+                      <button
+                        key={s.id}
+                        onClick={() => setAnalysisStatusFilter(s.id)}
+                        className={`px-3 py-1 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                          analysisStatusFilter === s.id
+                            ? "bg-indigo-600 text-white shadow-xs"
+                            : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                        }`}
+                      >
+                        {s.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Records Counter */}
+              <div className="flex items-center justify-between px-2 text-xs text-gray-500 dark:text-gray-400">
+                <span className="font-semibold">
+                  Toplam <span className="font-bold text-gray-800 dark:text-gray-200 font-mono tabular-nums">{filteredRecords.length}</span> tutanak listeleniyor
+                </span>
+                {(analysisSearchQuery ||
+                  analysisPriorityFilter !== "all" ||
+                  analysisStatusFilter !== "all" ||
+                  analysisDeptFilter !== "all") && (
+                  <button
+                    onClick={() => {
+                      setAnalysisSearchQuery("");
+                      setAnalysisPriorityFilter("all");
+                      setAnalysisStatusFilter("all");
+                      setAnalysisDeptFilter("all");
+                    }}
+                    className="text-indigo-600 dark:text-indigo-400 hover:underline font-bold"
+                  >
+                    Filtreleri Sıfırla
+                  </button>
+                )}
+              </div>
+
+              {/* Incidents Cards Grid */}
+              {filteredRecords.length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 text-center border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-3.5">
+                    <List className="w-7 h-7" />
+                  </div>
+                  <h4 className="font-extrabold text-gray-800 dark:text-gray-100 text-base">
+                    Filtrelere Uygun Tutanak Bulunamadı
+                  </h4>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-sm mx-auto">
+                    Arama kriterlerinizi değiştirerek veya filtreleri temizleyerek diğer tutanakları görüntüleyebilirsiniz.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {filteredRecords.map((task) => {
+                    const isExpanded = expandedAnalysisTaskId === task.id;
+                    const isResolved =
+                      task.status === "cozuldu" || task.status === "kapatildi";
+                    const priorityMeta =
+                      PRIORITIES[task.priority] || PRIORITIES["basit"];
+
+                    return (
+                      <div
+                        key={task.id}
+                        className={`bg-white dark:bg-gray-800 rounded-2xl border transition-all duration-200 shadow-xs ${
+                          isExpanded
+                            ? "border-indigo-300 dark:border-indigo-500/60 ring-2 ring-indigo-500/10 shadow-md"
+                            : "border-gray-200/90 dark:border-gray-700/80 hover:border-indigo-200 dark:hover:border-indigo-600/50 hover:shadow-sm"
+                        }`}
+                      >
+                        <div className="p-4 sm:p-5">
+                          <div className="flex items-center justify-between gap-2 mb-3">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span
+                                className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg ${priorityMeta.color}`}
+                              >
+                                {t(priorityMeta.label_key) ||
+                                  (task.priority === "yuksek" || task.priority === "kritik"
+                                    ? "Yüksek"
+                                    : task.priority === "orta"
+                                      ? "Orta"
+                                      : "Basit")}
+                              </span>
+
+                              <span
+                                onClick={() => setSelectedAnalysisDept(task.dept)}
+                                className="text-[11px] font-extrabold px-2.5 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+                                title="Birim detaylarına git"
+                              >
+                                {t(getDeptKey(task.dept))}
+                              </span>
+
+                              <span
+                                className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg border ${
+                                  isResolved
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800"
+                                    : "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"
+                                }`}
+                              >
+                                {isResolved ? "Çözüldü" : "Açık Risk"}
+                              </span>
+                            </div>
+
+                            <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center font-mono tabular-nums shrink-0">
+                              <Clock className="w-3.5 h-3.5 mr-1" />
+                              {new Date(task.timestamp).toLocaleDateString(
+                                lang === "tr" ? "tr-TR" : "en-US",
+                                { day: "numeric", month: "short" },
+                              )}
+                            </span>
+                          </div>
+
+                          <div
+                            className="cursor-pointer"
+                            onClick={() =>
+                              setExpandedAnalysisTaskId(
+                                isExpanded ? null : task.id,
+                              )
+                            }
+                          >
+                            <h4 className="text-base font-extrabold text-gray-900 dark:text-gray-100 flex items-start justify-between gap-2">
+                              <span className="leading-snug">
+                                {task.subject ||
+                                  (task.desc
+                                    ? task.desc.substring(0, 50) + "..."
+                                    : t("no_subject") || "İSG İhlal Tutanağı")}
+                              </span>
+                              {isExpanded ? (
+                                <ChevronUp className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
+                              ) : (
+                                <ChevronDown className="w-5 h-5 text-gray-400 shrink-0 mt-0.5" />
+                              )}
+                            </h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2 leading-relaxed">
+                              {task.desc}
+                            </p>
+                          </div>
+
+                          {/* Expandable Photo & Inspection Details */}
+                          {isExpanded && (
+                            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/80 animate-fade-in space-y-3">
+                              <div className="bg-gray-50 dark:bg-gray-900/60 p-3.5 rounded-xl border border-gray-100 dark:border-gray-700/60 text-xs text-gray-700 dark:text-gray-300 leading-relaxed font-medium">
+                                {task.desc}
+                              </div>
+
+                              {task.imgUrl && (
+                                <div
+                                  className="relative group cursor-pointer overflow-hidden rounded-xl aspect-video bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
+                                  onClick={() => setPreviewModalImg(task.imgUrl)}
+                                >
+                                  <img
+                                    loading="lazy"
+                                    decoding="async"
+                                    src={task.imgUrl}
+                                    alt="İhlal Fotoğrafı"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1.5 text-xs font-bold">
+                                    <Maximize2 className="w-4 h-4" />
+                                    <span>Büyük Görseli Aç</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1">
+                                <span className="flex items-center font-medium">
+                                  <User className="w-3.5 h-3.5 mr-1 text-gray-400" />
+                                  Denetleyen: {task.createdBy || "İSG Uzmanı"}
+                                </span>
+                                {task.resolvedAt && (
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                    Çözüm: {new Date(task.resolvedAt).toLocaleDateString(lang === "tr" ? "tr-TR" : "en-US")}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
                 </div>
               )}
             </div>
-          </div>
-        );
-      }
-
-      const issueCounts = {};
-      DEPARTMENTS.forEach((d) => (issueCounts[d] = 0));
-      filteredTasks.forEach((task) => {
-        if (issueCounts[task.dept] !== undefined) {
-          issueCounts[task.dept]++;
-        }
-      });
-
-      const sortedAnalysis = DEPARTMENTS.map((d) => ({
-        name: d,
-        count: issueCounts[d],
-      })).sort((a, b) => b.count - a.count);
-      const maxCount = sortedAnalysis.length > 0 ? sortedAnalysis[0].count : 0;
-
-      const mostIssues = sortedAnalysis.filter(
-        (d) => d.count === maxCount && maxCount > 0,
-      );
-      const minCount = Math.min(...sortedAnalysis.map((d) => d.count));
-      const leastIssues = sortedAnalysis.filter((d) => d.count === minCount);
-
-      return (
-        <div
-          id="analysis-report-container"
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up h-full flex flex-col print:shadow-none print:border-none print:p-0 print:h-auto print:block"
-        >
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 border-b pb-4 border-gray-100 dark:border-gray-700 print:border-b-2 print:pb-2">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                <Activity className="w-6 h-6 mr-2 text-indigo-600" />{" "}
-                {t("analysis_tab") || "Analiz Raporları"}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 print:hidden">
-                {t("analysis_desc")}
-              </p>
-            </div>
-            <div className="flex flex-col md:flex-row gap-4 items-end md:items-center print:hidden">
-              <div className="flex bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl border border-gray-200 dark:border-gray-600 shadow-inner flex-wrap gap-1">
-                <button
-                  onClick={() => setAnalysisFilter("day")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${analysisFilter === "day" ? "bg-white dark:bg-gray-800 text-indigo-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_today") || "Bugün"}
-                </button>
-                <button
-                  onClick={() => setAnalysisFilter("week")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${analysisFilter === "week" ? "bg-white dark:bg-gray-800 text-indigo-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_this_week") || "Bu Hafta"}
-                </button>
-                <button
-                  onClick={() => setAnalysisFilter("month")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${analysisFilter === "month" ? "bg-white dark:bg-gray-800 text-indigo-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_this_month") || "Bu Ay"}
-                </button>
-                <button
-                  onClick={() => setAnalysisFilter("year")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${analysisFilter === "year" ? "bg-white dark:bg-gray-800 text-indigo-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_yearly") || "Bu Yıl"}
-                </button>
-                <button
-                  onClick={() => setAnalysisFilter("all")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${analysisFilter === "all" ? "bg-white dark:bg-gray-800 text-indigo-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_all") || "Tümü"}
-                </button>
-              </div>
-              <button
-                onClick={handleExportPDF}
-                className="px-4 py-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 font-bold rounded-xl hover:bg-indigo-100 transition-colors flex items-center"
-              >
-                <Printer className="w-4 h-4 mr-2" />{" "}
-                {t("export_pdf") || "PDF Olarak Kaydet"}
-              </button>
-            </div>
-          </div>
-
-          {filteredTasks.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center py-16 px-4 text-center bg-emerald-50/50 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-800/40 my-4">
-              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/60 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 shadow-sm">
-                <ShieldCheck className="w-9 h-9" />
-              </div>
-              <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">
-                Tebrikler! Sıfır İhlal Kaydı
-              </h3>
-              <p className="text-gray-600 dark:text-gray-300 text-sm max-w-md">
-                Seçilen dönemde ({analysisFilter === "day" ? "Bugün" : analysisFilter === "week" ? "Bu Hafta" : analysisFilter === "month" ? "Bu Ay" : analysisFilter === "year" ? "Bu Yıl" : "Tüm Zamanlar"}) herhangi bir iş güvenliği ihlali bulunmamaktadır.
-              </p>
-              <div className="mt-4 inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                <CheckCircle className="w-4 h-4 text-emerald-600" />
-                Fabrika genelinde tüm birimler kurallara tam uyumlu
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <div className="bg-red-50 dark:bg-red-900/20 p-5 rounded-2xl border border-red-100 dark:border-red-800/30 print:break-inside-avoid print:bg-transparent print:border-gray-300">
-                  <h4 className="text-sm font-bold text-red-800 dark:text-red-400 mb-2">
-                    {t("dept_most_issues") || "En Çok Sorun Çıkan Birim"}
-                  </h4>
-                  <p className="text-xl font-extrabold text-red-900 dark:text-red-300">
-                    {mostIssues.length > 0
-                      ? mostIssues.map((d) => t(getDeptKey(d.name))).join(", ")
-                      : "-"}
-                  </p>
-                  <p className="text-xs text-red-700 dark:text-red-500 mt-1">
-                    {maxCount} {t("issues") || "İhlal"}
-                  </p>
-                </div>
-                <div className="bg-green-50 dark:bg-green-900/20 p-5 rounded-2xl border border-green-100 dark:border-green-800/30 print:break-inside-avoid print:bg-transparent print:border-gray-300">
-                  <h4 className="text-sm font-bold text-green-800 dark:text-green-400 mb-2">
-                    {t("dept_least_issues") || "En Az Sorun Çıkan Birim"}
-                  </h4>
-                  <p className="text-xl font-extrabold text-green-900 dark:text-green-300">
-                    {leastIssues.length > 0
-                      ? leastIssues.map((d) => t(getDeptKey(d.name))).join(", ")
-                      : "-"}
-                  </p>
-                  <p className="text-xs text-green-700 dark:text-green-500 mt-1">
-                    {minCount} {t("issues") || "İhlal"}
-                  </p>
-                </div>
-              </div>
-
-              <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700 print:break-inside-avoid">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
-                  {t("chart_violations") || "İhlal Dağılım Grafiği"}
-                </h3>
-                <div className="w-full overflow-x-auto pb-2">
-                  <div className="h-80 min-w-[500px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart
-                        data={sortedAnalysis.map((item) => ({
-                          name: t(getDeptKey(item.name)),
-                          issues: item.count,
-                        }))}
-                        margin={{ top: 10, right: 10, left: -20, bottom: 80 }}
-                      >
-                        <CartesianGrid
-                          strokeDasharray="3 3"
-                          vertical={false}
-                          stroke={darkMode ? "#374151" : "#E5E7EB"}
-                        />
-                        <XAxis
-                          dataKey="name"
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{
-                            fill: darkMode ? "#9CA3AF" : "#6B7280",
-                            fontSize: 11,
-                          }}
-                          angle={-45}
-                          textAnchor="end"
-                        />
-                        <YAxis
-                          allowDecimals={false}
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{
-                            fill: darkMode ? "#9CA3AF" : "#6B7280",
-                            fontSize: 11,
-                          }}
-                        />
-                        <Tooltip
-                          cursor={{ fill: darkMode ? "#1F2937" : "#F3F4F6" }}
-                          contentStyle={{
-                            backgroundColor: darkMode ? "#1F2937" : "#FFFFFF",
-                            borderRadius: "12px",
-                            border: "none",
-                            boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.1)",
-                          }}
-                          itemStyle={{ color: "#6366F1", fontWeight: "bold" }}
-                          labelStyle={{
-                            color: darkMode ? "#D1D5DB" : "#374151",
-                            fontWeight: "bold",
-                            marginBottom: "4px",
-                          }}
-                          formatter={(value) => [value, t("issues") || "İhlal"]}
-                        />
-                        <Bar
-                          dataKey="issues"
-                          name={t("issues") || "İhlal"}
-                          radius={[4, 4, 0, 0]}
-                        >
-                          {sortedAnalysis.map((entry, index) => (
-                            <Cell
-                              key={`cell-${index}`}
-                              fill={
-                                entry.count > 0
-                                  ? index === 0
-                                    ? "#EF4444"
-                                    : "#6366F1"
-                                  : "#9CA3AF"
-                              }
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              </div>
-              <div className="flex-1 overflow-y-auto pr-2 print:overflow-visible">
-                <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">
-                  {t("total_issues") || "Toplam Sorun (İhlal)"}
-                </h3>
-                <div className="space-y-4">
-                  {sortedAnalysis.map((item, index) => (
-                    <div
-                      key={item.name}
-                      className="flex items-center group cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-750 p-2 rounded-xl transition-colors print:break-inside-avoid print:p-0 print:mb-4"
-                      onClick={() => setSelectedAnalysisDept(item.name)}
-                    >
-                      <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-xs mr-3 print:border print:border-gray-300">
-                        {index + 1}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex justify-between mb-1">
-                          <span className="font-bold text-sm text-gray-800 dark:text-gray-100 group-hover:text-indigo-600 transition-colors">
-                            {t(getDeptKey(item.name))}
-                          </span>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${item.count === 0 ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300" : item.count <= 2 ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300" : "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"}`}>
-                            {item.count} {t("issues") || "İhlal"}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 print:border print:border-gray-200">
-                          <div
-                            className={`h-2 rounded-full transition-all duration-500 print:bg-gray-400 ${item.count === 0 ? "bg-emerald-500" : item.count <= 2 ? "bg-amber-500" : "bg-rose-500"}`}
-                            style={{
-                              width:
-                                maxCount > 0
-                                  ? `${(item.count / maxCount) * 100}%`
-                                  : "0%",
-                            }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </>
           )}
         </div>
       );
     }
 
     if (adminSystemMode === "leaderboard") {
-      const sortedDepts = Object.keys(points)
-        .filter(
-          (key) => key !== "lastDailyBonus" && key !== "lastBonusTimestamp",
-        )
-        .sort((a, b) => points[b] - points[a]);
+      const deptsList = Object.keys(points).filter(
+        (key) => key !== "lastDailyBonus" && key !== "lastBonusTimestamp"
+      );
+      DEPARTMENTS.forEach((d) => {
+        if (!deptsList.includes(d)) deptsList.push(d);
+      });
+      const sortedDepts = deptsList.sort((a, b) => (points[b] ?? 100) - (points[a] ?? 100));
+
+      const topDept = sortedDepts[0] || DEPARTMENTS[0];
+      const topDeptScore = points[topDept] ?? 100;
+      const allScores = sortedDepts.map((d) => points[d] ?? 100);
+      const avgScore =
+        allScores.length > 0
+          ? (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1)
+          : "100.0";
+      const criticalCount = sortedDepts.filter((d) => (points[d] ?? 100) < 75).length;
+      const perfectCount = sortedDepts.filter((d) => (points[d] ?? 100) >= 100).length;
 
       const executeResetAndSave = async () => {
         const now = new Date();
@@ -5614,232 +6958,792 @@ const AdminDashboard = () => {
         triggerHaptic("heavy");
         toast.success(
           t("success_reset") ||
-            "Geçmiş başarıyla kaydedildi ve tüm puanlar sıfırlandı!",
+            "Geçmiş başarıyla kaydedildi ve tüm puanlar sıfırlandı!"
         );
       };
 
+      // Filtered Departments for Tab 1
+      const filteredDepts = sortedDepts.filter((dept) => {
+        const score = points[dept] ?? 100;
+        if (leaderboardScoreFilter === "high" && score < 90) return false;
+        if (leaderboardScoreFilter === "mid" && (score < 75 || score >= 90)) return false;
+        if (leaderboardScoreFilter === "low" && score >= 75) return false;
+
+        if (leaderboardSearch.trim()) {
+          const q = leaderboardSearch.toLowerCase().trim();
+          const deptName = t(getDeptKey(dept)).toLowerCase();
+          const rawDept = dept.toLowerCase();
+          if (!deptName.includes(q) && !rawDept.includes(q)) return false;
+        }
+        return true;
+      });
+
+      // Filtered Point Logs for Tab 2
+      const filteredPointLogs = (pointLogs || []).filter((log) => {
+        if (pointLogsFilter !== "all") {
+          const now = new Date();
+          if (pointLogsFilter === "day") {
+            const startOfDay = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate()
+            ).getTime();
+            if (log.timestamp < startOfDay) return false;
+          } else if (pointLogsFilter === "week") {
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            const startOfWeek = new Date(now.setDate(diff)).setHours(0, 0, 0, 0);
+            if (log.timestamp < startOfWeek) return false;
+          } else if (pointLogsFilter === "month") {
+            const startOfMonth = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              1
+            ).getTime();
+            if (log.timestamp < startOfMonth) return false;
+          }
+        }
+
+        if (leaderboardLogType === "bonus" && log.points < 0) return false;
+        if (leaderboardLogType === "penalty" && log.points >= 0) return false;
+
+        if (leaderboardLogSearch.trim()) {
+          const q = leaderboardLogSearch.toLowerCase().trim();
+          const matchReason = log.reason?.toLowerCase().includes(q);
+          const matchAdmin = log.adminName?.toLowerCase().includes(q);
+          const matchDept = log.dept?.toLowerCase().includes(q);
+          if (!matchReason && !matchAdmin && !matchDept) return false;
+        }
+
+        return true;
+      });
+
       return (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up h-full flex flex-col">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 border-b pb-4 border-gray-100 dark:border-gray-700">
+        <div className="space-y-6 animate-slide-up">
+          {/* Executive Header & Navigation */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                <TrendingUp className="w-6 h-6 mr-2 text-green-600" />{" "}
-                {t("leaderboard") || "Liderlik Tablosu"}
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                Birimlerin anlık performans puanları. Ay sonu 1. olan birim
-                ödüllendirilecektir.
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row flex-wrap gap-2 w-full md:w-auto">
               <button
+                onClick={() => {
+                  navigate("/");
+                  setAdminSystemMode("home");
+                  setSelectedAdminDept(null);
+                  setSelectedAdminDate(null);
+                }}
+                className="flex items-center text-xs font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-2 transition-colors cursor-pointer group"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>{t("back_to_menu") || "Ana Menüye Dön"}</span>
+              </button>
+
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-green-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20 shrink-0">
+                  <Trophy className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">
+                    {t("leaderboard") || "Liderlik Tablosu & Puan Sıralaması"}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Birimlerin anlık İSG performans puanları, ceza ve ödül hareketleri ile ay sonu lig durumu
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side: Next Reset Pill & Actions */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+              <div className="hidden lg:flex items-center gap-2.5 px-4 py-2 bg-emerald-50/80 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl shrink-0">
+                <Calendar className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <div>
+                  <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
+                    {t("next_reset") || "Puan Sıfırlama"}
+                  </span>
+                  <span className="text-xs font-black text-emerald-950 dark:text-emerald-200">
+                    {getLastFridayOfCurrentMonth()}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
                 onClick={() => {
                   setShowResetModal(true);
                   setResetCountdown(10);
                 }}
-                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-200 px-4 py-2.5 rounded-xl font-bold flex items-center shadow-sm text-sm whitespace-nowrap"
+                className="px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-2xl font-bold text-xs shadow-md shadow-orange-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0"
               >
-                {t("save_history") || "Sıfırla ve Geçmişe Kaydet"}
+                <Save className="w-4 h-4 shrink-0" />
+                <span>{t("save_history") || "Sıfırla ve Geçmişe Kaydet"}</span>
               </button>
+
+              {/* Segmented View Selector */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1.5 rounded-2xl border border-gray-200/80 dark:border-gray-600 w-full sm:w-auto shadow-inner">
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardTab("ranking")}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    leaderboardTab === "ranking"
+                      ? "bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  }`}
+                >
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span>Sıralama Tablosu</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardTab("logs")}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    leaderboardTab === "logs"
+                      ? "bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  }`}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  <span>Puan Hareketleri</span>
+                  {pointLogs && pointLogs.length > 0 && (
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-black">
+                      {pointLogs.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLeaderboardTab("history")}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    leaderboardTab === "history"
+                      ? "bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  }`}
+                >
+                  <History className="w-3.5 h-3.5" />
+                  <span>Geçmiş Dönemler</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-4 mb-8">
-            {sortedDepts.map((dept, index) => {
-              const railClass =
-                index === 0
-                  ? "status-rail-amber"
-                  : index === 1
-                    ? "status-rail-blue"
-                    : "status-rail-emerald";
-              return (
-                <div
-                  key={dept}
-                  className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-5 border rounded-2xl transition-all card-interactive status-rail ${railClass} ${
-                    index === 0
-                      ? "bg-gradient-to-r from-yellow-50/80 to-white dark:from-yellow-950/20 dark:to-gray-800 border-yellow-300 dark:border-yellow-700/60 shadow-sm"
-                      : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50/60 dark:hover:bg-gray-750"
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <span
-                      className={`w-10 h-10 flex items-center justify-center rounded-full font-bold text-lg mr-4 shadow-sm ${index === 0 ? "bg-yellow-400 text-white" : index === 1 ? "bg-gray-300 text-white" : index === 2 ? "bg-orange-400 text-white" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"}`}
-                    >
-                      {index + 1}
+          {/* Quick Metrics Strip - 4 Balanced Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* Card 1: Lider Birim */}
+            <div
+              onClick={() => {
+                setLeaderboardTab("ranking");
+                setLeaderboardScoreFilter("all");
+                setLeaderboardSearch("");
+              }}
+              className="p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-amber-300 dark:hover:border-amber-700/80 shadow-sm"
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
+                <span className="truncate">Lider Birim (#1)</span>
+                <Trophy className="w-4 h-4 text-amber-500 shrink-0" />
+              </div>
+              <div className="my-2">
+                <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 leading-none tabular-nums">
+                  {topDeptScore} <span className="text-xs font-bold text-gray-400">Puan</span>
+                </p>
+              </div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+                <span className="truncate font-bold">{t(getDeptKey(topDept))}</span>
+              </div>
+            </div>
+
+            {/* Card 2: Fabrika Ortalaması */}
+            <div
+              onClick={() => {
+                setLeaderboardTab("ranking");
+                setLeaderboardScoreFilter("all");
+              }}
+              className="p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-emerald-300 dark:hover:border-emerald-700/80 shadow-sm"
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
+                <span className="truncate">Fabrika Ortalaması</span>
+                <Sparkles className="w-4 h-4 text-emerald-500 shrink-0" />
+              </div>
+              <div className="my-2">
+                <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 leading-none tabular-nums">
+                  {avgScore} <span className="text-xs font-bold text-gray-400">/ 100</span>
+                </p>
+              </div>
+              <div className="text-[11px] text-gray-400 font-medium truncate">
+                <span>Genel Birimler Skoru</span>
+              </div>
+            </div>
+
+            {/* Card 3: Tam Puanlı Birimler */}
+            <div
+              onClick={() => {
+                setLeaderboardTab("ranking");
+                setLeaderboardScoreFilter("high");
+              }}
+              className="p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-blue-300 dark:hover:border-blue-700/80 shadow-sm"
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
+                <span className="truncate">Kusursuz Birimler</span>
+                <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />
+              </div>
+              <div className="my-2">
+                <p className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 leading-none tabular-nums">
+                  {perfectCount} <span className="text-xs font-bold text-gray-400">Birim</span>
+                </p>
+              </div>
+              <div className="text-[11px] text-gray-400 font-medium truncate">
+                <span>100 Puan ve Üzeri</span>
+              </div>
+            </div>
+
+            {/* Card 4: Risk Seviyesinde */}
+            <div
+              onClick={() => {
+                setLeaderboardTab("ranking");
+                setLeaderboardScoreFilter("low");
+              }}
+              className="p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-rose-300 dark:hover:border-rose-700/80 shadow-sm"
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
+                <span className="truncate">Risk Seviyesinde</span>
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+              </div>
+              <div className="my-2">
+                <p className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 leading-none tabular-nums">
+                  {criticalCount} <span className="text-xs font-bold text-gray-400">Birim</span>
+                </p>
+              </div>
+              <div className="text-[11px] text-gray-400 font-medium truncate">
+                <span>&lt;75 Puan Altı Birimler</span>
+              </div>
+            </div>
+          </div>
+
+          {/* TAB 1: SIRALAMA TABLOSU */}
+          {leaderboardTab === "ranking" && (
+            <div className="space-y-6">
+              {/* Top 3 Podium (Podyum) Showcase */}
+              {sortedDepts.length >= 3 && !leaderboardSearch && leaderboardScoreFilter === "all" && (
+                <div className="bg-gradient-to-b from-slate-50 to-white dark:from-gray-800/80 dark:to-gray-800 rounded-3xl p-6 md:p-8 border border-gray-100 dark:border-gray-700/80 shadow-sm">
+                  <div className="text-center mb-6">
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                      Ayın Zirve Yarışı
                     </span>
-                    <span className="font-bold text-lg text-gray-800 dark:text-gray-100">
-                      {t(getDeptKey(dept))}
-                    </span>
+                    <h3 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-100 mt-1">
+                      Şampiyonluk Podyumu
+                    </h3>
                   </div>
-                  <div className="text-right flex items-center space-x-2 sm:space-x-4 mt-4 sm:mt-0">
-                    <button
-                      onClick={() => handleCustomBonus(dept)}
-                      className="text-xs bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-3 py-1.5 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 font-bold transition-colors"
-                    >
-                      {t("custom_bonus") || "Özel Puan"}
-                    </button>
-                    <div>
-                      <span className={`text-3xl font-extrabold ${(points[dept] ?? 100) >= 90 ? "text-emerald-600 dark:text-emerald-400" : (points[dept] ?? 100) >= 70 ? "text-amber-500 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"}`}>
-                        <CountUp end={points[dept] ?? 100} duration={700} />
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 items-end max-w-4xl mx-auto pt-4">
+                    {/* 2nd Place (Silver) */}
+                    <div className="order-2 md:order-1 bg-white dark:bg-gray-800/90 rounded-3xl p-5 border border-slate-200 dark:border-slate-700 shadow-md flex flex-col items-center text-center relative hover:-translate-y-1 transition-transform">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-slate-400 to-slate-200 text-slate-800 font-black text-lg flex items-center justify-center shadow-md mb-3 -mt-9 border-2 border-white dark:border-gray-800">
+                        🥈
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/70 px-2.5 py-0.5 rounded-full mb-1">
+                        2. Sıra
                       </span>
-                      <span className="text-sm text-gray-500 dark:text-gray-400 font-normal ml-1 tracking-wider uppercase">
-                        {t("risk") || "Puan"}
+                      <h4 className="font-black text-gray-900 dark:text-gray-100 text-base mb-1 truncate max-w-full">
+                        {t(getDeptKey(sortedDepts[1]))}
+                      </h4>
+                      <p className="text-2xl font-black text-slate-700 dark:text-slate-300 tabular-nums">
+                        <CountUp end={points[sortedDepts[1]] ?? 100} duration={600} /> <span className="text-xs font-bold text-gray-400">Puan</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleCustomBonus(sortedDepts[1])}
+                        className="mt-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 py-1.5 px-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                      >
+                        Özel Puan
+                      </button>
+                    </div>
+
+                    {/* 1st Place (Gold / Champion) */}
+                    <div className="order-1 md:order-2 bg-gradient-to-b from-amber-50/80 via-yellow-50/40 to-white dark:from-amber-950/30 dark:via-yellow-950/10 dark:to-gray-800 rounded-3xl p-6 border-2 border-amber-400 dark:border-amber-600 shadow-xl flex flex-col items-center text-center relative hover:-translate-y-1.5 transition-transform ring-4 ring-amber-400/10">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-yellow-400 text-white font-black text-2xl flex items-center justify-center shadow-lg shadow-amber-500/30 mb-3 -mt-12 border-4 border-white dark:border-gray-800">
+                        🏆
+                      </div>
+                      <span className="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-3 py-1 rounded-full mb-1 flex items-center gap-1">
+                        <Trophy className="w-3 h-3 text-amber-600" />
+                        1. Sıra (Lider)
                       </span>
+                      <h4 className="font-black text-gray-900 dark:text-gray-100 text-lg mb-1 truncate max-w-full">
+                        {t(getDeptKey(sortedDepts[0]))}
+                      </h4>
+                      <p className="text-3xl font-black text-amber-600 dark:text-amber-400 tabular-nums">
+                        <CountUp end={points[sortedDepts[0]] ?? 100} duration={700} /> <span className="text-sm font-bold text-gray-400">Puan</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleCustomBonus(sortedDepts[0])}
+                        className="mt-3 text-xs font-bold text-amber-800 dark:text-amber-200 hover:text-white py-1.5 px-4 rounded-xl bg-amber-200/80 dark:bg-amber-900/60 hover:bg-amber-600 dark:hover:bg-amber-600 transition-colors shadow-xs cursor-pointer"
+                      >
+                        Özel Puan Ekle
+                      </button>
+                    </div>
+
+                    {/* 3rd Place (Bronze) */}
+                    <div className="order-3 bg-white dark:bg-gray-800/90 rounded-3xl p-5 border border-amber-200/60 dark:border-amber-900/40 shadow-md flex flex-col items-center text-center relative hover:-translate-y-1 transition-transform">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-700 to-orange-400 text-white font-black text-lg flex items-center justify-center shadow-md mb-3 -mt-9 border-2 border-white dark:border-gray-800">
+                        🥉
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-full mb-1">
+                        3. Sıra
+                      </span>
+                      <h4 className="font-black text-gray-900 dark:text-gray-100 text-base mb-1 truncate max-w-full">
+                        {t(getDeptKey(sortedDepts[2]))}
+                      </h4>
+                      <p className="text-2xl font-black text-amber-700 dark:text-amber-400 tabular-nums">
+                        <CountUp end={points[sortedDepts[2]] ?? 100} duration={600} /> <span className="text-xs font-bold text-gray-400">Puan</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleCustomBonus(sortedDepts[2])}
+                        className="mt-3 text-xs font-bold text-amber-700 dark:text-amber-300 hover:text-blue-600 dark:hover:text-blue-400 py-1.5 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors cursor-pointer"
+                      >
+                        Özel Puan
+                      </button>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              )}
 
-          <div className="mt-4 pt-6 border-t border-gray-100 dark:border-gray-700">
-            <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
-              <Calendar className="w-5 h-5 mr-2 text-purple-600" />{" "}
-              {t("historical_results") || "Geçmiş Sonuçlar"}
-            </h3>
-            {!pointsHistory || Object.keys(pointsHistory).length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Henüz kaydedilmiş bir geçmiş tablo bulunmuyor.
-              </p>
-            ) : (
-              <div className="space-y-4">
-                {Object.keys(pointsHistory)
-                  .sort()
-                  .reverse()
-                  .map((monthKey) => {
-                    const mPoints = pointsHistory[monthKey];
-                    const mSorted = Object.keys(mPoints)
-                      .filter(
-                        (k) =>
-                          k !== "lastDailyBonus" && k !== "lastBonusTimestamp",
-                      )
-                      .sort((a, b) => mPoints[b] - mPoints[a]);
+              {/* Search & Score Filter Toolbar */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 md:p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
+                {/* Search Input */}
+                <div className="relative flex-1 min-w-0">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={leaderboardSearch}
+                    onChange={(e) => setLeaderboardSearch(e.target.value)}
+                    placeholder="Birim adı ile filtrele..."
+                    className="w-full pl-10 pr-9 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                  />
+                  {leaderboardSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setLeaderboardSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Score Filter Dropdown & Clear */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <select
+                    value={leaderboardScoreFilter}
+                    onChange={(e) => setLeaderboardScoreFilter(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                  >
+                    <option value="all">Tüm Puan Seviyeleri</option>
+                    <option value="high">Mükemmel (90+ Puan)</option>
+                    <option value="mid">Orta Seviye (75-89 Puan)</option>
+                    <option value="low">Risk Altında (&lt;75 Puan)</option>
+                  </select>
+
+                  {(leaderboardSearch || leaderboardScoreFilter !== "all") && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLeaderboardSearch("");
+                        setLeaderboardScoreFilter("all");
+                      }}
+                      className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline px-2 py-1 cursor-pointer"
+                    >
+                      Filtreyi Temizle
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Department Rankings List */}
+              <div className="space-y-3">
+                {filteredDepts.length === 0 ? (
+                  <div className="bg-white dark:bg-gray-800 rounded-3xl p-10 text-center border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                    <Trophy className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <h4 className="font-extrabold text-gray-800 dark:text-gray-100">
+                      Birim Bulunamadı
+                    </h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Arama kriterlerinize uygun departman bulunamadı.
+                    </p>
+                  </div>
+                ) : (
+                  filteredDepts.map((dept) => {
+                    const originalRank = sortedDepts.indexOf(dept) + 1;
+                    const deptScore = points[dept] ?? 100;
+                    const openTaskCount = tasks.filter(
+                      (t) => t.dept === dept && (t.status === "acik" || t.status === "itiraz_edildi")
+                    ).length;
+
+                    const isTop1 = originalRank === 1;
+                    const isTop2 = originalRank === 2;
+                    const isTop3 = originalRank === 3;
+
+                    const statusColor =
+                      deptScore >= 95
+                        ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800"
+                        : deptScore >= 85
+                          ? "text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800"
+                          : deptScore >= 75
+                            ? "text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800"
+                            : "text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800";
+
+                    const statusLabel =
+                      deptScore >= 95
+                        ? "Kusursuz / Lider"
+                        : deptScore >= 85
+                          ? "Mükemmel Uyum"
+                          : deptScore >= 75
+                            ? "Standart Seviye"
+                            : "Riskli Seviye";
+
+                    const railClass =
+                      originalRank === 1
+                        ? "status-rail-amber"
+                        : originalRank === 2
+                          ? "status-rail-blue"
+                          : originalRank === 3
+                            ? "status-rail-emerald"
+                            : "";
+
                     return (
                       <div
-                        key={monthKey}
-                        className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700"
+                        key={dept}
+                        className={`bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-md status-rail ${railClass} ${
+                          isTop1
+                            ? "border-amber-300 dark:border-amber-700/80 bg-gradient-to-r from-amber-50/40 via-white to-white dark:from-amber-950/10 dark:via-gray-800 dark:to-gray-800"
+                            : "border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-300 dark:hover:border-emerald-700/60"
+                        }`}
                       >
-                        <h4 className="font-bold text-gray-700 dark:text-gray-200 mb-3">
-                          {monthKey}
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {mSorted.map((d, i) => (
+                        {/* Left Info: Rank & Dept */}
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <span
+                            className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 shadow-xs ${
+                              isTop1
+                                ? "bg-amber-500 text-white shadow-amber-500/30"
+                                : isTop2
+                                  ? "bg-slate-400 text-white shadow-slate-400/30"
+                                  : isTop3
+                                    ? "bg-amber-700 text-white shadow-amber-700/30"
+                                    : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                            }`}
+                          >
+                            {isTop1 ? "🥇" : isTop2 ? "🥈" : isTop3 ? "🥉" : `#${originalRank}`}
+                          </span>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <h4 className="font-black text-gray-900 dark:text-gray-100 text-base truncate">
+                                {t(getDeptKey(dept))}
+                              </h4>
+                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border ${statusColor} shrink-0`}>
+                                {statusLabel}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
+                              <span className="flex items-center gap-1">
+                                <ShieldAlert className="w-3.5 h-3.5 text-gray-400" />
+                                {openTaskCount > 0 ? (
+                                  <b className="text-rose-600 dark:text-rose-400">{openTaskCount} Açık İhlal</b>
+                                ) : (
+                                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Sorunsuz</span>
+                                )}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Right Info: Score & Action */}
+                        <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-100 dark:border-gray-700/60">
+                          <button
+                            type="button"
+                            onClick={() => handleCustomBonus(dept)}
+                            className="text-xs font-bold px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors cursor-pointer shrink-0"
+                          >
+                            {t("custom_bonus") || "Özel Puan"}
+                          </button>
+
+                          <div className="text-right shrink-0">
                             <span
-                              key={d}
-                              className={`text-xs px-2.5 py-1 rounded-md font-medium ${i === 0 ? "bg-yellow-100 text-yellow-800 border border-yellow-200" : "bg-white dark:bg-gray-800 border text-gray-600 dark:text-gray-300"}`}
+                              className={`text-2xl sm:text-3xl font-black tabular-nums ${
+                                deptScore >= 90
+                                  ? "text-emerald-600 dark:text-emerald-400"
+                                  : deptScore >= 75
+                                    ? "text-amber-500 dark:text-amber-400"
+                                    : "text-rose-600 dark:text-rose-400"
+                              }`}
                             >
-                              {i + 1}. {d} ({mPoints[d]}p)
+                              <CountUp end={deptScore} duration={600} />
                             </span>
-                          ))}
+                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
+                              {t("risk") || "Puan"}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     );
-                  })}
-              </div>
-            )}
-          </div>
-          <div className="mt-8 pt-6 border-t border-gray-100 dark:border-gray-700">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                <Activity className="w-5 h-5 mr-2 text-blue-600" />{" "}
-                {t("point_logs") || "Puan Hareketleri"}
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setPointLogsFilter("day")}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pointLogsFilter === "day" ? "bg-blue-100 text-blue-700" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_today") || "Bugün"}
-                </button>
-                <button
-                  onClick={() => setPointLogsFilter("week")}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pointLogsFilter === "week" ? "bg-blue-100 text-blue-700" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_this_week") || "Bu Hafta"}
-                </button>
-                <button
-                  onClick={() => setPointLogsFilter("month")}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pointLogsFilter === "month" ? "bg-blue-100 text-blue-700" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_this_month") || "Bu Ay"}
-                </button>
-                <button
-                  onClick={() => setPointLogsFilter("all")}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${pointLogsFilter === "all" ? "bg-blue-100 text-blue-700" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_all") || "Tümü"}
-                </button>
+                  })
+                )}
               </div>
             </div>
-            {!pointLogs || pointLogs.length === 0 ? (
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                Henüz bir puan hareketi bulunmuyor.
-              </p>
-            ) : (
-              <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                {pointLogs
-                  .filter((log) => {
-                    if (pointLogsFilter === "all") return true;
-                    const now = new Date();
-                    if (pointLogsFilter === "day") {
-                      const startOfDay = new Date(
-                        now.getFullYear(),
-                        now.getMonth(),
-                        now.getDate(),
-                      ).getTime();
-                      return log.timestamp >= startOfDay;
-                    }
-                    if (pointLogsFilter === "week") {
-                      const day = now.getDay();
-                      const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-                      const startOfWeek = new Date(now.setDate(diff)).setHours(
-                        0,
-                        0,
-                        0,
-                        0,
-                      );
-                      return log.timestamp >= startOfWeek;
-                    }
-                    if (pointLogsFilter === "month") {
-                      const startOfMonth = new Date(
-                        now.getFullYear(),
-                        now.getMonth(),
-                        1,
-                      ).getTime();
-                      return log.timestamp >= startOfMonth;
-                    }
-                    return true;
-                  })
-                  .map((log) => (
-                    <div
-                      key={log.id}
-                      className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700"
+          )}
+
+          {/* TAB 2: PUAN HAREKETLERİ */}
+          {leaderboardTab === "logs" && (
+            <div className="space-y-4">
+              {/* Filter Bar */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 md:p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
+                {/* Search */}
+                <div className="relative flex-1 min-w-0">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={leaderboardLogSearch}
+                    onChange={(e) => setLeaderboardLogSearch(e.target.value)}
+                    placeholder="İşlem sebebi, yönetici veya birim adı ara..."
+                    className="w-full pl-10 pr-9 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-medium"
+                  />
+                  {leaderboardLogSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setLeaderboardLogSearch("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-0.5"
                     >
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span className="font-bold text-gray-700 dark:text-gray-200 text-sm">
-                            {t(getDeptKey(log.dept))}
-                          </span>
-                          <span className="text-[10px] text-gray-400 bg-gray-200 dark:bg-gray-700 px-1.5 py-0.5 rounded">
-                            {log.adminName}
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {/* Type Filter */}
+                  <select
+                    value={leaderboardLogType}
+                    onChange={(e) => setLeaderboardLogType(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                  >
+                    <option value="all">Tüm İşlemler</option>
+                    <option value="bonus">Yalnızca Bonuslar (+)</option>
+                    <option value="penalty">Yalnızca Cezalar (-)</option>
+                  </select>
+
+                  {/* Timeframe Pills */}
+                  <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setPointLogsFilter("all")}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        pointLogsFilter === "all"
+                          ? "bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_all") || "Tümü"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPointLogsFilter("day")}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        pointLogsFilter === "day"
+                          ? "bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_today") || "Bugün"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPointLogsFilter("week")}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        pointLogsFilter === "week"
+                          ? "bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_this_week") || "Bu Hafta"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPointLogsFilter("month")}
+                      className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        pointLogsFilter === "month"
+                          ? "bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_this_month") || "Bu Ay"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Logs Stream */}
+              <div className="space-y-3">
+                {filteredPointLogs.length === 0 ? (
+                  <div className="bg-white dark:bg-gray-800 rounded-3xl p-10 text-center border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                    <Activity className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <h4 className="font-extrabold text-gray-800 dark:text-gray-100">
+                      Puan Hareketi Bulunmuyor
+                    </h4>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Seçilen zaman dilimine veya filtrelere uygun puan hareketi kaydı bulunamadı.
+                    </p>
+                  </div>
+                ) : (
+                  filteredPointLogs.map((log) => {
+                    const isPositive = log.points >= 0;
+
+                    return (
+                      <div
+                        key={log.id}
+                        className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-700/80 hover:border-emerald-300 dark:hover:border-emerald-700 transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-xs"
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          <div
+                            className={`w-10 h-10 rounded-2xl flex items-center justify-center font-black shrink-0 ${
+                              isPositive
+                                ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                                : "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400"
+                            }`}
+                          >
+                            {isPositive ? (
+                              <TrendingUp className="w-5 h-5" />
+                            ) : (
+                              <TrendingDown className="w-5 h-5" />
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-black text-gray-900 dark:text-gray-100 text-sm">
+                                {t(getDeptKey(log.dept))}
+                              </span>
+                              <span className="text-[10px] font-bold text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md">
+                                {log.adminName || "Sistem"}
+                              </span>
+                              <span className="text-[11px] text-gray-400">
+                                {log.dateStr}
+                              </span>
+                            </div>
+                            <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 italic">
+                              "{log.reason}"
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="shrink-0 self-end sm:self-center">
+                          <span
+                            className={`text-sm sm:text-base font-black px-3 py-1 rounded-xl shadow-xs tabular-nums flex items-center gap-1 ${
+                              isPositive
+                                ? "bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                : "bg-rose-100 dark:bg-rose-950 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800"
+                            }`}
+                          >
+                            {isPositive ? `+${log.points}` : log.points} Puan
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          "{log.reason}" - {log.dateStr}
-                        </p>
                       </div>
-                      <span
-                        className={`font-extrabold text-sm px-2 py-1 rounded-lg shadow-sm ${log.points >= 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                      >
-                        {log.points >= 0 ? "+" : ""}
-                        {log.points}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
+          {/* TAB 3: GEÇMİŞ DÖNEMLER */}
+          {leaderboardTab === "history" && (
+            <div className="space-y-4">
+              {!pointsHistory || Object.keys(pointsHistory).length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 text-center border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                  <div className="w-16 h-16 mx-auto rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-4">
+                    <History className="w-8 h-8" />
+                  </div>
+                  <h4 className="font-extrabold text-gray-800 dark:text-gray-100 text-lg">
+                    Geçmiş Dönem Kaydı Bulunmuyor
+                  </h4>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1.5 max-w-md mx-auto">
+                    Ay sonunda sağ üstteki <b>"Sıfırla ve Geçmişe Kaydet"</b> butonuna tıkladığınızda dönemin puan sıralaması ve şampiyon birim kalıcı olarak buraya kaydedilecektir.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.keys(pointsHistory)
+                    .sort()
+                    .reverse()
+                    .map((monthKey) => {
+                      const mPoints = pointsHistory[monthKey];
+                      const mSorted = Object.keys(mPoints)
+                        .filter(
+                          (k) =>
+                            k !== "lastDailyBonus" && k !== "lastBonusTimestamp"
+                        )
+                        .sort((a, b) => mPoints[b] - mPoints[a]);
+
+                      const winnerDept = mSorted[0];
+                      const winnerScore = mPoints[winnerDept];
+
+                      return (
+                        <div
+                          key={monthKey}
+                          className="bg-white dark:bg-gray-800 rounded-3xl p-5 md:p-6 border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-4"
+                        >
+                          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-3 border-b border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-2.5">
+                              <Calendar className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                              <h4 className="font-black text-gray-900 dark:text-gray-100 text-base">
+                                {monthKey} Dönemi Sonuçları
+                              </h4>
+                            </div>
+
+                            {winnerDept && (
+                              <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-xl text-xs font-black text-amber-800 dark:text-amber-300">
+                                <span>🏆 Dönem Şampiyonu:</span>
+                                <b>{t(getDeptKey(winnerDept))} ({winnerScore} Puan)</b>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
+                            {mSorted.map((d, i) => (
+                              <div
+                                key={d}
+                                className={`p-3 rounded-2xl border flex flex-col justify-between ${
+                                  i === 0
+                                    ? "bg-amber-50/80 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800 text-amber-950 dark:text-amber-200"
+                                    : i === 1
+                                      ? "bg-slate-50 dark:bg-slate-900/50 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200"
+                                      : i === 2
+                                        ? "bg-orange-50/50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800 text-orange-900 dark:text-orange-200"
+                                        : "bg-gray-50/70 dark:bg-gray-900/40 border-gray-200/80 dark:border-gray-700 text-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                <div className="flex items-center justify-between text-[11px] font-bold">
+                                  <span>#{i + 1}</span>
+                                  {i === 0 && <span>🥇</span>}
+                                  {i === 1 && <span>🥈</span>}
+                                  {i === 2 && <span>🥉</span>}
+                                </div>
+                                <h5 className="font-extrabold text-xs truncate mt-1">
+                                  {t(getDeptKey(d))}
+                                </h5>
+                                <p className="font-black text-sm mt-1 tabular-nums">
+                                  {mPoints[d]} <span className="text-[10px] font-normal text-gray-400">p</span>
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Reset Modal */}
           {showResetModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/75 backdrop-blur-sm p-4">
               <div className="bg-white dark:bg-gray-800 w-full max-w-md rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
@@ -5853,7 +7757,7 @@ const AdminDashboard = () => {
                       setShowResetModal(false);
                       setResetCountdown(10);
                     }}
-                    className="p-1 hover:bg-white/20 rounded-full"
+                    className="p-1 hover:bg-white/20 rounded-full cursor-pointer"
                   >
                     <X className="w-6 h-6" />
                   </button>
@@ -5871,18 +7775,24 @@ const AdminDashboard = () => {
                   </div>
                   <div className="flex space-x-3 pt-4">
                     <button
+                      type="button"
                       onClick={() => {
                         setShowResetModal(false);
                         setResetCountdown(10);
                       }}
-                      className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-bold rounded-xl hover:bg-gray-200"
+                      className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
                     >
                       {t("cancel")}
                     </button>
                     <button
+                      type="button"
                       onClick={executeResetAndSave}
                       disabled={resetCountdown > 0}
-                      className={`flex-1 py-4 font-bold rounded-xl shadow-md ${resetCountdown > 0 ? "bg-orange-200 text-orange-500 cursor-not-allowed" : "bg-orange-600 text-white hover:bg-orange-700"}`}
+                      className={`flex-1 py-4 font-bold rounded-xl shadow-md cursor-pointer ${
+                        resetCountdown > 0
+                          ? "bg-orange-200 text-orange-500 cursor-not-allowed"
+                          : "bg-orange-600 text-white hover:bg-orange-700"
+                      }`}
                     >
                       {resetCountdown > 0
                         ? `${t("wait")} (${resetCountdown}s)`
@@ -5897,403 +7807,676 @@ const AdminDashboard = () => {
       );
     }
 
-    if (adminViewMode === "users") {
-      const filteredUsers = users.filter((u) =>
-        accountTab === "isg" ? u.role !== "yuklemeci" : u.role === "yuklemeci",
-      );
+    if (adminViewMode === "users" || adminSystemMode === "users") {
+      const chiefsCount = users.filter((u) => u.role === "sef").length;
+      const modsCount = users.filter((u) => u.role === "mod").length;
+      const loadersCount = users.filter((u) => u.role === "yuklemeci").length;
+      const adminsCount = users.filter((u) => u.role === "admin").length;
+      const lockedCount = lockedAccounts.filter((a) => a.isLocked).length;
+
+      const filteredUsers = users.filter((u) => {
+        if (userRoleFilter === "sef" && u.role !== "sef") return false;
+        if (userRoleFilter === "mod" && u.role !== "mod") return false;
+        if (userRoleFilter === "yuklemeci" && u.role !== "yuklemeci") return false;
+        if (userRoleFilter === "admin" && u.role !== "admin") return false;
+
+        if (userSearchQuery.trim()) {
+          const q = userSearchQuery.toLowerCase().trim();
+          const matchName = u.name?.toLowerCase().includes(q);
+          const matchUsername = u.username?.toLowerCase().includes(q);
+          const matchDept = u.dept?.toLowerCase().includes(q);
+          const matchRole = u.role?.toLowerCase().includes(q);
+          if (!matchName && !matchUsername && !matchDept && !matchRole) return false;
+        }
+
+        return true;
+      });
+
+      const getInitials = (name) => {
+        if (!name) return "U";
+        const parts = name.trim().split(" ");
+        if (parts.length >= 2) {
+          return (parts[0][0] + parts[1][0]).toUpperCase();
+        }
+        return name.slice(0, 2).toUpperCase();
+      };
+
+      const getRoleMeta = (role, dept) => {
+        switch (role) {
+          case "sef":
+            return {
+              title: "Birim Şefi",
+              sub: dept ? t(getDeptKey(dept)) : "Genel",
+              color: "text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800",
+              grad: "from-blue-600 to-indigo-600",
+            };
+          case "mod":
+            return {
+              title: "İSG Uzmanı",
+              sub: "Saha Denetim & İtiraz",
+              color: "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800",
+              grad: "from-emerald-600 to-teal-600",
+            };
+          case "admin":
+            return {
+              title: "Sistem Yöneticisi",
+              sub: "Tam Yetki & Yönetim",
+              color: "text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800",
+              grad: "from-purple-600 to-pink-600",
+            };
+          case "yuklemeci":
+            return {
+              title: "Yükleme Sorumlusu",
+              sub: "Sevkiyat & Tır",
+              color: "text-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800",
+              grad: "from-amber-500 to-orange-600",
+            };
+          default:
+            return {
+              title: role || "Personel",
+              sub: dept || "Saha",
+              color: "text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700",
+              grad: "from-slate-600 to-gray-700",
+            };
+        }
+      };
+
+      const canEdit =
+        currentUser?.role === "admin" ||
+        currentUser?.username === "agiradar" ||
+        currentUser?.username === "agiradarsahin";
 
       return (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-              <Users className="w-6 h-6 mr-2 text-blue-600" />{" "}
-              {t("user_management")}
-            </h2>
-          </div>
-
-          <div className="flex bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner mb-6">
-            <button
-              onClick={() => setAccountTab("isg")}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === "isg" ? "bg-white dark:bg-gray-800 text-blue-700 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}
-            >
-              <ShieldAlert className="w-4 h-4 mr-2" /> {t("isg_accounts")}
-            </button>
-            <button
-              onClick={() => setAccountTab("yukleme")}
-              className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex justify-center items-center ${accountTab === "yukleme" ? "bg-white dark:bg-gray-800 text-orange-600 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}
-            >
-              <Truck className="w-4 h-4 mr-2" /> {t("yukleme_accounts")}
-            </button>
-          </div>
-
-          {/* Hesap Güvenliği & Kilit Durumu Kartı */}
-          <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 p-5 rounded-2xl border border-amber-200/80 dark:border-gray-700 mb-8 shadow-sm">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4 pb-3 border-b border-amber-200/60 dark:border-gray-700">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">
-                  <Lock className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-gray-800 dark:text-gray-100 text-base flex items-center gap-2">
-                    Hesap Güvenliği & Kilit Durumu
-                    {lockedAccounts.filter((a) => a.isLocked).length > 0 && (
-                      <span className="bg-red-500 text-white text-xs px-2 py-0.5 rounded-full font-extrabold animate-pulse">
-                        {lockedAccounts.filter((a) => a.isLocked).length} Kilitli
-                      </span>
-                    )}
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    5 hatalı denemede 1 dk, sonraki hatalarda 3 dk ve 15 dk kilitlenen hesapları buradan yönetebilirsiniz.
-                  </p>
-                </div>
+        <div className="space-y-6 animate-slide-up">
+          {/* Header & Main Actions */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
+                <Users className="w-6 h-6" />
               </div>
+              <div>
+                <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">
+                  {t("user_management") || "Kullanıcı & Şef Hesapları"}
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Birim şefleri, İSG uzmanı, yüklemeci ve yönetici hesaplarının merkezi yönetimi
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               <button
                 type="button"
                 onClick={fetchLockedAccounts}
                 disabled={loadingLocked}
-                className="self-start sm:self-center px-3.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer shadow-xs"
+                title="Kilit durumlarını yenile"
               >
-                <Loader2 className={`w-3.5 h-3.5 ${loadingLocked ? "animate-spin text-amber-600" : ""}`} />
-                Yenile
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingLocked ? "animate-spin text-blue-600" : ""}`} />
+                <span className="hidden sm:inline">Güvenlik Kontrolü</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setNewUser({
+                    username: "",
+                    password: "",
+                    name: "",
+                    role: "sef",
+                    dept: DEPARTMENTS[0],
+                  });
+                  setShowAddUserModal(true);
+                }}
+                className="flex-1 sm:flex-initial px-5 py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-sm shadow-md shadow-blue-500/20 transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>+ Yeni Hesap Tanımla</span>
               </button>
             </div>
-
-            {lockedAccounts.length === 0 ? (
-              <div className="text-center py-4 bg-white/70 dark:bg-gray-800/70 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 flex items-center justify-center gap-2">
-                <CheckCircle className="w-4 h-4 text-emerald-500" />
-                <span>Şu anda kilitli veya hatalı şifre denemesi bulunan hesap bulunmuyor. Tüm hesaplar güvende.</span>
-              </div>
-            ) : (
-              <div className="space-y-2.5">
-                {lockedAccounts.map((acc) => {
-                  const stageLabel =
-                    acc.stage === 1
-                      ? "1 Dakika"
-                      : acc.stage === 2
-                        ? "3 Dakika"
-                        : acc.stage >= 3
-                          ? "15 Dakika"
-                          : "Henüz Kilitlenmedi";
-                  return (
-                    <div
-                      key={acc.username}
-                      className={`flex flex-col sm:flex-row items-start sm:items-center justify-between p-3.5 rounded-xl border transition-all gap-3 ${
-                        acc.isLocked
-                          ? "bg-red-50/90 dark:bg-red-950/40 border-red-200 dark:border-red-900/60 shadow-sm"
-                          : "bg-white dark:bg-gray-800/90 border-gray-200 dark:border-gray-700"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`p-2 rounded-lg ${
-                            acc.isLocked
-                              ? "bg-red-100 text-red-600 dark:bg-red-900/50 dark:text-red-400"
-                              : "bg-amber-100 text-amber-600 dark:bg-amber-900/50 dark:text-amber-400"
-                          }`}
-                        >
-                          <ShieldAlert className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-gray-900 dark:text-white text-sm">
-                              @{acc.username}
-                            </span>
-                            {acc.isLocked ? (
-                              <span className="bg-red-600 text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
-                                <Lock className="w-3 h-3" /> Kilitli (
-                                {Math.floor(acc.remainingSeconds / 60)}:
-                                {String(acc.remainingSeconds % 60).padStart(2, "0")} kaldı)
-                              </span>
-                            ) : (
-                              <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
-                                {acc.failedCount} Hatalı Deneme
-                              </span>
-                            )}
-                          </div>
-                          <div className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                            <span>
-                              Hata Sayısı: <b>{acc.failedCount}</b>
-                            </span>
-                            <span>
-                              Kilit Kademesi: <b>{stageLabel}</b>
-                            </span>
-                            <span>
-                              Son Deneme:{" "}
-                              <b>{new Date(acc.lastAttemptAt).toLocaleTimeString()}</b>
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => handleUnlockAccount(acc.username)}
-                        className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition-all"
-                      >
-                        <ShieldCheck className="w-4 h-4" />
-                        Kilidi Kaldır ve Sıfırla
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
 
-          <form
-            onSubmit={handleCreateUser}
-            className="bg-gray-50 dark:bg-gray-900 p-5 rounded-xl border border-gray-200 dark:border-gray-700 mb-8 space-y-4"
-          >
-            <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-2 border-b pb-2">
-              {t("new_account")} ({accountTab === "isg" ? "İSG" : "Yükleme"})
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
-                  {t("fullname")}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newUser.name}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, name: e.target.value })
-                  }
-                  className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-                />
+          {/* Quick Metrics Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div
+              onClick={() => setUserRoleFilter("all")}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${userRoleFilter === "all" ? "bg-blue-50/80 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"}`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Toplam</span>
+                <Users className="w-3.5 h-3.5 text-blue-500" />
               </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
-                  {t("username")}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newUser.username}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, username: e.target.value })
-                  }
-                  className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
-                  {t("password")}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={newUser.password}
-                  onChange={(e) =>
-                    setNewUser({ ...newUser, password: e.target.value })
-                  }
-                  className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-                />
-              </div>
+              <p className="text-2xl font-black text-gray-900 dark:text-gray-100 mt-1">
+                {users.length}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Kayıtlı Kullanıcı</span>
+            </div>
 
-              {accountTab === "isg" && (
+            <div
+              onClick={() => setUserRoleFilter("sef")}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${userRoleFilter === "sef" ? "bg-blue-50/80 dark:bg-blue-900/20 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"}`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Şefler</span>
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+              </div>
+              <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                {chiefsCount}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Birim Yetkilisi</span>
+            </div>
+
+            <div
+              onClick={() => setUserRoleFilter("mod")}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${userRoleFilter === "mod" ? "bg-emerald-50/80 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700 ring-2 ring-emerald-500/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"}`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>İSG Uzmanı</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
+              <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {modsCount}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Saha Denetim</span>
+            </div>
+
+            <div
+              onClick={() => setUserRoleFilter("yuklemeci")}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${userRoleFilter === "yuklemeci" ? "bg-orange-50/80 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700 ring-2 ring-orange-500/20" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"}`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Yükleme</span>
+                <Truck className="w-3.5 h-3.5 text-orange-500" />
+              </div>
+              <p className="text-2xl font-black text-orange-600 dark:text-orange-400 mt-1">
+                {loadersCount}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Sevkiyat Ekibi</span>
+            </div>
+
+            <div
+              className={`col-span-2 sm:col-span-1 p-4 rounded-2xl border transition-all shadow-sm ${lockedCount > 0 ? "bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-900" : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80"}`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Güvenlik</span>
+                <Lock className={`w-3.5 h-3.5 ${lockedCount > 0 ? "text-red-500" : "text-emerald-500"}`} />
+              </div>
+              <p className={`text-2xl font-black mt-1 ${lockedCount > 0 ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                {lockedCount > 0 ? `${lockedCount} Kilit` : "Güvende"}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">
+                {lockedCount > 0 ? "İşlem Bekliyor" : "Şüpheli Giriş Yok"}
+              </span>
+            </div>
+          </div>
+
+          {/* Locked Accounts Alert Banner (Displays only if there are active locks) */}
+          {lockedCount > 0 && (
+            <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/60 rounded-3xl p-5 shadow-sm space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0">
+                  <Lock className="w-5 h-5" />
+                </div>
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
-                    {t("sys_role")}
-                  </label>
-                  <select
-                    value={newUser.role}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, role: e.target.value })
-                    }
-                    className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
-                  >
-                    <option value="sef">
-                      {t("unit_chief") || "Birim Şefi"}
-                    </option>
-                    <option value="mod">İSG Uzmanı (Moderatör)</option>
-                    <option value="admin">
-                      {t("system_admin") || "Sistem Yöneticisi"}
-                    </option>
-                  </select>
+                  <h3 className="font-extrabold text-red-900 dark:text-red-200 text-sm sm:text-base flex items-center gap-2">
+                    Güvenlik Kilidi Devrede ({lockedCount} Hesap Kilitli)
+                  </h3>
+                  <p className="text-xs text-red-700 dark:text-red-400">
+                    Hatalı şifre denemeleri sebebiyle otomatik kilitlenen hesapların kilidini buradan anında kaldırabilirsiniz.
+                  </p>
                 </div>
-              )}
+              </div>
 
-              {accountTab === "isg" && newUser.role === "sef" && (
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-1">
-                    {t("dept")}
-                  </label>
-                  <select
-                    value={newUser.dept}
-                    onChange={(e) =>
-                      setNewUser({ ...newUser, dept: e.target.value })
-                    }
-                    className="w-full border dark:border-gray-600 rounded-lg p-2 text-sm bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2">
+                {lockedAccounts.filter((a) => a.isLocked).map((acc) => (
+                  <div
+                    key={acc.username}
+                    className="bg-white dark:bg-gray-800 p-3.5 rounded-2xl border border-red-200 dark:border-red-900/60 flex items-center justify-between gap-3 shadow-xs"
                   >
-                    {DEPARTMENTS.map((d) => (
-                      <option key={d} value={d}>
-                        {t(getDeptKey(d))}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div>
+                      <span className="font-mono font-bold text-gray-900 dark:text-gray-100 text-sm">
+                        @{acc.username}
+                      </span>
+                      <div className="text-[11px] text-red-600 dark:text-red-400 font-bold mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <Lock className="w-3.5 h-3.5 shrink-0" />
+                        <span>
+                          {Math.floor(acc.remainingSeconds / 60)}:
+                          {String(acc.remainingSeconds % 60).padStart(2, "0")} kaldı
+                        </span>
+                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                        <span className="text-gray-400 font-normal">{acc.failedCount} Hata</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleUnlockAccount(acc.username)}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer shrink-0"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                      <span>Kilidi Aç</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Interactive Search & Role Tabs Bar */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            {/* Search Input */}
+            <div className="relative flex-1 max-w-md">
+              <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <input
+                type="text"
+                value={userSearchQuery}
+                onChange={(e) => setUserSearchQuery(e.target.value)}
+                placeholder="İsim, kullanıcı adı (@) veya departman ara..."
+                className="w-full pl-10 pr-9 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+              />
+              {userSearchQuery && (
+                <button
+                  onClick={() => setUserSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 cursor-pointer"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
               )}
             </div>
-            <button
-              type="submit"
-              className={`text-white font-bold py-2 px-4 rounded-lg text-sm w-full flex justify-center items-center ${accountTab === "isg" ? "bg-blue-600 hover:bg-blue-700" : "bg-orange-600 hover:bg-orange-700"}`}
-            >
-              <Plus className="w-4 h-4 mr-1" /> {t("create_acc_btn")}
-            </button>
-          </form>
 
-          <div>
-            <h3 className="font-bold text-gray-700 dark:text-gray-200 text-sm mb-3">
-              {t("existing_accs")} ({filteredUsers.length})
-            </h3>
-            <div className="space-y-2">
+            {/* Role Filter Segmented Control */}
+            <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-2xl overflow-x-auto">
+              <button
+                onClick={() => setUserRoleFilter("all")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${userRoleFilter === "all" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+              >
+                Tümü ({users.length})
+              </button>
+              <button
+                onClick={() => setUserRoleFilter("sef")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${userRoleFilter === "sef" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+              >
+                Şefler ({chiefsCount})
+              </button>
+              <button
+                onClick={() => setUserRoleFilter("mod")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${userRoleFilter === "mod" ? "bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-xs" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+              >
+                İSG ({modsCount})
+              </button>
+              <button
+                onClick={() => setUserRoleFilter("yuklemeci")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${userRoleFilter === "yuklemeci" ? "bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-xs" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+              >
+                Yükleme ({loadersCount})
+              </button>
+              <button
+                onClick={() => setUserRoleFilter("admin")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${userRoleFilter === "admin" ? "bg-white dark:bg-gray-800 text-purple-600 dark:text-purple-400 shadow-xs" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"}`}
+              >
+                Yönetici ({adminsCount})
+              </button>
+            </div>
+          </div>
+
+          {/* User Directory Cards Grid */}
+          {filteredUsers.length === 0 ? (
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-12 text-center border border-gray-100 dark:border-gray-700/80 shadow-sm space-y-3">
+              <div className="w-16 h-16 mx-auto rounded-3xl bg-gray-100 dark:bg-gray-700/50 flex items-center justify-center text-gray-400">
+                <Users className="w-8 h-8" />
+              </div>
+              <h3 className="font-extrabold text-gray-800 dark:text-gray-200 text-lg">
+                Kullanıcı Bulunamadı
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                Aradığınız arama kriterine veya seçtiğiniz role uygun kayıtlı kullanıcı bulunmuyor.
+              </p>
+              {userSearchQuery && (
+                <button
+                  onClick={() => setUserSearchQuery("")}
+                  className="px-4 py-2 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 rounded-xl font-bold text-xs hover:bg-blue-100 transition-colors cursor-pointer"
+                >
+                  Aramayı Temizle
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredUsers.map((u) => {
-                const isEditing = editingUserId === u.id;
-                const canEdit =
-                  currentUser.role === "admin" ||
-                  currentUser.username === "agiradar" ||
-                  currentUser.username === "agiradarsahin";
+                const roleMeta = getRoleMeta(u.role, u.dept);
                 const lockedInfo = lockedAccounts.find(
                   (a) => a.username.toLowerCase() === u.username.toLowerCase(),
                 );
+                const isLocked = lockedInfo?.isLocked;
+                const isCurrentUser = currentUser?.id === u.id;
+
                 return (
                   <div
                     key={u.id}
-                    className={`flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 border rounded-xl hover:bg-gray-50 dark:bg-gray-900 transition-colors gap-3 ${
-                      lockedInfo?.isLocked
-                        ? "border-red-300 dark:border-red-900 bg-red-50/40 dark:bg-red-950/20"
-                        : ""
-                    }`}
+                    className={`bg-white dark:bg-gray-800 rounded-3xl p-5 border transition-all duration-200 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md ${isLocked ? "border-red-300 dark:border-red-900 bg-red-50/20 dark:bg-red-950/10" : "border-gray-100 dark:border-gray-700/80 hover:border-blue-400/40 dark:hover:border-blue-500/40"}`}
                   >
-                    {isEditing ? (
-                      <div className="flex-1 w-full grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <input
-                          type="text"
-                          value={editUserForm.name}
-                          onChange={(e) =>
-                            setEditUserForm({
-                              ...editUserForm,
-                              name: e.target.value,
-                            })
-                          }
-                          className="border rounded-md p-1.5 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                          placeholder="Ad Soyad"
-                        />
-                        <input
-                          type="text"
-                          value={editUserForm.username}
-                          onChange={(e) =>
-                            setEditUserForm({
-                              ...editUserForm,
-                              username: e.target.value,
-                            })
-                          }
-                          className="border rounded-md p-1.5 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                          placeholder="Kullanıcı Adı"
-                        />
-                        <input
-                          type="text"
-                          value={editUserForm.password}
-                          onChange={(e) =>
-                            setEditUserForm({
-                              ...editUserForm,
-                              password: e.target.value,
-                            })
-                          }
-                          className="border rounded-md p-1.5 text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white"
-                          placeholder="Şifre"
-                        />
-                      </div>
-                    ) : (
-                      <div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">
-                            {u.name}
-                            <span className="text-xs text-gray-400 dark:text-gray-500 font-normal ml-2">
-                              @{u.username}
-                            </span>
-                          </p>
-                          {lockedInfo?.isLocked ? (
-                            <span className="inline-flex items-center gap-1 bg-red-100 dark:bg-red-950/70 text-red-700 dark:text-red-300 text-[11px] font-bold px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800 animate-pulse">
-                              <Lock className="w-3 h-3 text-red-600" />
-                              Kilitli ({Math.floor(lockedInfo.remainingSeconds / 60)}:
-                              {String(lockedInfo.remainingSeconds % 60).padStart(2, "0")})
-                            </span>
-                          ) : lockedInfo && lockedInfo.failedCount > 0 ? (
-                            <span className="inline-flex items-center gap-1 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[11px] font-medium px-2 py-0.5 rounded-full border border-amber-200 dark:border-amber-800">
-                              ⚠️ {lockedInfo.failedCount} Hata
-                            </span>
-                          ) : null}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3.5">
+                        <div
+                          className={`w-12 h-12 rounded-2xl bg-gradient-to-tr ${roleMeta.grad} flex items-center justify-center text-white font-black text-sm shadow-md shrink-0`}
+                        >
+                          {getInitials(u.name)}
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-0.5">
-                          {u.role === "sef" ? `Şef - ${u.dept}` : u.role}
-                        </p>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-black text-gray-900 dark:text-gray-100 text-base truncate pb-0.5">
+                              {u.name}
+                            </h4>
+                            {isCurrentUser && (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 uppercase shrink-0">
+                                Siz
+                              </span>
+                            )}
+                          </div>
+                          <p className="font-mono text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            @{u.username}
+                          </p>
+                        </div>
                       </div>
-                    )}
 
-                    <div className="flex items-center space-x-2 sm:space-x-3 w-full sm:w-auto justify-end flex-wrap gap-y-2">
-                      {isEditing ? (
-                        <>
+                      {/* Security Status Indicator */}
+                      <div className="shrink-0">
+                        {isLocked ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 whitespace-nowrap">
+                            <Lock className="w-3.5 h-3.5 text-red-600 animate-pulse shrink-0" />
+                            <span>Kilitli</span>
+                          </span>
+                        ) : lockedInfo && lockedInfo.failedCount > 0 ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 whitespace-nowrap">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span>{lockedInfo.failedCount} Hata</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                            <span>Aktif</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Role & Department info bar */}
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-gray-700/60 gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
+                        <span
+                          className={`text-xs font-bold px-3 py-1 rounded-xl border shrink-0 ${roleMeta.color}`}
+                        >
+                          {roleMeta.title}
+                        </span>
+                        {roleMeta.sub && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium truncate max-w-[150px]">
+                            {roleMeta.sub}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {isLocked && (
                           <button
-                            onClick={() => handleUpdateUserClick(u.id)}
-                            className="text-green-600 bg-green-50 hover:bg-green-100 px-3 py-1.5 rounded-md text-sm font-bold flex items-center"
+                            type="button"
+                            onClick={() => handleUnlockAccount(u.username)}
+                            className="p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/50 dark:text-emerald-300 transition-colors cursor-pointer"
+                            title="Hesap Kilidini Aç"
                           >
-                            <Save className="w-4 h-4 mr-1" /> Kaydet
+                            <ShieldCheck className="w-4 h-4" />
                           </button>
+                        )}
+
+                        {canEdit && (
                           <button
-                            onClick={() => setEditingUserId(null)}
-                            className="text-gray-500 bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-md text-sm font-bold"
+                            type="button"
+                            onClick={() => {
+                              setUserToEditModal(u);
+                              setEditUserForm({
+                                name: u.name || "",
+                                username: u.username || "",
+                                password: "",
+                              });
+                            }}
+                            className="p-2 rounded-xl text-gray-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors cursor-pointer"
+                            title="Düzenle & Şifre Güncelle"
                           >
-                            İptal
+                            <Edit className="w-4 h-4" />
                           </button>
-                        </>
-                      ) : (
-                        <>
-                          {lockedInfo && (lockedInfo.isLocked || lockedInfo.failedCount > 0) && (
-                            <button
-                              type="button"
-                              onClick={() => handleUnlockAccount(u.username)}
-                              className="bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 px-2.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
-                              title="Hesap kilidini aç ve hatalı giriş sayaçlarını sıfırla"
-                            >
-                              <ShieldCheck className="w-3.5 h-3.5" />
-                              <span>Kilidi Aç</span>
-                            </button>
-                          )}
-                          {canEdit && (
-                            <button
-                              onClick={() => {
-                                setEditingUserId(u.id);
-                                setEditUserForm({
-                                  username: u.username,
-                                  password: "",
-                                  name: u.name,
-                                });
-                              }}
-                              className="text-blue-500 hover:bg-blue-50 p-2 rounded-md"
-                              title="Düzenle"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                          )}
-                          {u.id !== "1" && (
-                            <button
-                              onClick={() => handleDeleteUserClick(u.id)}
-                              className="text-red-500 hover:bg-red-50 p-2 rounded-md"
-                              title="Sil"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </>
-                      )}
+                        )}
+
+                        {u.id !== "1" && canEdit && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteUserClick(u.id)}
+                            className="p-2 rounded-xl text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors cursor-pointer"
+                            title="Hesabı Sil"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          </div>
+          )}
+
+          {/* Modal 1: Yeni Hesap Tanımlama (Add User Modal) */}
+          {showAddUserModal && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex justify-center items-center p-4 animate-fade-in">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 animate-slide-up space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                      <UserPlus className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
+                        Yeni Hesap Tanımla
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Yetkili şef, İSG uzmanı veya yüklemeci kaydı oluşturun
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowAddUserModal(false)}
+                    className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateUser} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                      Ad Soyad
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Örn: Mehmet Demir"
+                      value={newUser.name}
+                      onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Kullanıcı Adı (@)
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Örn: mehmetd"
+                        value={newUser.username}
+                        onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Giriş Şifresi
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Güçlü şifre belirleyin"
+                        value={newUser.password}
+                        onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                      Sistem Yetkisi / Rolü
+                    </label>
+                    <select
+                      value={newUser.role}
+                      onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    >
+                      <option value="sef">Birim Şefi (İSG Departman Şefi)</option>
+                      <option value="mod">İSG Uzmanı (Saha Denetim & İtiraz Onayı)</option>
+                      <option value="yuklemeci">Yükleme Sorumlusu (Sevkiyat & Tır)</option>
+                      <option value="admin">Sistem Yöneticisi (Admin)</option>
+                    </select>
+                  </div>
+
+                  {newUser.role === "sef" && (
+                    <div className="animate-slide-up">
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                        Sorumlu Olduğu Departman
+                      </label>
+                      <select
+                        value={newUser.dept}
+                        onChange={(e) => setNewUser({ ...newUser, dept: e.target.value })}
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                      >
+                        {DEPARTMENTS.map((d) => (
+                          <option key={d} value={d}>
+                            {t(getDeptKey(d))}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddUserModal(false)}
+                      className="px-5 py-2.5 rounded-2xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold text-sm transition-colors cursor-pointer"
+                    >
+                      Vazgeç
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-sm shadow-md shadow-blue-500/25 transition-all cursor-pointer"
+                    >
+                      Hesabı Kaydet
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Modal 2: Hesap Düzenleme & Şifre Değiştirme Modal */}
+          {userToEditModal && (
+            <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex justify-center items-center p-4 animate-fade-in">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 animate-slide-up space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                      <Key className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
+                        Hesabı Düzenle
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        @{userToEditModal.username}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setUserToEditModal(null)}
+                    className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                      Ad Soyad
+                    </label>
+                    <input
+                      type="text"
+                      value={editUserForm.name}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, name: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                      Kullanıcı Adı (@)
+                    </label>
+                    <input
+                      type="text"
+                      value={editUserForm.username}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, username: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                      Yeni Şifre Belirle
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                      value={editUserForm.password}
+                      onChange={(e) => setEditUserForm({ ...editUserForm, password: e.target.value })}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all"
+                    />
+                    <p className="text-[11px] text-gray-400 mt-1">
+                      Şifreyi güncellemek için yeni bir şifre girin. Boş bırakırsanız mevcut şifre korunur.
+                    </p>
+                  </div>
+
+                  <div className="pt-4 flex items-center justify-end gap-3 border-t border-gray-100 dark:border-gray-700">
+                    <button
+                      type="button"
+                      onClick={() => setUserToEditModal(null)}
+                      className="px-5 py-2.5 rounded-2xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-bold text-sm transition-colors cursor-pointer"
+                    >
+                      İptal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setUserToUpdate(userToEditModal.id);
+                        confirmUpdateUser();
+                      }}
+                      className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-2xl font-bold text-sm shadow-md shadow-purple-500/25 transition-all cursor-pointer"
+                    >
+                      Güncelle ve Kaydet
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -6301,228 +8484,334 @@ const AdminDashboard = () => {
     const renderLoadingList = (listToRender) => {
       const paginatedLoads = listToRender.slice(0, adminLoadingsLimit);
       return (
-        <div className="space-y-4">
+        <div className="space-y-3.5">
           {listToRender.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-10">
-              {t("no_records")}
-            </p>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-10 text-center border border-gray-100 dark:border-gray-700/80 shadow-xs">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center mb-3.5">
+                <Truck className="w-7 h-7" />
+              </div>
+              <h4 className="font-extrabold text-gray-800 dark:text-gray-100 text-base">
+                {t("no_records") || "Kayıtlı Sevkiyat Bulunamadı"}
+              </h4>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-sm mx-auto">
+                Arama kriterlerinize veya seçilen döneme uygun araç yükleme kaydı bulunmuyor.
+              </p>
+            </div>
           ) : (
             <>
               {paginatedLoads.map((load) => {
-              const isExpanded = expandedLoadId === load.id;
-              const statusColor =
-                load.status === "tamamlandi"
-                  ? "bg-green-100 text-green-700"
-                  : load.status === "yukleniyor"
-                    ? "bg-orange-100 text-orange-700"
-                    : "bg-blue-100 text-blue-700";
-              return (
-                <div key={load.id} className="flex flex-col gap-2">
-                  <div
-                    onClick={() =>
-                      setExpandedLoadId(isExpanded ? null : load.id)
-                    }
-                    className="cursor-pointer border border-gray-200 dark:border-gray-700 rounded-2xl p-4 hover:shadow-md transition-shadow bg-white dark:bg-gray-800 flex flex-col md:flex-row justify-between md:items-center gap-3"
-                  >
-                    <div className="flex items-center space-x-4">
-                      <div className="flex flex-col min-w-[100px]">
-                        <span className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
-                          {t("dest_country")}
-                        </span>
-                        <span className="font-bold text-gray-800 dark:text-gray-100">
-                          {load.destCountry || "-"}
-                        </span>
-                      </div>
-                      <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
-                      <div className="flex flex-col min-w-[150px]">
-                        <span className="text-xs text-gray-400 dark:text-gray-500 font-bold uppercase">
-                          {t("dest_company")}
-                        </span>
-                        <span
-                          className="font-bold text-gray-800 dark:text-gray-100 truncate max-w-[200px]"
-                          title={load.destCompany}
-                        >
-                          {load.destCompany || "-"}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between md:justify-end w-full md:w-auto space-x-3">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-bold ${statusColor}`}
-                      >
-                        {t(`status_${load.status}`)}
-                      </span>
-                      <ChevronRight
-                        className={`w-5 h-5 text-gray-400 dark:text-gray-500 transition-transform ${isExpanded ? "rotate-90" : ""}`}
-                      />
-                    </div>
-                  </div>
+                const isExpanded = expandedLoadId === load.id;
+                const countryFlag = COUNTRY_FLAGS[load.destCountry] || "🌐";
+                const isFinished = load.status === "tamamlandi";
+                const isLoadingNow = load.status === "yukleniyor";
 
-                  {isExpanded && (
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-5 bg-gray-50/50 animate-slide-up">
-                      <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 pb-3 border-b border-gray-100 dark:border-gray-700 gap-3">
-                        <div>
-                          <div className="flex items-center mb-1 flex-wrap gap-2">
-                            <span className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
-                              {load.plaka}
+                return (
+                  <div
+                    key={load.id}
+                    className={`bg-white dark:bg-gray-800 rounded-2xl border transition-all overflow-hidden ${
+                      isExpanded
+                        ? "border-orange-300 dark:border-orange-500/60 ring-2 ring-orange-500/10 shadow-md"
+                        : "border-gray-200/90 dark:border-gray-700/80 hover:border-orange-200 dark:hover:border-orange-600/50 shadow-xs hover:shadow-sm"
+                    }`}
+                  >
+                    {/* Main Row */}
+                    <div
+                      onClick={() => setExpandedLoadId(isExpanded ? null : load.id)}
+                      className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 cursor-pointer select-none"
+                    >
+                      {/* Left: Plate Badge + Destination Info */}
+                      <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+                        {/* Embossed Turkish Plate */}
+                        <div className="shrink-0 flex items-center bg-gray-950 text-white rounded-xl border border-gray-900 dark:border-gray-600 shadow-xs overflow-hidden font-mono text-xs sm:text-sm">
+                          <div className="bg-blue-600 px-1.5 py-2 text-white font-extrabold text-[9px] flex items-center justify-center border-r border-blue-700 shrink-0">
+                            TR
+                          </div>
+                          <span className="px-2.5 sm:px-3 py-1.5 bg-white text-gray-950 dark:bg-gray-900 dark:text-white font-black tracking-wider uppercase whitespace-nowrap">
+                            {load.plaka || "34 ADS 01"}
+                          </span>
+                        </div>
+
+                        {/* Destination & Company details */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span
+                              className="text-base font-extrabold text-gray-900 dark:text-gray-100 truncate pb-0.5"
+                              title={load.destCompany}
+                            >
+                              {load.destCompany || "Alıcı Belirtilmedi"}
                             </span>
-                            {load.status === "yukleniyor" ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                                {t("status_yukleniyor") || "Yükleniyor"}
-                              </span>
-                            ) : load.status === "tamamlandi" ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
-                                <CheckCircle className="w-3 h-3 text-blue-600" />
-                                {t("status_tamamlandi") || "Tamamlandı"}
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
-                                <Clock className="w-3 h-3 text-amber-600" />
-                                {t("status_beklemede") || "Beklemede"}
+                            {load.projectNo && (
+                              <span className="text-[11px] font-mono font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/80 px-2 py-0.5 rounded-md shrink-0">
+                                #{load.projectNo}
                               </span>
                             )}
                           </div>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                            <Calendar className="w-3 h-3 inline mr-1" />{" "}
-                            {load.createdAtDate} - {load.createdAtTime}{" "}
-                            {load.finishedAtTime &&
-                              `| Çıkış: ${load.finishedAtTime}`}
-                          </p>
-                        </div>
-                        <div className="bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 text-sm font-medium text-gray-600 dark:text-gray-300">
-                          <User className="w-4 h-4 inline text-gray-400 dark:text-gray-500 mr-1" />{" "}
-                          {load.sofor || "-"}
+
+                          <div className="flex items-center gap-2.5 text-xs text-gray-500 dark:text-gray-400 mt-1.5 flex-wrap">
+                            <span className="inline-flex items-center gap-1.5 font-medium text-gray-700 dark:text-gray-300 shrink-0">
+                              <span className="text-base leading-none shrink-0">{countryFlag}</span>
+                              <span>{getCountryName(load.destCountry, lang) || "Türkiye"}</span>
+                            </span>
+                            {load.destLocation && (
+                              <span className="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-300 shrink-0">
+                                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                                <MapPin className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
+                                <span className="truncate max-w-[160px]">{load.destLocation}</span>
+                              </span>
+                            )}
+                            {load.sofor && (
+                              <span className="inline-flex items-center gap-1.5 text-gray-600 dark:text-gray-300 shrink-0">
+                                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                                <User className="w-3.5 h-3.5 text-gray-400 dark:text-gray-500 shrink-0" />
+                                <span className="truncate max-w-[140px]">{load.sofor}</span>
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 mb-4">
-                        <div>
-                          <span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">
-                            {t("dest_country")}
-                          </span>
-                          <span className="font-bold text-gray-800 dark:text-gray-100">
-                            {load.destCountry || "-"}
-                          </span>
+                      {/* Right: Tonnage, Status, Time, Chevron */}
+                      <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 dark:border-gray-700/70">
+                        {/* Tonnage Pill */}
+                        <div className="text-right">
+                          <div className="inline-flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 px-3 py-1.5 rounded-xl">
+                            <Scale className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 shrink-0" />
+                            <span className="text-sm font-black text-amber-900 dark:text-amber-200">
+                              {load.tonnage ? parseFloat(load.tonnage).toLocaleString("tr-TR") : "-"}
+                            </span>
+                            <span className="text-[11px] font-bold text-amber-700 dark:text-amber-300">
+                              {t("unit_ton") || "Ton"}
+                            </span>
+                          </div>
                         </div>
-                        <div>
-                          <span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">
-                            {t("dest_location")}
-                          </span>
-                          <span className="font-bold text-gray-800 dark:text-gray-100">
-                            {load.destLocation || "-"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">
-                            {t("project_no")}
-                          </span>
-                          <span className="font-bold text-gray-800 dark:text-gray-100">
-                            {load.projectNo || "-"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-gray-400 dark:text-gray-500 font-bold block text-[10px]">
-                            {t("tonnage")}
-                          </span>
-                          <span className="font-extrabold text-orange-600">
-                            {load.tonnage ? `${load.tonnage} Ton` : "-"}
-                          </span>
-                        </div>
-                      </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col">
-                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">
-                            {t("before")}
-                          </span>
-                          {load.preImgUrl ? (
-                            <div
-                              className="relative group cursor-pointer overflow-hidden rounded-lg mb-2"
-                              onClick={() => setPreviewModalImg(load.preImgUrl)}
-                            >
-                              <img
-                                loading="lazy"
-                                decoding="async"
-                                src={load.preImgUrl}
-                                className="w-full h-44 object-cover group-hover:scale-105 transition-transform"
-                              />
-                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                <Maximize2 className="w-5 h-5" />
-                              </div>
-                            </div>
+                        {/* Status */}
+                        <div>
+                          {isLoadingNow ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold bg-orange-100 text-orange-800 dark:bg-orange-950/60 dark:text-orange-300 border border-orange-200 dark:border-orange-800 whitespace-nowrap">
+                              <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse shrink-0"></span>
+                              {t("status_yukleniyor") || "Yükleniyor"}
+                            </span>
+                          ) : isFinished ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 whitespace-nowrap">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                              {t("status_tamamlandi") || "Sevk Edildi"}
+                            </span>
                           ) : (
-                            <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs mb-2">
-                              {t("no_photo")}
-                            </div>
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 whitespace-nowrap">
+                              <Clock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                              {t("status_beklemede") || "Beklemede"}
+                            </span>
                           )}
-                          <p className="text-sm text-gray-700 dark:text-gray-200 italic">
-                            "{load.preNote || "-"}"
-                          </p>
                         </div>
-                        <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700 flex flex-col">
-                          <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2">
-                            {t("after")}
-                          </span>
-                          {load.status === "beklemede" ? (
-                            <div className="w-full h-44 bg-blue-50 border border-blue-100 rounded-lg flex items-center justify-center text-blue-400 text-sm font-medium mb-2">
-                              {t("status_beklemede")}
+
+                        {/* Chevron */}
+                        <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-700/60 flex items-center justify-center text-gray-400 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                          <ChevronRight
+                            className={`w-4 h-4 transition-transform duration-200 ${
+                              isExpanded ? "rotate-90 text-orange-600" : ""
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Expanded Logistics Dossier */}
+                    {isExpanded && (
+                      <div className="border-t border-gray-100 dark:border-gray-700/70 p-5 md:p-6 bg-gray-50/70 dark:bg-gray-900/40 space-y-5 animate-slide-up">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-200/80 dark:border-gray-700/80">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-orange-600 dark:text-orange-400 shrink-0" />
+                            <h4 className="font-extrabold text-sm text-gray-900 dark:text-gray-100">
+                              {t("shipment_dossier_title") || "Sevkiyat Dosyası & Saha Tutanakları"}
+                            </h4>
+                          </div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 flex flex-wrap items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 shrink-0">
+                              <Calendar className="w-3.5 h-3.5 text-orange-500 shrink-0" />
+                              <span>{load.createdAtDate}</span>
+                            </span>
+                            <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                            <span className="shrink-0">Giriş: {load.createdAtTime || "-"}</span>
+                            {load.finishedAtTime && (
+                              <>
+                                <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+                                  Çıkış: {load.finishedAtTime}
+                                </span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 4-Specs Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
+                              {t("dest_country") || "Varış Ülkesi"}
+                            </span>
+                            <span className="font-extrabold text-gray-900 dark:text-gray-100 text-sm mt-0.5 flex items-center gap-1.5 truncate">
+                              <span>{countryFlag}</span>
+                              <span className="truncate">{getCountryName(load.destCountry, lang) || "Türkiye"}</span>
+                            </span>
+                          </div>
+
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
+                              {t("dest_location") || "Şehir / Bölge"}
+                            </span>
+                            <span className="font-extrabold text-gray-900 dark:text-gray-100 text-sm mt-0.5 truncate block">
+                              {load.destLocation || "-"}
+                            </span>
+                          </div>
+
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
+                              {t("driver_name") || "Sorumlu Şoför"}
+                            </span>
+                            <span className="font-extrabold text-gray-900 dark:text-gray-100 text-sm mt-0.5 truncate block">
+                              {load.sofor || "Belirtilmemiş"}
+                            </span>
+                          </div>
+
+                          <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                            <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider block">
+                              {t("tonnage") || "Net Tonaj"}
+                            </span>
+                            <span className="font-black text-orange-600 dark:text-orange-400 text-sm mt-0.5 truncate block">
+                              {load.tonnage ? `${parseFloat(load.tonnage).toLocaleString("tr-TR")} Ton` : "-"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Side by Side Inspection Panels */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {/* Pre-load Photo & Note */}
+                          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700/80 flex flex-col justify-between shadow-xs">
+                            <div>
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-extrabold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                                  <Camera className="w-3.5 h-3.5 text-blue-500" />
+                                  {t("pre_load_check") || "Yükleme Öncesi Kontrol (Boş Kasa)"}
+                                </span>
+                                {load.preImgUrl && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-full">
+                                    Kayıtlı
+                                  </span>
+                                )}
+                              </div>
+
+                              {load.preImgUrl ? (
+                                <div
+                                  className="relative group cursor-pointer overflow-hidden rounded-xl mb-3 aspect-video bg-gray-100 dark:bg-gray-900"
+                                  onClick={() => setPreviewModalImg(load.preImgUrl)}
+                                >
+                                  <img
+                                    loading="lazy"
+                                    decoding="async"
+                                    src={load.preImgUrl}
+                                    alt="Yükleme Öncesi"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1.5 text-xs font-bold">
+                                    <Maximize2 className="w-4 h-4" />
+                                    <span>Büyüt</span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="aspect-video bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-gray-400 text-xs mb-3">
+                                  <ImageIcon className="w-6 h-6 mb-1 text-gray-300 dark:text-gray-600" />
+                                  <span>{t("no_photo") || "Fotoğraf Yok"}</span>
+                                </div>
+                              )}
                             </div>
-                          ) : load.status === "yukleniyor" ? (
-                            <div className="w-full h-44 bg-orange-50 border border-orange-100 rounded-lg flex items-center justify-center text-orange-400 text-sm font-medium mb-2">
-                              {t("status_yukleniyor")}
+
+                            <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700/60 text-xs text-gray-600 dark:text-gray-300">
+                              <span className="font-bold text-[10px] uppercase text-gray-400 block mb-0.5">
+                                Giriş Notu:
+                              </span>
+                              <p className="italic">
+                                {load.preNote ? `"${load.preNote}"` : "Özel bir not belirtilmedi."}
+                              </p>
                             </div>
-                          ) : (
-                            <>
+                          </div>
+
+                          {/* Post-load Photo & Note */}
+                          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 border border-gray-100 dark:border-gray-700/80 flex flex-col justify-between shadow-xs">
+                            <div>
+                              <div className="flex items-center justify-between mb-3">
+                                <span className="text-xs font-extrabold text-gray-700 dark:text-gray-200 flex items-center gap-1.5">
+                                  <CheckSquare className="w-3.5 h-3.5 text-emerald-500" />
+                                  {t("post_load_check") || "Yükleme & Emniyet Kontrolü"}
+                                </span>
+                                {load.postImgUrl && (
+                                  <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 rounded-full">
+                                    Onaylı
+                                  </span>
+                                )}
+                              </div>
+
                               {load.postImgUrl ? (
                                 <div
-                                  className="relative group cursor-pointer overflow-hidden rounded-lg mb-2"
-                                  onClick={() =>
-                                    setPreviewModalImg(load.postImgUrl)
-                                  }
+                                  className="relative group cursor-pointer overflow-hidden rounded-xl mb-3 aspect-video bg-gray-100 dark:bg-gray-900"
+                                  onClick={() => setPreviewModalImg(load.postImgUrl)}
                                 >
                                   <img
                                     loading="lazy"
                                     decoding="async"
                                     src={load.postImgUrl}
-                                    className="w-full h-44 object-cover group-hover:scale-105 transition-transform"
+                                    alt="Yükleme Sonrası"
+                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                                   />
-                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                    <Maximize2 className="w-5 h-5" />
+                                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1.5 text-xs font-bold">
+                                    <Maximize2 className="w-4 h-4" />
+                                    <span>Büyüt</span>
                                   </div>
                                 </div>
+                              ) : isLoadingNow ? (
+                                <div className="aspect-video bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-dashed border-amber-200 dark:border-amber-800/60 flex flex-col items-center justify-center text-amber-700 dark:text-amber-400 text-xs mb-3 p-4 text-center">
+                                  <span className="w-3 h-3 rounded-full bg-amber-500 animate-ping mb-2" />
+                                  <span className="font-bold">Yükleme Devam Ediyor</span>
+                                  <span className="text-[11px] text-amber-600/80 dark:text-amber-400/80 mt-1">
+                                    Bağlama ve brandalama tamamlandığında çıkış fotoğrafı yüklenecektir.
+                                  </span>
+                                </div>
                               ) : (
-                                <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs mb-2">
-                                  {t("no_photo")}
+                                <div className="aspect-video bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-gray-400 text-xs mb-3">
+                                  <Clock className="w-6 h-6 mb-1 text-gray-300 dark:text-gray-600" />
+                                  <span>Henüz yükleme başlamadı</span>
                                 </div>
                               )}
-                              <p className="text-sm text-gray-700 dark:text-gray-200 italic">
-                                "{load.postNote || "-"}"
+                            </div>
+
+                            <div className="bg-gray-50 dark:bg-gray-900/50 p-3 rounded-xl border border-gray-100 dark:border-gray-700/60 text-xs text-gray-600 dark:text-gray-300">
+                              <span className="font-bold text-[10px] uppercase text-gray-400 block mb-0.5">
+                                Çıkış / Emniyet Notu:
+                              </span>
+                              <p className="italic">
+                                {load.postNote ? `"${load.postNote}"` : isFinished ? "Yük güvenli şekilde bağlandı ve sevk edildi." : "Henüz çıkış yapılmadı."}
                               </p>
-                            </>
-                          )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            {isAdminLoadingsPaginating && (
-              <ShipmentCardSkeleton count={2} />
-            )}
-            <PaginationControl
-              currentCount={adminLoadingsLimit}
-              totalCount={listToRender.length}
-              pageSize={15}
-              isLoading={isAdminLoadingsPaginating}
-              onLoadMore={handleLoadMoreAdminLoadings}
-              label={t("load_more_shipments") || "Daha Fazla Sevkiyat Göster"}
-            />
-          </>
-        )}
-      </div>
-    );
+                    )}
+                  </div>
+                );
+              })}
+              {isAdminLoadingsPaginating && <ShipmentCardSkeleton count={2} />}
+              <PaginationControl
+                currentCount={adminLoadingsLimit}
+                totalCount={listToRender.length}
+                pageSize={15}
+                isLoading={isAdminLoadingsPaginating}
+                onLoadMore={handleLoadMoreAdminLoadings}
+                label={t("load_more_shipments") || "Daha Fazla Sevkiyat Göster"}
+              />
+            </>
+          )}
+        </div>
+      );
     };
 
     if (adminSystemMode === "yukleme") {
@@ -6530,24 +8819,86 @@ const AdminDashboard = () => {
         const dateLoadings = loadings.filter(
           (l) => l.createdAtDate === selectedYuklemeDate,
         );
+        const dateTotalTonnage = dateLoadings.reduce(
+          (acc, l) => acc + (parseFloat(l.tonnage) || 0),
+          0,
+        );
+        const dateCompleted = dateLoadings.filter((l) => l.status === "tamamlandi").length;
+        const dateActive = dateLoadings.filter((l) => l.status === "yukleniyor" || l.status === "beklemede").length;
+
         return (
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
-            <div className="flex justify-between items-start mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
-              <div>
+          <div className="space-y-6 animate-slide-up">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-gray-100 dark:border-gray-700/80 pb-6 mb-6">
+                <div>
+                  <button
+                    onClick={() => setSelectedYuklemeDate(null)}
+                    className="flex items-center text-xs font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-2 transition-colors cursor-pointer group"
+                  >
+                    <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
+                    <span>{t("return_back") || "Tüm Sevkiyatlara Dön"}</span>
+                  </button>
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2.5">
+                    <CalendarDays className="w-6 h-6 text-orange-500" />
+                    <span>{selectedYuklemeDate} Günlük Sevkiyat Özeti</span>
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Bu tarihte fabrikadan çıkışı yapılan araçlar ve yükleme tutanakları
+                  </p>
+                </div>
+
                 <button
                   onClick={() => setSelectedYuklemeDate(null)}
-                  className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4"
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-2xl text-xs font-bold transition-all cursor-pointer"
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" /> {t("return_back")}
+                  Kapat
                 </button>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-                  {selectedYuklemeDate} Sevkiyat Raporu
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
-                  {t("total_record")} {dateLoadings.length}
-                </p>
+              </div>
+
+              {/* Day KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-900/60 border border-gray-100 dark:border-gray-700/80">
+                  <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                    Toplam Araç
+                  </span>
+                  <p className="text-2xl font-black text-gray-900 dark:text-gray-100 mt-1">
+                    {dateLoadings.length}
+                  </p>
+                  <span className="text-[11px] text-gray-400">Sevkiyat Kaydı</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40">
+                  <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block">
+                    Toplam Tonaj
+                  </span>
+                  <p className="text-2xl font-black text-amber-900 dark:text-amber-200 mt-1">
+                    {dateTotalTonnage.toLocaleString("tr-TR")} <span className="text-sm font-bold">Ton</span>
+                  </p>
+                  <span className="text-[11px] text-amber-700/80 dark:text-amber-400/80">Net Yük</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40">
+                  <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block">
+                    Tamamlanan
+                  </span>
+                  <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                    {dateCompleted}
+                  </p>
+                  <span className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80">Sevk Edildi</span>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200/60 dark:border-blue-900/40">
+                  <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider block">
+                    İşlemde / Bekleyen
+                  </span>
+                  <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1">
+                    {dateActive}
+                  </p>
+                  <span className="text-[11px] text-blue-600/80 dark:text-blue-400/80">Rampa Durumu</span>
+                </div>
               </div>
             </div>
+
             {renderLoadingList(dateLoadings)}
           </div>
         );
@@ -6557,13 +8908,20 @@ const AdminDashboard = () => {
         (acc, l) => acc + (parseFloat(l.tonnage) || 0),
         0,
       );
+      const activeLoadingsCount = loadings.filter(
+        (l) => l.status === "yukleniyor" || l.status === "beklemede",
+      ).length;
+      const completedLoadingsCount = loadings.filter(
+        (l) => l.status === "tamamlandi",
+      ).length;
+      const tonnage24h = get24HourTonnage ? get24HourTonnage() : 0;
 
       // Analysis calculations
       const countryStats = {};
       const companyStats = {};
       loadings.forEach((load) => {
         const tVal = parseFloat(load.tonnage) || 0;
-        const cName = load.destCountry || "Belirsiz";
+        const cName = load.destCountry || "Türkiye";
         const compName = load.destCompany || "Belirsiz";
 
         if (!countryStats[cName]) countryStats[cName] = { count: 0, ton: 0 };
@@ -6582,6 +8940,13 @@ const AdminDashboard = () => {
         (a, b) => companyStats[b].ton - companyStats[a].ton,
       );
 
+      const topCountry = sortedCountries[0] || null;
+      const topCompany = sortedCompanies[0] || null;
+      const avgTonnagePerTruck =
+        loadings.length > 0
+          ? (totalTonnageAll / loadings.length).toFixed(1)
+          : "0.0";
+
       const currDate = new Date();
       const currentMonth = yuklemeCalendarMonth;
       const currentYear = yuklemeCalendarYear;
@@ -6592,40 +8957,15 @@ const AdminDashboard = () => {
         lang === "tr"
           ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
           : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-      const tasksByDate = {};
-      tasks.forEach((t) => {
-        if (!tasksByDate[t.createdAt]) tasksByDate[t.createdAt] = [];
-        tasksByDate[t.createdAt].push(t);
-      });
       const monthNames =
         lang === "tr"
           ? [
-              "Ocak",
-              "Şubat",
-              "Mart",
-              "Nisan",
-              "Mayıs",
-              "Haziran",
-              "Temmuz",
-              "Ağustos",
-              "Eylül",
-              "Ekim",
-              "Kasım",
-              "Aralık",
+              "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+              "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
             ]
           : [
-              "January",
-              "February",
-              "March",
-              "April",
-              "May",
-              "June",
-              "July",
-              "August",
-              "September",
-              "October",
-              "November",
-              "December",
+              "January", "February", "March", "April", "May", "June",
+              "July", "August", "September", "October", "November", "December"
             ];
       const loadingsByDate = {};
       loadings.forEach((l) => {
@@ -6634,31 +8974,116 @@ const AdminDashboard = () => {
         loadingsByDate[l.createdAtDate].push(l);
       });
 
+      // Filtered list for 'list' tab
+      const filteredListLoadings = loadings.filter((l) => {
+        // Search query
+        if (yuklemeSearchQuery.trim()) {
+          const q = yuklemeSearchQuery.toLowerCase().trim();
+          const matchPlaka = l.plaka?.toLowerCase().includes(q);
+          const matchCompany = l.destCompany?.toLowerCase().includes(q);
+          const matchSofor = l.sofor?.toLowerCase().includes(q);
+          const matchLocation = l.destLocation?.toLowerCase().includes(q);
+          const matchCountry = l.destCountry?.toLowerCase().includes(q);
+          const matchProject = l.projectNo?.toLowerCase().includes(q);
+          if (
+            !matchPlaka &&
+            !matchCompany &&
+            !matchSofor &&
+            !matchLocation &&
+            !matchCountry &&
+            !matchProject
+          ) {
+            return false;
+          }
+        }
+        // Status filter
+        if (yuklemeStatusFilter !== "all" && l.status !== yuklemeStatusFilter) {
+          return false;
+        }
+        // Date period filter
+        if (yuklemeListFilter !== "all") {
+          const now = new Date();
+          if (yuklemeListFilter === "day") {
+            const startOfDay = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              now.getDate(),
+            ).getTime();
+            if ((l.timestamp || l.createdAtTimestamp || 0) < startOfDay) return false;
+          } else if (yuklemeListFilter === "week") {
+            const day = now.getDay();
+            const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+            const startOfWeek = new Date(now.setDate(diff)).setHours(
+              0,
+              0,
+              0,
+              0,
+            );
+            if ((l.timestamp || l.createdAtTimestamp || 0) < startOfWeek) return false;
+          } else if (yuklemeListFilter === "month") {
+            const startOfMonth = new Date(
+              now.getFullYear(),
+              now.getMonth(),
+              1,
+            ).getTime();
+            if ((l.timestamp || l.createdAtTimestamp || 0) < startOfMonth) return false;
+          }
+        }
+        return true;
+      });
+
+      const filteredTotalTonnage = filteredListLoadings.reduce(
+        (sum, l) => sum + (parseFloat(l.tonnage) || 0),
+        0,
+      );
+
       return (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 border-b border-gray-100 dark:border-gray-700 pb-4">
+        <div className="space-y-6 animate-slide-up">
+          {/* Header & Main Navigation Bar */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                <Truck className="w-6 h-6 mr-3 text-orange-500" />{" "}
-                {t("all_reports")}
-              </h2>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {t("total_tonnage")}:{" "}
-                <b className="text-orange-600 font-bold">
-                  {totalTonnageAll.toLocaleString("tr-TR")} Ton
-                </b>
-              </p>
+              <button
+                onClick={() => {
+                  navigate("/");
+                  setAdminSystemMode("home");
+                }}
+                className="flex items-center text-xs font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-2 transition-colors cursor-pointer group"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>{t("back_to_menu") || "Ana Menüye Dön"}</span>
+              </button>
+
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-orange-600 flex items-center justify-center text-white shadow-md shadow-orange-500/20 shrink-0">
+                  <Truck className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">
+                    {t("module_yukleme_title") || "Yükleme & Sevkiyat Takibi"}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Fabrika tır çıkışları, tonaj analizleri, sevkiyat takvimi ve lojistik tutanakları
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="flex bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl shadow-inner">
+
+            {/* Segmented View Selector */}
+            <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1.5 rounded-2xl border border-gray-200/80 dark:border-gray-600 w-full sm:w-auto shadow-inner">
               <button
                 onClick={() => {
                   setYuklemeAnaTab("list");
                   setSelectedYuklemeCountry(null);
                   setSelectedYuklemeCompany(null);
                 }}
-                className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === "list" ? "bg-white dark:bg-gray-800 text-orange-600 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  yuklemeAnaTab === "list"
+                    ? "bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
               >
-                Liste
+                <Truck className="w-3.5 h-3.5" />
+                <span>Sevkiyat Listesi</span>
               </button>
               <button
                 onClick={() => {
@@ -6666,9 +9091,14 @@ const AdminDashboard = () => {
                   setSelectedYuklemeCountry(null);
                   setSelectedYuklemeCompany(null);
                 }}
-                className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === "analysis" ? "bg-white dark:bg-gray-800 text-orange-600 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  yuklemeAnaTab === "analysis"
+                    ? "bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
               >
-                Analiz
+                <TrendingUp className="w-3.5 h-3.5" />
+                <span>Sevkiyat Analizi</span>
               </button>
               <button
                 onClick={() => {
@@ -6676,34 +9106,258 @@ const AdminDashboard = () => {
                   setSelectedYuklemeCountry(null);
                   setSelectedYuklemeCompany(null);
                 }}
-                className={`py-1.5 px-3 text-sm font-bold rounded-lg transition-all ${yuklemeAnaTab === "calendar" ? "bg-white dark:bg-gray-800 text-orange-600 shadow-sm" : "text-gray-500 dark:text-gray-400"}`}
+                className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-4 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                  yuklemeAnaTab === "calendar"
+                    ? "bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-sm"
+                    : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                }`}
               >
-                Takvim
+                <CalendarDays className="w-3.5 h-3.5" />
+                <span>Takvim Görünümü</span>
               </button>
             </div>
           </div>
 
-          {yuklemeAnaTab === "analysis" ? (
-            selectedYuklemeCountry || selectedYuklemeCompany ? (
+          {/* Quick Metrics Strip */}
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div
+              onClick={() => {
+                setYuklemeAnaTab("list");
+                setYuklemeStatusFilter("all");
+              }}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                yuklemeAnaTab === "list" && yuklemeStatusFilter === "all"
+                  ? "bg-orange-50/80 dark:bg-orange-950/20 border-orange-300 dark:border-orange-800 ring-2 ring-orange-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Toplam</span>
+                <Truck className="w-3.5 h-3.5 text-orange-500" />
+              </div>
+              <p className="text-2xl font-black text-gray-900 dark:text-gray-100 mt-1">
+                {loadings.length}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Kayıtlı Araç</span>
+            </div>
+
+            <div
+              onClick={() => {
+                setYuklemeAnaTab("list");
+                setYuklemeStatusFilter("yukleniyor");
+              }}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                yuklemeAnaTab === "list" && yuklemeStatusFilter === "yukleniyor"
+                  ? "bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 ring-2 ring-amber-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Sahada İşlemde</span>
+                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              </div>
+              <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">
+                {activeLoadingsCount}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Yükleme / Beklemede</span>
+            </div>
+
+            <div
+              onClick={() => {
+                setYuklemeAnaTab("list");
+                setYuklemeStatusFilter("tamamlandi");
+              }}
+              className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                yuklemeAnaTab === "list" && yuklemeStatusFilter === "tamamlandi"
+                  ? "bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 ring-2 ring-emerald-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Tamamlanan</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              </div>
+              <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
+                {completedLoadingsCount}
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Sevk Edildi</span>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/80 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Toplam Tonaj</span>
+                <Scale className="w-3.5 h-3.5 text-orange-500" />
+              </div>
+              <p className="text-2xl font-black text-orange-600 dark:text-orange-400 mt-1 truncate">
+                {totalTonnageAll.toLocaleString("tr-TR")} <span className="text-xs font-bold">Ton</span>
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Genel Toplam</span>
+            </div>
+
+            <div className="col-span-2 sm:col-span-1 p-4 rounded-2xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700/80 shadow-sm">
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider">
+                <span>Son 24 Saat</span>
+                <Clock className="w-3.5 h-3.5 text-blue-500" />
+              </div>
+              <p className="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 truncate">
+                {tonnage24h} <span className="text-xs font-bold">Ton</span>
+              </p>
+              <span className="text-[11px] text-gray-400 font-medium">Günlük Çıkış</span>
+            </div>
+          </div>
+
+          {/* TAB 1: LIST VIEW */}
+          {yuklemeAnaTab === "list" && (
+            <div className="space-y-4">
+              {/* Search and Filters Bar */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 md:p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+                {/* Search Bar */}
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={yuklemeSearchQuery}
+                    onChange={(e) => setYuklemeSearchQuery(e.target.value)}
+                    placeholder={
+                      t("search_shipments_ph") ||
+                      "Plaka, firma adı, şoför, proje no veya rota ara..."
+                    }
+                    className="w-full pl-10 pr-9 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all font-medium"
+                  />
+                  {yuklemeSearchQuery && (
+                    <button
+                      onClick={() => setYuklemeSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Status Filter */}
+                  <select
+                    value={yuklemeStatusFilter}
+                    onChange={(e) => setYuklemeStatusFilter(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <option value="all">Tüm Durumlar</option>
+                    <option value="yukleniyor">Yükleniyor</option>
+                    <option value="beklemede">Beklemede</option>
+                    <option value="tamamlandi">Tamamlandı</option>
+                  </select>
+
+                  {/* Date Period Filter */}
+                  <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1 rounded-xl">
+                    <button
+                      onClick={() => setYuklemeListFilter("all")}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        yuklemeListFilter === "all"
+                          ? "bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_all") || "Tümü"}
+                    </button>
+                    <button
+                      onClick={() => setYuklemeListFilter("day")}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        yuklemeListFilter === "day"
+                          ? "bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_day") || "Bugün"}
+                    </button>
+                    <button
+                      onClick={() => setYuklemeListFilter("week")}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        yuklemeListFilter === "week"
+                          ? "bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_week") || "Bu Hafta"}
+                    </button>
+                    <button
+                      onClick={() => setYuklemeListFilter("month")}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        yuklemeListFilter === "month"
+                          ? "bg-white dark:bg-gray-800 text-orange-600 dark:text-orange-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_month") || "Bu Ay"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Results Summary */}
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-2 font-medium">
+                <span>
+                  <b>{filteredListLoadings.length}</b> sevkiyat kaydı listeleniyor
+                </span>
+                <span>
+                  Toplam:{" "}
+                  <b className="text-orange-600 dark:text-orange-400 font-extrabold">
+                    {filteredTotalTonnage.toLocaleString("tr-TR")} Ton
+                  </b>
+                </span>
+              </div>
+
+              {/* Render List */}
+              {renderLoadingList(filteredListLoadings)}
+            </div>
+          )}
+
+          {/* TAB 2: ANALYSIS VIEW */}
+          {yuklemeAnaTab === "analysis" &&
+            (selectedYuklemeCountry || selectedYuklemeCompany ? (
               <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-gray-100 dark:border-gray-700 pb-4">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                   <div>
                     <button
                       onClick={() => {
                         setSelectedYuklemeCountry(null);
                         setSelectedYuklemeCompany(null);
                       }}
-                      className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4"
+                      className="flex items-center text-xs font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-2 transition-colors cursor-pointer group"
                     >
-                      <ArrowLeft className="w-4 h-4 mr-2" /> {t("return_back")}
+                      <ArrowLeft className="w-4 h-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
+                      <span>{t("return_back") || "Tüm Analiz Tablosuna Dön"}</span>
                     </button>
-                    <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                      {selectedYuklemeCountry
-                        ? `${selectedYuklemeCountry} ${t("shipments_title") || "Sevkiyatları"}`
-                        : `${selectedYuklemeCompany} ${t("shipments_title") || "Sevkiyatları"}`}
+                    <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      {selectedYuklemeCountry ? (
+                        <>
+                          <span className="text-2xl">
+                            {COUNTRY_FLAGS[selectedYuklemeCountry] || "🌐"}
+                          </span>
+                          <span>
+                            {selectedYuklemeCountry} {t("shipments_title") || "Sevkiyatları"}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Building2 className="w-5 h-5 text-orange-500" />
+                          <span>
+                            {selectedYuklemeCompany} {t("shipments_title") || "Sevkiyatları"}
+                          </span>
+                        </>
+                      )}
                     </h3>
                   </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-extrabold text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/40 px-3.5 py-1.5 rounded-xl border border-orange-200/80 dark:border-orange-800/60">
+                      {selectedYuklemeCountry
+                        ? `${countryStats[selectedYuklemeCountry]?.ton.toLocaleString("tr-TR") || 0} Ton`
+                        : `${companyStats[selectedYuklemeCompany]?.ton.toLocaleString("tr-TR") || 0} Ton`}
+                    </span>
+                  </div>
                 </div>
+
                 {renderLoadingList(
                   loadings.filter((l) =>
                     selectedYuklemeCountry
@@ -6713,146 +9367,274 @@ const AdminDashboard = () => {
                 )}
               </div>
             ) : (
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
-                    <Globe className="w-5 h-5 mr-2 text-blue-500" />{" "}
-                    {t("shipments_by_country") || "Ülkelere Göre Sevkiyatlar"}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {sortedCountries.map((c) => (
-                      <div
-                        key={c}
-                        onClick={() => setSelectedYuklemeCountry(c)}
-                        className="cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center transition-colors"
-                      >
-                        <span className="font-bold text-gray-700 dark:text-gray-200">
-                          {c}
-                        </span>
-                        <div className="text-right">
-                          <span className="block text-lg font-extrabold text-orange-600">
-                            {countryStats[c].ton.toLocaleString("tr-TR")} Ton
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                            {countryStats[c].count} Sevkiyat
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
-                    <Building2 className="w-5 h-5 mr-2 text-blue-500" />{" "}
-                    {t("shipments_by_company") || "Firmalara Göre Sevkiyatlar"}
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {sortedCompanies.map((c) => (
-                      <div
-                        key={c}
-                        onClick={() => setSelectedYuklemeCompany(c)}
-                        className="cursor-pointer bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center transition-colors"
-                      >
-                        <span
-                          className="font-bold text-gray-700 dark:text-gray-200 truncate w-32"
-                          title={c}
-                        >
-                          {c}
-                        </span>
-                        <div className="text-right shrink-0">
-                          <span className="block text-lg font-extrabold text-orange-600">
-                            {companyStats[c].ton.toLocaleString("tr-TR")} Ton
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                            {companyStats[c].count} Sevkiyat
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )
-          ) : yuklemeAnaTab === "calendar" ? (
-            <div>
-              <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
-                <div>
-                  <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-                    <div className="flex items-center gap-2">
-                      <CalendarDays className="w-6 h-6 text-orange-500 shrink-0" />
-                      <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 gap-1 border border-gray-200 dark:border-gray-600 shadow-sm">
-                        <select
-                          value={currentMonth}
-                          onChange={(e) => handleYuklemeSelectMonth(e.target.value)}
-                          className="bg-transparent font-extrabold text-sm sm:text-base text-gray-800 dark:text-gray-100 px-2.5 py-1 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                        >
-                          {monthNames.map((name, idx) => (
-                            <option key={idx} value={idx} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
-                              {name}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="text-gray-400 font-bold">/</span>
-                        <select
-                          value={currentYear}
-                          onChange={(e) => handleYuklemeSelectYear(e.target.value)}
-                          className="bg-transparent font-extrabold text-sm sm:text-base text-gray-800 dark:text-gray-100 px-2.5 py-1 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                        >
-                          {Array.from({ length: 12 }, (_, i) => 2022 + i).map((y) => (
-                            <option key={y} value={y} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
-                              {y}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+              <div className="space-y-6">
+                {/* 3 Executive Insights Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                    <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      <span className="truncate">{t("top_export_country") || "En Fazla Sevk Edilen Ülke"}</span>
+                      <Globe className="w-4 h-4 text-blue-500 shrink-0" />
                     </div>
+                    {topCountry ? (
+                      <div>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-2xl leading-none shrink-0">
+                            {COUNTRY_FLAGS[topCountry] || "🌐"}
+                          </span>
+                          <span className="text-lg font-black text-gray-900 dark:text-gray-100 truncate pb-0.5">
+                            {topCountry}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium flex items-center gap-2 flex-wrap">
+                          <span>{countryStats[topCountry].ton.toLocaleString("tr-TR")} Ton</span>
+                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                          <span>{countryStats[topCountry].count} Sevkiyat</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 mt-2">-</p>
+                    )}
+                  </div>
 
-                    <div className="flex items-center space-x-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 shadow-inner border border-gray-200 dark:border-gray-600">
-                      <button
-                        type="button"
-                        onClick={handleYuklemePrevMonth}
-                        className="px-2.5 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold shadow-sm"
-                        title="Önceki Ay"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        <span className="hidden sm:inline">Önceki</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleYuklemeToday}
-                        className="px-3 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all shadow-sm"
-                      >
-                        {t("filter_today") || "Bugün"}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleYuklemeNextMonth}
-                        className="px-2.5 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold shadow-sm"
-                        title="Sonraki Ay"
-                      >
-                        <span className="hidden sm:inline">Sonraki</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
+                  <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                    <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      <span className="truncate">{t("top_client_company") || "En Yüksek Sevk Alan Firma"}</span>
+                      <Building2 className="w-4 h-4 text-orange-500 shrink-0" />
+                    </div>
+                    {topCompany ? (
+                      <div>
+                        <span className="text-lg font-black text-gray-900 dark:text-gray-100 truncate block pb-0.5" title={topCompany}>
+                          {topCompany}
+                        </span>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium flex items-center gap-2 flex-wrap">
+                          <span>{companyStats[topCompany].ton.toLocaleString("tr-TR")} Ton</span>
+                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 shrink-0" />
+                          <span>{companyStats[topCompany].count} Sevkiyat</span>
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-gray-400 mt-2">-</p>
+                    )}
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                    <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">
+                      <span className="truncate">{t("avg_tonnage_per_truck") || "Tır Başına Ort. Tonaj"}</span>
+                      <Scale className="w-4 h-4 text-emerald-500 shrink-0" />
+                    </div>
+                    <div>
+                      <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 inline-block pb-0.5">
+                        {avgTonnagePerTruck} <span className="text-sm font-bold">Ton</span>
+                      </span>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                        Tüm tamamlanan ve aktif araçlar ortalaması
+                      </p>
                     </div>
                   </div>
                 </div>
+
+                {/* Country Breakdown */}
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-blue-500" />
+                      <span>{t("shipments_by_country") || "Ülkelere Göre Dağılım"}</span>
+                    </h3>
+                    <span className="text-xs text-gray-400 font-medium">
+                      Filtrelemek için ülkeye tıklayın
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {sortedCountries.map((c) => {
+                      const sharePct = totalTonnageAll > 0
+                        ? Math.min(100, Math.round((countryStats[c].ton / totalTonnageAll) * 100))
+                        : 0;
+                      return (
+                        <div
+                          key={c}
+                          onClick={() => setSelectedYuklemeCountry(c)}
+                          className="p-4 rounded-2xl bg-gray-50/70 hover:bg-gray-100 dark:bg-gray-900/40 dark:hover:bg-gray-900/80 border border-gray-200/80 dark:border-gray-700/80 transition-all cursor-pointer group"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-xl shrink-0">
+                                {COUNTRY_FLAGS[c] || "🌐"}
+                              </span>
+                              <span className="font-extrabold text-gray-900 dark:text-gray-100 truncate text-sm">
+                                {c}
+                              </span>
+                            </div>
+                            <span className="text-xs font-black text-orange-600 dark:text-orange-400 shrink-0">
+                              {countryStats[c].ton.toLocaleString("tr-TR")} Ton
+                            </span>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="bg-orange-500 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${sharePct}%` }}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-gray-400 mt-2">
+                            <span>{countryStats[c].count} Sevkiyat</span>
+                            <span>%{sharePct} Pay</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Company Breakdown */}
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      <Building2 className="w-5 h-5 text-orange-500" />
+                      <span>{t("shipments_by_company") || "Firmalara Göre Sevkiyatlar"}</span>
+                    </h3>
+                    <span className="text-xs text-gray-400 font-medium">
+                      Filtrelemek için firmaya tıklayın
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                    {sortedCompanies.map((c) => {
+                      const sharePct = totalTonnageAll > 0
+                        ? Math.min(100, Math.round((companyStats[c].ton / totalTonnageAll) * 100))
+                        : 0;
+                      return (
+                        <div
+                          key={c}
+                          onClick={() => setSelectedYuklemeCompany(c)}
+                          className="p-4 rounded-2xl bg-gray-50/70 hover:bg-gray-100 dark:bg-gray-900/40 dark:hover:bg-gray-900/80 border border-gray-200/80 dark:border-gray-700/80 transition-all cursor-pointer group"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span
+                              className="font-extrabold text-gray-900 dark:text-gray-100 truncate text-sm flex-1 mr-2"
+                              title={c}
+                            >
+                              {c}
+                            </span>
+                            <span className="text-xs font-black text-orange-600 dark:text-orange-400 shrink-0">
+                              {companyStats[c].ton.toLocaleString("tr-TR")} Ton
+                            </span>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div className="w-full bg-gray-200 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className="bg-amber-500 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${sharePct}%` }}
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-gray-400 mt-2">
+                            <span>{companyStats[c].count} Sevkiyat</span>
+                            <span>%{sharePct} Pay</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-              <div className="grid grid-cols-7 gap-2 text-center mb-3">
+            ))}
+
+          {/* TAB 3: CALENDAR VIEW */}
+          {yuklemeAnaTab === "calendar" && (
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 space-y-6">
+              {/* Calendar Controls */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-4 border-b border-gray-100 dark:border-gray-700/80">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-50 dark:bg-orange-950/40 text-orange-600 flex items-center justify-center shrink-0">
+                    <CalendarDays className="w-5 h-5" />
+                  </div>
+                  <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 gap-1 border border-gray-200/80 dark:border-gray-600 shadow-inner">
+                    <select
+                      value={currentMonth}
+                      onChange={(e) => handleYuklemeSelectMonth(e.target.value)}
+                      className="bg-transparent font-black text-sm text-gray-900 dark:text-gray-100 px-3 py-1.5 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                    >
+                      {monthNames.map((name, idx) => (
+                        <option
+                          key={idx}
+                          value={idx}
+                          className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                        >
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                    <span className="text-gray-400 font-bold">/</span>
+                    <select
+                      value={currentYear}
+                      onChange={(e) => handleYuklemeSelectYear(e.target.value)}
+                      className="bg-transparent font-black text-sm text-gray-900 dark:text-gray-100 px-3 py-1.5 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => 2022 + i).map((y) => (
+                        <option
+                          key={y}
+                          value={y}
+                          className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"
+                        >
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 shadow-inner border border-gray-200/80 dark:border-gray-600">
+                  <button
+                    type="button"
+                    onClick={handleYuklemePrevMonth}
+                    className="px-3 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold cursor-pointer"
+                    title="Önceki Ay"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    <span className="hidden sm:inline">Önceki</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleYuklemeToday}
+                    className="px-3.5 py-1.5 text-xs font-bold text-orange-600 dark:text-orange-400 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all shadow-xs cursor-pointer"
+                  >
+                    {t("filter_today") || "Bugün"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleYuklemeNextMonth}
+                    className="px-3 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold cursor-pointer"
+                    title="Sonraki Ay"
+                  >
+                    <span className="hidden sm:inline">Sonraki</span>
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Day Names Row */}
+              <div className="grid grid-cols-7 gap-2 text-center">
                 {dayNames.map((day) => (
                   <div
                     key={day}
-                    className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase py-2 bg-gray-50 dark:bg-gray-900 rounded-lg"
+                    className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase py-2 bg-gray-50 dark:bg-gray-900/50 rounded-xl"
                   >
                     {day}
                   </div>
                 ))}
               </div>
+
+              {/* Calendar Days Grid */}
               <div className="grid grid-cols-7 gap-2">
                 {Array.from({ length: startOffset }).map((_, i) => (
                   <div
                     key={`empty-${i}`}
-                    className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 opacity-50"
-                  ></div>
+                    className="h-18 md:h-24 rounded-2xl bg-gray-50/50 dark:bg-gray-900/20 border border-gray-100 dark:border-gray-800/40 opacity-40"
+                  />
                 ))}
                 {Array.from({ length: daysInMonth }).map((_, i) => {
                   const dayNum = i + 1;
@@ -6861,8 +9643,11 @@ const AdminDashboard = () => {
                     dayNum === currDate.getDate() &&
                     currentMonth === currDate.getMonth() &&
                     currentYear === currDate.getFullYear();
-                  const dayLoadings =
-                    loadingsByDate[formattedDateForCell] || [];
+                  const dayLoadings = loadingsByDate[formattedDateForCell] || [];
+                  const dayTotalTon = dayLoadings.reduce(
+                    (acc, l) => acc + (parseFloat(l.tonnage) || 0),
+                    0,
+                  );
 
                   return (
                     <div
@@ -6871,724 +9656,1703 @@ const AdminDashboard = () => {
                         dayLoadings.length > 0 &&
                         setSelectedYuklemeDate(formattedDateForCell)
                       }
-                      className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? "bg-orange-50 border-orange-300 ring-2 ring-orange-100 shadow-sm" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600"}`}
+                      className={`h-18 md:h-24 rounded-2xl border p-2 flex flex-col items-center justify-between transition-all select-none ${
+                        isToday
+                          ? "bg-orange-50/80 dark:bg-orange-950/30 border-orange-400 dark:border-orange-600 ring-2 ring-orange-500/20 shadow-sm"
+                          : dayLoadings.length > 0
+                            ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-500 cursor-pointer hover:shadow-md hover:-translate-y-0.5"
+                            : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-800/80 opacity-80"
+                      }`}
                     >
                       <span
-                        className={`text-sm md:text-base font-bold ${isToday ? "text-orange-700" : "text-gray-700 dark:text-gray-200"}`}
+                        className={`text-xs md:text-sm font-black ${
+                          isToday
+                            ? "text-orange-600 dark:text-orange-400"
+                            : "text-gray-800 dark:text-gray-200"
+                        }`}
                       >
                         {dayNum}
                       </span>
-                      {dayLoadings.length > 0 && (
-                        <span className="text-[9px] font-bold text-white bg-orange-500 px-2 py-0.5 rounded-full mt-1 shadow-sm text-center truncate w-3/4 sm:w-auto">
-                          {dayLoadings.length}{" "}
-                          <span className="hidden sm:inline">Sevkiyat</span>
-                        </span>
+
+                      {dayLoadings.length > 0 ? (
+                        <div className="flex flex-col items-center w-full gap-0.5">
+                          <span className="text-[10px] font-extrabold text-white bg-orange-500 px-2 py-0.5 rounded-full shadow-xs truncate w-full text-center">
+                            {dayLoadings.length} Tır
+                          </span>
+                          <span className="hidden md:inline text-[9px] font-bold text-gray-500 dark:text-gray-400">
+                            {dayTotalTon.toFixed(1)} Ton
+                          </span>
+                        </div>
+                      ) : (
+                        <div />
                       )}
                     </div>
                   );
                 })}
               </div>
             </div>
-          ) : (
-            <div>
-              <div className="flex flex-wrap justify-end mb-4 gap-2">
-                <button
-                  onClick={() => setYuklemeListFilter("day")}
-                  className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${yuklemeListFilter === "day" ? "bg-orange-100 text-orange-700" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_day")}
-                </button>
-                <button
-                  onClick={() => setYuklemeListFilter("week")}
-                  className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${yuklemeListFilter === "week" ? "bg-orange-100 text-orange-700" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_week")}
-                </button>
-                <button
-                  onClick={() => setYuklemeListFilter("month")}
-                  className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${yuklemeListFilter === "month" ? "bg-orange-100 text-orange-700" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_month")}
-                </button>
-                <button
-                  onClick={() => setYuklemeListFilter("all")}
-                  className={`px-4 py-2 text-sm font-bold rounded-xl transition-colors ${yuklemeListFilter === "all" ? "bg-orange-100 text-orange-700" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_all")}
-                </button>
-              </div>
-              {renderLoadingList(
-                loadings.filter((l) => {
-                  if (yuklemeListFilter === "all") return true;
-                  const now = new Date();
-                  if (yuklemeListFilter === "day") {
-                    const startOfDay = new Date(
-                      now.getFullYear(),
-                      now.getMonth(),
-                      now.getDate(),
-                    ).getTime();
-                    return l.timestamp >= startOfDay;
-                  }
-                  if (yuklemeListFilter === "week") {
-                    const day = now.getDay();
-                    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
-                    const startOfWeek = new Date(now.setDate(diff)).setHours(
-                      0,
-                      0,
-                      0,
-                      0,
-                    );
-                    return l.timestamp >= startOfWeek;
-                  }
-                  if (yuklemeListFilter === "month") {
-                    const startOfMonth = new Date(
-                      now.getFullYear(),
-                      now.getMonth(),
-                      1,
-                    ).getTime();
-                    return l.timestamp >= startOfMonth;
-                  }
-                  return true;
-                }),
-              )}
-            </div>
           )}
         </div>
       );
     }
 
-    if (selectedAdminDept || selectedAdminDate) {
-      let baseTasks = selectedAdminDept
+    if (adminSystemMode === "isg") {
+      const now = Date.now();
+      const currDate = new Date();
+      const currentMonth = isgCalendarMonth;
+      const currentYear = isgCalendarYear;
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+      const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+      const dayNames =
+        lang === "tr"
+          ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
+          : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+      const monthNames =
+        lang === "tr"
+          ? [
+              "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+              "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+            ]
+          : [
+              "January", "February", "March", "April", "May", "June",
+              "July", "August", "September", "October", "November", "December"
+            ];
+
+      // Calendar tasks map
+      const tasksByDate = {};
+      tasks.forEach((t) => {
+        if (t.createdAt) {
+          if (!tasksByDate[t.createdAt]) tasksByDate[t.createdAt] = [];
+          tasksByDate[t.createdAt].push(t);
+        }
+      });
+
+      // Quick Key Metrics
+      const totalViolations = tasks.length;
+      const openViolations = tasks.filter((t) => t.status === "acik").length;
+      const highRiskViolations = tasks.filter(
+        (t) => t.priority === "kritik" || t.priority === "yuksek"
+      ).length;
+      const resolvedViolations = tasks.filter(
+        (t) => t.status === "cozuldu" || t.status === "onaylandi"
+      ).length;
+      const deptScores = DEPARTMENTS.map((d) => points[d] ?? 100);
+      const avgSafetyScore =
+        deptScores.length > 0
+          ? Math.round(deptScores.reduce((a, b) => a + b, 0) / deptScores.length)
+          : 100;
+
+      // Filtered Tasks for Tab 1 (Saha Denetimleri)
+      const filteredTasks = tasks.filter((task) => {
+        // Selected Date filter if any
+        if (selectedAdminDate && task.createdAt !== selectedAdminDate) {
+          return false;
+        }
+
+        // Search Query
+        if (isgSearchQuery.trim()) {
+          const q = isgSearchQuery.toLowerCase().trim();
+          const matchSubject = task.subject?.toLowerCase().includes(q);
+          const matchDesc = task.desc?.toLowerCase().includes(q);
+          const matchDept = task.dept?.toLowerCase().includes(q);
+          const matchChief = task.chiefNote?.toLowerCase().includes(q);
+          const matchInspector = (task.inspectorName || task.user)?.toLowerCase().includes(q);
+          if (!matchSubject && !matchDesc && !matchDept && !matchChief && !matchInspector) {
+            return false;
+          }
+        }
+
+        // Department filter
+        if (isgDeptFilter !== "all" && task.dept !== isgDeptFilter) {
+          return false;
+        }
+
+        // Status filter
+        if (isgStatusFilter !== "all") {
+          if (isgStatusFilter === "cozuldu") {
+            if (task.status !== "cozuldu" && task.status !== "onaylandi") return false;
+          } else if (isgStatusFilter === "itiraz") {
+            if (task.status !== "itiraz" && task.status !== "itiraz_edildi") return false;
+          } else if (task.status !== isgStatusFilter) {
+            return false;
+          }
+        }
+
+        // Priority filter
+        if (isgPriorityFilter !== "all") {
+          if (isgPriorityFilter === "yuksek") {
+            if (task.priority !== "yuksek" && task.priority !== "kritik") return false;
+          } else if (task.priority !== isgPriorityFilter) {
+            return false;
+          }
+        }
+
+        // Timeframe filter
+        if (isgTimeFilter !== "all") {
+          const nowTime = new Date();
+          const startOfDay = new Date(
+            nowTime.getFullYear(),
+            nowTime.getMonth(),
+            nowTime.getDate()
+          ).getTime();
+          const startOfWeek =
+            startOfDay -
+            (nowTime.getDay() === 0 ? 6 : nowTime.getDay() - 1) * 24 * 60 * 60 * 1000;
+          const startOfMonth = new Date(
+            nowTime.getFullYear(),
+            nowTime.getMonth(),
+            1
+          ).getTime();
+
+          const taskTime = task.timestamp || task.createdAtTimestamp || 0;
+          if (isgTimeFilter === "day" && taskTime < startOfDay) return false;
+          if (isgTimeFilter === "week" && taskTime < startOfWeek) return false;
+          if (isgTimeFilter === "month" && taskTime < startOfMonth) return false;
+        }
+
+        return true;
+      });
+
+      const paginatedTasks = filteredTasks.slice(0, adminTasksLimit);
+
+      // Selected Department details for Drill-Down in Tab 2
+      const selectedDeptTasks = selectedAdminDept
         ? tasks.filter((t) => t.dept === selectedAdminDept)
-        : tasks.filter((t) => t.createdAt === selectedAdminDate);
+        : [];
+      const selectedDeptResolved = selectedDeptTasks.filter(
+        (t) => t.status === "cozuldu" || t.status === "onaylandi"
+      ).length;
+      const selectedDeptOpen = selectedDeptTasks.filter(
+        (t) => t.status === "acik"
+      ).length;
+      const selectedDeptCritical = selectedDeptTasks.filter(
+        (t) => t.priority === "kritik" || t.priority === "yuksek"
+      ).length;
+      const selectedDeptScore = selectedAdminDept ? (points[selectedAdminDept] ?? 100) : 100;
 
-      if (selectedAdminDept) {
-        const nowTime = new Date();
-        const startOfDay = new Date(
-          nowTime.getFullYear(),
-          nowTime.getMonth(),
-          nowTime.getDate(),
-        ).getTime();
-        const startOfWeek =
-          startOfDay -
-          (nowTime.getDay() === 0 ? 6 : nowTime.getDay() - 1) *
-            24 *
-            60 *
-            60 *
-            1000;
-        const startOfMonth = new Date(
-          nowTime.getFullYear(),
-          nowTime.getMonth(),
-          1,
-        ).getTime();
-        const startOfYear = new Date(nowTime.getFullYear(), 0, 1).getTime();
+      // Filtered selected department tasks
+      const filteredDeptTasks = selectedDeptTasks.filter((task) => {
+        if (adminDeptFilter !== "all") {
+          const nowTime = new Date();
+          const startOfDay = new Date(
+            nowTime.getFullYear(),
+            nowTime.getMonth(),
+            nowTime.getDate()
+          ).getTime();
+          const startOfWeek =
+            startOfDay -
+            (nowTime.getDay() === 0 ? 6 : nowTime.getDay() - 1) * 24 * 60 * 60 * 1000;
+          const startOfMonth = new Date(
+            nowTime.getFullYear(),
+            nowTime.getMonth(),
+            1
+          ).getTime();
 
-        if (adminDeptFilter === "day")
-          baseTasks = baseTasks.filter((t) => t.timestamp >= startOfDay);
-        if (adminDeptFilter === "week")
-          baseTasks = baseTasks.filter((t) => t.timestamp >= startOfWeek);
-        if (adminDeptFilter === "month")
-          baseTasks = baseTasks.filter((t) => t.timestamp >= startOfMonth);
-        if (adminDeptFilter === "year")
-          baseTasks = baseTasks.filter((t) => t.timestamp >= startOfYear);
-      }
+          const taskTime = task.timestamp || task.createdAtTimestamp || 0;
+          if (adminDeptFilter === "day" && taskTime < startOfDay) return false;
+          if (adminDeptFilter === "week" && taskTime < startOfWeek) return false;
+          if (adminDeptFilter === "month" && taskTime < startOfMonth) return false;
+        }
+        return true;
+      });
 
-      const filterTasks = baseTasks;
+      // Tasks for selected date from calendar
+      const selectedDateTasks = selectedAdminDate
+        ? (tasksByDate[selectedAdminDate] || [])
+        : [];
 
       return (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
-          <div className="flex flex-col mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
-            <div className="flex justify-between items-start">
-              <div>
+        <div className="space-y-6 animate-slide-up">
+          {/* Header & Main Navigation Bar */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
+            <div>
+              <button
+                onClick={() => {
+                  navigate("/");
+                  setAdminSystemMode("home");
+                  setSelectedAdminDept(null);
+                  setSelectedAdminDate(null);
+                }}
+                className="flex items-center text-xs font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100 mb-2 transition-colors cursor-pointer group"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 mr-1.5 group-hover:-translate-x-0.5 transition-transform" />
+                <span>{t("back_to_menu") || "Ana Menüye Dön"}</span>
+              </button>
+
+              <div className="flex items-center gap-3.5">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
+                  <ShieldAlert className="w-6 h-6" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-gray-900 dark:text-gray-100">
+                    {t("isg_tab") || "İSG & Saha Tertip Denetimleri"}
+                  </h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                    Saha güvenlik denetimleri, birim risk puanları, acil aksiyon takibi ve denetim takvimi
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side: Next Reset Pill & Segmented Tabs */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full xl:w-auto">
+              <div className="hidden lg:flex items-center gap-2.5 px-4 py-2 bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/60 rounded-2xl shrink-0">
+                <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
+                <div>
+                  <span className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider block">
+                    {t("next_reset") || "Puan Sıfırlama"}
+                  </span>
+                  <span className="text-xs font-black text-blue-950 dark:text-blue-200">
+                    {getLastFridayOfCurrentMonth()}
+                  </span>
+                </div>
+              </div>
+
+              {/* Segmented View Selector */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1.5 rounded-2xl border border-gray-200/80 dark:border-gray-600 w-full sm:w-auto shadow-inner">
                 <button
                   onClick={() => {
+                    setIsgAnaTab("tasks");
                     setSelectedAdminDept(null);
                     setSelectedAdminDate(null);
                   }}
-                  className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:text-gray-100 font-medium text-sm mb-4"
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    isgAnaTab === "tasks"
+                      ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  }`}
                 >
-                  <ArrowLeft className="w-4 h-4 mr-2" /> {t("return_back")}
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>Saha Denetimleri</span>
                 </button>
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100">
-                  {selectedAdminDept
-                    ? t(getDeptKey(selectedAdminDept))
-                    : selectedAdminDate}{" "}
-                  Raporları
-                </h2>
-                <p className="text-gray-500 dark:text-gray-400 mt-1">
-                  {t("total_record")} {filterTasks.length}
+                <button
+                  onClick={() => {
+                    setIsgAnaTab("risk");
+                    setSelectedAdminDate(null);
+                  }}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    isgAnaTab === "risk"
+                      ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>Birim Risk Haritası</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setIsgAnaTab("calendar");
+                    setSelectedAdminDept(null);
+                  }}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-bold rounded-xl transition-all cursor-pointer ${
+                    isgAnaTab === "calendar"
+                      ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                  }`}
+                >
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  <span>Denetim Takvimi</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Metrics Strip - 4 Balanced Cards, Equal Baseline & Height */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {/* 1. Toplam */}
+            <div
+              onClick={() => {
+                setIsgAnaTab("tasks");
+                setIsgStatusFilter("all");
+                setIsgPriorityFilter("all");
+                setSelectedAdminDept(null);
+                setSelectedAdminDate(null);
+              }}
+              className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] ${
+                isgAnaTab === "tasks" && isgStatusFilter === "all" && isgPriorityFilter === "all" && !selectedAdminDept
+                  ? "bg-blue-50/80 dark:bg-blue-950/20 border-blue-300 dark:border-blue-800 ring-2 ring-blue-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
+                <span className="truncate">Toplam</span>
+                <ShieldAlert className="w-4 h-4 text-blue-500 shrink-0" />
+              </div>
+              <div className="my-2">
+                <p className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-gray-100 leading-none tabular-nums">
+                  {totalViolations}
                 </p>
               </div>
-              {selectedAdminDept && (
-                <div className="bg-gradient-to-br from-green-50 to-green-100 px-6 py-3 rounded-2xl border border-green-200 text-center ml-4">
-                  <p className="text-green-700 text-xs font-bold uppercase tracking-wider mb-1">
-                    {t("current_score")}
+              <div className="text-[11px] text-gray-400 font-medium truncate">
+                <span>Saha Tutanağı</span>
+              </div>
+            </div>
+
+            {/* 2. Açık & Bekleyen */}
+            <div
+              onClick={() => {
+                setIsgAnaTab("tasks");
+                setIsgStatusFilter("acik");
+                setIsgPriorityFilter("all");
+                setSelectedAdminDept(null);
+                setSelectedAdminDate(null);
+              }}
+              className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] ${
+                isgAnaTab === "tasks" && isgStatusFilter === "acik"
+                  ? "bg-amber-50/80 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 ring-2 ring-amber-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
+                <span className="truncate">Açık & Bekleyen</span>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                  <Clock className="w-3.5 h-3.5 text-amber-500" />
+                </div>
+              </div>
+              <div className="my-2">
+                <p className="text-2xl sm:text-3xl font-black text-amber-600 dark:text-amber-400 leading-none tabular-nums">
+                  {openViolations}
+                </p>
+              </div>
+              <div className="text-[11px] text-gray-400 font-medium truncate">
+                <span>Müdahale Bekleyen</span>
+              </div>
+            </div>
+
+            {/* 3. Acil Risk */}
+            <div
+              onClick={() => {
+                setIsgAnaTab("tasks");
+                setIsgPriorityFilter("yuksek");
+                setIsgStatusFilter("all");
+                setSelectedAdminDept(null);
+                setSelectedAdminDate(null);
+              }}
+              className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] ${
+                isgAnaTab === "tasks" && isgPriorityFilter === "yuksek"
+                  ? "bg-red-50/80 dark:bg-red-950/20 border-red-300 dark:border-red-800 ring-2 ring-red-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
+                <span className="truncate">Acil Risk</span>
+                <AlertTriangle className="w-4 h-4 text-red-500 shrink-0" />
+              </div>
+              <div className="my-2">
+                <p className="text-2xl sm:text-3xl font-black text-red-600 dark:text-red-400 leading-none tabular-nums">
+                  {highRiskViolations}
+                </p>
+              </div>
+              <div className="text-[11px] text-gray-400 font-medium truncate">
+                <span>Kritik / Yüksek</span>
+              </div>
+            </div>
+
+            {/* 4. Giderilen */}
+            <div
+              onClick={() => {
+                setIsgAnaTab("tasks");
+                setIsgStatusFilter("cozuldu");
+                setIsgPriorityFilter("all");
+                setSelectedAdminDept(null);
+                setSelectedAdminDate(null);
+              }}
+              className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] ${
+                isgAnaTab === "tasks" && isgStatusFilter === "cozuldu"
+                  ? "bg-emerald-50/80 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800 ring-2 ring-emerald-500/20"
+                  : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-sm"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
+                <span className="truncate">Giderilen</span>
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+              </div>
+              <div className="my-2">
+                <p className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 leading-none tabular-nums">
+                  {resolvedViolations}
+                </p>
+              </div>
+              <div className="text-[11px] text-gray-400 font-medium truncate">
+                <span>Çözülen İhlal</span>
+              </div>
+            </div>
+          </div>
+
+          {/* TAB 1: SAHA DENETİMLERİ (LİSTE & TUTANAKLAR) */}
+          {isgAnaTab === "tasks" && (
+            <div className="space-y-4">
+              {/* Filter and Search Bar */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 md:p-6 shadow-sm border border-gray-100 dark:border-gray-700/80 flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
+                {/* Search Input */}
+                <div className="relative flex-1 min-w-0">
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={isgSearchQuery}
+                    onChange={(e) => setIsgSearchQuery(e.target.value)}
+                    placeholder="İhlal konusu, açıklama, şef notu, denetmen veya birim ara..."
+                    className="w-full pl-10 pr-9 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all font-medium"
+                  />
+                  {isgSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setIsgSearchQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filters Row */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {/* Department Filter */}
+                  <select
+                    value={isgDeptFilter}
+                    onChange={(e) => setIsgDeptFilter(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                  >
+                    <option value="all">Tüm Birimler</option>
+                    {DEPARTMENTS.map((d) => (
+                      <option key={d} value={d}>
+                        {t(getDeptKey(d))}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* Status Filter */}
+                  <select
+                    value={isgStatusFilter}
+                    onChange={(e) => setIsgStatusFilter(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                  >
+                    <option value="all">Tüm Durumlar</option>
+                    <option value="acik">Açık / Bekleyen</option>
+                    <option value="onay_bekliyor">Onay Bekliyor</option>
+                    <option value="cozuldu">Çözüldü & Onaylandı</option>
+                    <option value="itiraz">İtiraz Edildi</option>
+                  </select>
+
+                  {/* Priority Filter */}
+                  <select
+                    value={isgPriorityFilter}
+                    onChange={(e) => setIsgPriorityFilter(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
+                  >
+                    <option value="all">Tüm Öncelikler</option>
+                    <option value="yuksek">Kritik & Yüksek</option>
+                    <option value="orta">Orta Öncelik</option>
+                    <option value="basit">Basit Risk</option>
+                  </select>
+
+                  {/* Timeframe Pills */}
+                  <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 p-1 rounded-xl shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsgTimeFilter("all")}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        isgTimeFilter === "all"
+                          ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_all") || "Tümü"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsgTimeFilter("day")}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        isgTimeFilter === "day"
+                          ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_day") || "Bugün"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsgTimeFilter("week")}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        isgTimeFilter === "week"
+                          ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_week") || "Bu Hafta"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIsgTimeFilter("month")}
+                      className={`px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                        isgTimeFilter === "month"
+                          ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-xs"
+                          : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
+                      }`}
+                    >
+                      {t("filter_month") || "Bu Ay"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Active Filter Indicators & Date Banner */}
+              <div className="flex flex-wrap items-center justify-between gap-2 px-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span>
+                    <b>{filteredTasks.length}</b> adet saha denetim kaydı listeleniyor
+                  </span>
+                  {selectedAdminDate && (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg font-bold">
+                      <Calendar className="w-3 h-3" />
+                      Tarih: {selectedAdminDate}
+                      <button
+                        onClick={() => setSelectedAdminDate(null)}
+                        className="hover:text-blue-950 dark:hover:text-white cursor-pointer ml-1"
+                        title="Tarih filtresini kaldır"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
+                </div>
+
+                {(isgSearchQuery || isgDeptFilter !== "all" || isgStatusFilter !== "all" || isgPriorityFilter !== "all" || isgTimeFilter !== "all" || selectedAdminDate) && (
+                  <button
+                    onClick={() => {
+                      setIsgSearchQuery("");
+                      setIsgDeptFilter("all");
+                      setIsgStatusFilter("all");
+                      setIsgPriorityFilter("all");
+                      setIsgTimeFilter("all");
+                      setSelectedAdminDate(null);
+                    }}
+                    className="text-blue-600 dark:text-blue-400 hover:underline font-bold cursor-pointer"
+                  >
+                    Filtreleri Temizle
+                  </button>
+                )}
+              </div>
+
+              {/* Task Cards List */}
+              {filteredTasks.length === 0 ? (
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-10 text-center border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3.5">
+                    <ShieldAlert className="w-7 h-7" />
+                  </div>
+                  <h4 className="font-extrabold text-gray-800 dark:text-gray-100 text-base">
+                    Saha Denetim Kaydı Bulunamadı
+                  </h4>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 max-w-sm mx-auto">
+                    Seçilen kriterlere veya arama sorgunuza uygun iş sağlığı ve saha güvenlik tutanağı bulunmuyor.
                   </p>
-                  <p className="text-3xl font-extrabold text-green-600">
-                    {points[selectedAdminDept]}
-                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  {paginatedTasks.map((task) => {
+                    const isExpanded = expandedAdminTaskId === task.id;
+                    const statusDef = STATUS_INFO[task.status] || STATUS_INFO["acik"];
+                    const StatusIcon = statusDef?.icon || AlertTriangle;
+                    const priorityDef = PRIORITIES[task.priority] || PRIORITIES["basit"];
+
+                    const isUrgent = task.priority === "kritik" || task.priority === "yuksek";
+                    const isResolved = task.status === "cozuldu" || task.status === "onaylandi";
+                    const railClass = isResolved
+                      ? "status-rail-emerald"
+                      : isUrgent
+                        ? "status-rail-red"
+                        : "status-rail-amber";
+
+                    return (
+                      <TimerWrapper key={task.id}>
+                        {(nowTime) => {
+                          let timeWarning = null;
+                          let isGlowing = false;
+
+                          if (task.status === "acik") {
+                            const deadlineMs =
+                              (task.timestamp || task.createdAtTimestamp || 0) +
+                              (task.deadlineHours || 24) * 60 * 60 * 1000;
+                            const diff = deadlineMs - nowTime;
+
+                            if (diff <= 0) {
+                              const lateMs = Math.abs(diff);
+                              const lateHours = Math.floor(lateMs / (1000 * 60 * 60));
+                              const lateMins = Math.floor((lateMs % (1000 * 60 * 60)) / (1000 * 60));
+                              timeWarning = (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-extrabold px-2.5 py-1 bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 rounded-lg border border-red-200 dark:border-red-800">
+                                  <AlertTriangle className="w-3 h-3 text-red-600" />
+                                  {lateHours > 0 ? `${lateHours} sa ` : ""}
+                                  {lateMins} dk gecikti!
+                                </span>
+                              );
+                              isGlowing = true;
+                            } else {
+                              const leftHours = Math.floor(diff / (1000 * 60 * 60));
+                              const leftMins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                              const isCriticalTime = diff < 30 * 60 * 1000;
+                              timeWarning = (
+                                <span className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-1 rounded-lg ${
+                                  isCriticalTime
+                                    ? "bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300 animate-pulse border border-red-200"
+                                    : "bg-gray-100 text-gray-700 dark:bg-gray-700/80 dark:text-gray-300"
+                                }`}>
+                                  <Clock className="w-3 h-3 text-gray-500" />
+                                  {leftHours > 0 ? `${leftHours} saat ` : ""}
+                                  {leftMins} dk kaldı
+                                </span>
+                              );
+                            }
+                          }
+
+                          return (
+                            <div
+                              className={`bg-white dark:bg-gray-800 rounded-2xl border transition-all overflow-hidden status-rail ${railClass} ${
+                                isGlowing
+                                  ? "border-red-300 dark:border-red-700 ring-2 ring-red-500/20 shadow-md"
+                                  : isExpanded
+                                    ? "border-blue-300 dark:border-blue-600/60 ring-2 ring-blue-500/10 shadow-md"
+                                    : "border-gray-200/90 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-xs hover:shadow-sm"
+                              }`}
+                            >
+                              {/* Main Card Header */}
+                              <div
+                                onClick={() =>
+                                  setExpandedAdminTaskId(isExpanded ? null : task.id)
+                                }
+                                className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 cursor-pointer select-none"
+                              >
+                                {/* Left Info */}
+                                <div className="flex-1 min-w-0 space-y-1.5">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {/* Department Tag */}
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/40 shrink-0">
+                                      <Building2 className="w-3 h-3" />
+                                      {t(getDeptKey(task.dept))}
+                                    </span>
+
+                                    {/* Priority Badge */}
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold ${priorityDef.color} shrink-0`}>
+                                      {t(priorityDef.label_key)} {t("risk") || "Risk"}
+                                    </span>
+
+                                    {/* Status Badge */}
+                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold ${statusDef.color.split(" ").slice(0, 2).join(" ")} shrink-0`}>
+                                      <StatusIcon className="w-3 h-3" />
+                                      {t(statusDef.label_key)}
+                                    </span>
+
+                                    {/* Submission Date */}
+                                    <span className="text-[11px] text-gray-400 font-medium ml-1">
+                                      {task.createdAt} {task.createdAtTime ? `• ${task.createdAtTime}` : ""}
+                                    </span>
+                                  </div>
+
+                                  {/* Subject / Title */}
+                                  <h4 className="text-base font-extrabold text-gray-900 dark:text-gray-100 truncate pr-4">
+                                    {task.subject || task.desc || "Saha Güvenlik Tutanak Kaydı"}
+                                  </h4>
+
+                                  {/* Subtext info */}
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                                    {task.desc || "Açıklama belirtilmedi."}
+                                  </p>
+                                </div>
+
+                                {/* Right Side: Time Warning, Inspector & Chevron */}
+                                <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 dark:border-gray-700/70">
+                                  {timeWarning}
+
+                                  {(task.inspectorName || task.user) && (
+                                    <span className="hidden sm:inline-block text-[11px] text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/80 px-2.5 py-1 rounded-lg font-medium">
+                                      Denetmen: <b>{task.inspectorName || task.user}</b>
+                                    </span>
+                                  )}
+
+                                  <div className="w-8 h-8 rounded-xl bg-gray-50 dark:bg-gray-700/60 flex items-center justify-center text-gray-400 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors">
+                                    <ChevronDown
+                                      className={`w-4 h-4 transition-transform duration-200 ${
+                                        isExpanded ? "rotate-180 text-blue-600" : ""
+                                      }`}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Expanded Dossier: Side-by-Side Photos & Notes */}
+                              {isExpanded && (
+                                <div className="border-t border-gray-100 dark:border-gray-700/70 p-5 md:p-6 bg-gray-50/70 dark:bg-gray-900/40 space-y-4 animate-slide-up">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {/* Before Photo & Inspector Note */}
+                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-extrabold text-red-600 dark:text-red-400 uppercase tracking-wider flex items-center gap-1.5">
+                                          <AlertTriangle className="w-3.5 h-3.5" />
+                                          {t("before") || "Öncesi — Tespit Anı"}
+                                        </span>
+                                      </div>
+
+                                      {task.imgUrl ? (
+                                        <div
+                                          onClick={() => setPreviewModalImg(task.imgUrl)}
+                                          className="relative group cursor-pointer overflow-hidden rounded-xl bg-black/5 aspect-video flex items-center justify-center"
+                                        >
+                                          <img
+                                            src={task.imgUrl}
+                                            alt="İSG Öncesi Fotoğraf"
+                                            referrerPolicy="no-referrer"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                          />
+                                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5">
+                                            <Maximize2 className="w-4 h-4" />
+                                            <span>Fotoğrafı Büyüt</span>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="aspect-video bg-gray-100 dark:bg-gray-700/60 rounded-xl flex items-center justify-center text-gray-400 text-xs">
+                                          {t("no_photo") || "Öncesi fotoğrafı yüklenmedi"}
+                                        </div>
+                                      )}
+
+                                      <div className="text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/60 p-3 rounded-xl border border-gray-100 dark:border-gray-700/60">
+                                        <span className="font-bold text-gray-500 block mb-0.5">Tespit Detayı:</span>
+                                        {task.desc || "Detaylı açıklama bulunmuyor."}
+                                      </div>
+                                    </div>
+
+                                    {/* After Photo & Chief Resolution Note */}
+                                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-extrabold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                                          <CheckCircle2 className="w-3.5 h-3.5" />
+                                          {t("solution_after") || "Sonrası — Çözüm & Düzeltme"}
+                                        </span>
+                                      </div>
+
+                                      {task.afterImgUrl ? (
+                                        <div
+                                          onClick={() => setPreviewModalImg(task.afterImgUrl)}
+                                          className="relative group cursor-pointer overflow-hidden rounded-xl bg-black/5 aspect-video flex items-center justify-center"
+                                        >
+                                          <img
+                                            src={task.afterImgUrl}
+                                            alt="İSG Çözüm Fotoğrafı"
+                                            referrerPolicy="no-referrer"
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                          />
+                                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-xs gap-1.5">
+                                            <Maximize2 className="w-4 h-4" />
+                                            <span>Fotoğrafı Büyüt</span>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="aspect-video bg-gray-100 dark:bg-gray-700/60 rounded-xl flex items-center justify-center text-gray-400 text-xs">
+                                          {task.status === "cozuldu" || task.status === "onay_bekliyor"
+                                            ? "Çözüm fotoğrafı bulunmuyor"
+                                            : "Henüz düzeltme aksiyonu alınmadı"}
+                                        </div>
+                                      )}
+
+                                      <div className="text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/60 p-3 rounded-xl border border-gray-100 dark:border-gray-700/60">
+                                        <span className="font-bold text-gray-500 block mb-0.5">Şef Aksiyon Notu:</span>
+                                        {task.chiefNote ? `"${task.chiefNote}"` : "Henüz bir şef notu girilmedi."}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Appeal Reason if any */}
+                                  {task.appealReason && (
+                                    <div className="bg-amber-50 dark:bg-amber-950/30 p-3.5 rounded-2xl border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2.5">
+                                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                      <div>
+                                        <span className="font-extrabold block">Birim İtiraz Gerekçesi:</span>
+                                        <span>"{task.appealReason}"</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }}
+                      </TimerWrapper>
+                    );
+                  })}
+
+                  {/* Pagination Control */}
+                  {isAdminTasksPaginating && <TaskCardSkeleton count={2} />}
+                  <PaginationControl
+                    currentCount={adminTasksLimit}
+                    totalCount={filteredTasks.length}
+                    pageSize={12}
+                    isLoading={isAdminTasksPaginating}
+                    onLoadMore={handleLoadMoreAdminTasks}
+                    label={t("load_more_tasks") || "Daha Fazla İhlal Göster"}
+                  />
                 </div>
               )}
             </div>
-            {selectedAdminDept && (
-              <div className="flex flex-wrap bg-gray-100 dark:bg-gray-700 p-1.5 rounded-xl border border-gray-200 dark:border-gray-600 shadow-inner gap-1 mt-4">
-                <button
-                  onClick={() => setAdminDeptFilter("day")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === "day" ? "bg-white dark:bg-gray-800 text-blue-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_today") || "Bugün"}
-                </button>
-                <button
-                  onClick={() => setAdminDeptFilter("week")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === "week" ? "bg-white dark:bg-gray-800 text-blue-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_this_week") || "Bu Hafta"}
-                </button>
-                <button
-                  onClick={() => setAdminDeptFilter("month")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === "month" ? "bg-white dark:bg-gray-800 text-blue-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_this_month") || "Bu Ay"}
-                </button>
-                <button
-                  onClick={() => setAdminDeptFilter("year")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === "year" ? "bg-white dark:bg-gray-800 text-blue-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_yearly") || "Bu Yıl"}
-                </button>
-                <button
-                  onClick={() => setAdminDeptFilter("all")}
-                  className={`px-4 py-2 text-xs font-bold rounded-lg transition-colors ${adminDeptFilter === "all" ? "bg-white dark:bg-gray-800 text-blue-700 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"}`}
-                >
-                  {t("filter_all") || "Tümü"}
-                </button>
-              </div>
-            )}
-          </div>
+          )}
 
-          <div className="space-y-4">
-            {filterTasks.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {t("no_records")}
-              </p>
-            ) : (
-              <>
-                {filterTasks.slice(0, adminTasksLimit).map((task) => {
-                return (
-                  <TimerWrapper key={task.id}>
-                    {(now) => {
-                      const statusDef =
-                        STATUS_INFO[task.status] || STATUS_INFO["acik"];
-                      const Icon = statusDef?.icon || AlertTriangle;
-                      const isExpanded = expandedAdminTaskId === task.id;
+          {/* TAB 2: BİRİM RİSK HARİTASI & SKORLAR */}
+          {isgAnaTab === "risk" && (
+            <div className="space-y-6">
+              {/* If a department is selected (Drilldown View) */}
+              {selectedAdminDept ? (
+                <div className="space-y-4 animate-slide-up">
+                  {/* Department Drill-Down Banner */}
+                  <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <button
+                        onClick={() => setSelectedAdminDept(null)}
+                        className="flex items-center text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline mb-2 cursor-pointer"
+                      >
+                        <ArrowLeft className="w-3.5 h-3.5 mr-1" />
+                        Tüm Birimlere Geri Dön
+                      </button>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                          <Building2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-xl font-black text-gray-900 dark:text-gray-100">
+                            {t(getDeptKey(selectedAdminDept))} İSG Performansı
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Departmana ait güncel denetim kayıtları ve risk puanı dökümü
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-                      let timeDisplay = null;
-                      let isGlowing = false;
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                      <div className="px-5 py-3 rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border border-emerald-200 dark:border-emerald-800 text-center">
+                        <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
+                          Birim Puanı
+                        </span>
+                        <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                          {selectedDeptScore}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
 
-                      if (task.status === "acik") {
-                        const deadlineMs =
-                          task.timestamp + task.deadlineHours * 60 * 60 * 1000;
-                        const diff = deadlineMs - now;
+                  {/* 4 Mini KPIs for Department */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                      <span className="text-xs font-bold text-gray-400 uppercase">Toplam Tutanak</span>
+                      <p className="text-2xl font-black text-gray-900 dark:text-gray-100 mt-1 tabular-nums">
+                        {selectedDeptTasks.length}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                      <span className="text-xs font-bold text-emerald-500 uppercase">Giderilen</span>
+                      <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 tabular-nums">
+                        {selectedDeptResolved}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                      <span className="text-xs font-bold text-amber-500 uppercase">Açık Risk</span>
+                      <p className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 tabular-nums">
+                        {selectedDeptOpen}
+                      </p>
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700/80 shadow-xs">
+                      <span className="text-xs font-bold text-red-500 uppercase">Kritik Sorun</span>
+                      <p className="text-2xl font-black text-red-600 dark:text-red-400 mt-1 tabular-nums">
+                        {selectedDeptCritical}
+                      </p>
+                    </div>
+                  </div>
 
-                        if (diff <= 0) {
-                          const lateMs = Math.abs(diff);
-                          const lateHours = Math.floor(
-                            lateMs / (1000 * 60 * 60),
-                          );
-                          const lateMins = Math.floor(
-                            (lateMs % (1000 * 60 * 60)) / (1000 * 60),
-                          );
+                  {/* Department Tasks List */}
+                  {filteredDeptTasks.length === 0 ? (
+                    <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 text-center border border-gray-100 dark:border-gray-700/80">
+                      <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2" />
+                      <h4 className="font-bold text-gray-800 dark:text-gray-100">Bu Birimde Açık İhlal Bulunmuyor</h4>
+                      <p className="text-xs text-gray-400 mt-1">Birim İSG kurallarına tam uyum göstermektedir.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredDeptTasks.map((task) => {
+                        const statusDef = STATUS_INFO[task.status] || STATUS_INFO["acik"];
+                        const StatusIcon = statusDef?.icon || AlertTriangle;
+                        const priorityDef = PRIORITIES[task.priority] || PRIORITIES["basit"];
+                        const isExpanded = expandedAdminTaskId === task.id;
 
-                          timeDisplay = (
-                            <span className="text-xs text-red-700 font-extrabold px-2 py-1 bg-red-100 rounded-md">
-                              <AlertTriangle className="w-3 h-3 inline mr-1 mb-0.5" />
-                              {lateHours > 0 ? `${lateHours} saat ` : ""}
-                              {lateMins} dk geç kalındı!
-                            </span>
-                          );
-                          isGlowing = true;
-                        } else {
-                          const leftHours = Math.floor(diff / (1000 * 60 * 60));
-                          const leftMins = Math.floor(
-                            (diff % (1000 * 60 * 60)) / (1000 * 60),
-                          );
-                          const isCritical = diff < 30 * 60 * 1000;
+                        return (
+                          <div
+                            key={task.id}
+                            className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 hover:border-blue-300 dark:hover:border-blue-700 transition-all"
+                          >
+                            <div
+                              onClick={() => setExpandedAdminTaskId(isExpanded ? null : task.id)}
+                              className="flex justify-between items-center cursor-pointer select-none"
+                            >
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${priorityDef.color}`}>
+                                    {t(priorityDef.label_key)}
+                                  </span>
+                                  <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold ${statusDef.color.split(" ").slice(0, 2).join(" ")}`}>
+                                    <StatusIcon className="w-3 h-3 inline mr-1" />
+                                    {t(statusDef.label_key)}
+                                  </span>
+                                  <span className="text-[11px] text-gray-400">{task.createdAt}</span>
+                                </div>
+                                <h5 className="font-extrabold text-sm text-gray-900 dark:text-gray-100">
+                                  {task.subject || task.desc}
+                                </h5>
+                              </div>
+                              <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180 text-blue-600" : ""}`} />
+                            </div>
 
-                          if (isCritical) {
-                            isGlowing = true;
-                            timeDisplay = (
-                              <span className="text-xs text-red-700 font-bold px-2 py-1 bg-red-100 rounded-md animate-pulse">
-                                <Clock className="w-3 h-3 inline mr-1 mb-0.5" />
-                                {leftMins} dk kaldı
-                              </span>
-                            );
-                          } else {
-                            timeDisplay = (
-                              <span className="text-xs text-orange-600 font-bold">
-                                <Clock className="w-3 h-3 inline mr-1 mb-0.5" />
-                                {leftHours > 0 ? `${leftHours} saat ` : ""}
-                                {leftMins} dk kaldı
-                              </span>
-                            );
-                          }
-                        }
-                      }
+                            {isExpanded && (
+                              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs animate-slide-up">
+                                <div>
+                                  <span className="font-bold text-gray-500 block mb-1">Öncesi (Tespit):</span>
+                                  {task.imgUrl && (
+                                    <img
+                                      src={task.imgUrl}
+                                      alt="Öncesi"
+                                      onClick={() => setPreviewModalImg(task.imgUrl)}
+                                      className="rounded-xl h-36 w-full object-cover mb-2 cursor-pointer"
+                                    />
+                                  )}
+                                  <p className="text-gray-700 dark:text-gray-300">{task.desc}</p>
+                                </div>
+                                <div>
+                                  <span className="font-bold text-gray-500 block mb-1">Sonrası (Çözüm):</span>
+                                  {task.afterImgUrl && (
+                                    <img
+                                      src={task.afterImgUrl}
+                                      alt="Sonrası"
+                                      onClick={() => setPreviewModalImg(task.afterImgUrl)}
+                                      className="rounded-xl h-36 w-full object-cover mb-2 cursor-pointer"
+                                    />
+                                  )}
+                                  <p className="text-gray-700 dark:text-gray-300 italic">{task.chiefNote ? `"${task.chiefNote}"` : "Not girilmedi."}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Department Cards Grid */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 px-1 font-medium">
+                    <span>Tüm fabrika birimlerinin güvenlik skoru ve açık risk dağılımı</span>
+                    <span>{sortedDeptsAdmin.length} birim izleniyor</span>
+                  </div>
 
-                      const adminRail =
-                        task.priority === "kritik" || task.priority === "yuksek"
-                          ? "status-rail-red"
-                          : task.status === "onaylandi"
-                            ? "status-rail-emerald"
-                            : "status-rail-amber";
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {sortedDeptsAdmin.map((dept, index) => {
+                      const redCount = getRedTaskCount(dept);
+                      const deptScore = points[dept] ?? 100;
+                      const deptTasksCount = tasks.filter((t) => t.dept === dept).length;
+                      const deptResolvedCount = tasks.filter(
+                        (t) => t.dept === dept && (t.status === "cozuldu" || t.status === "onaylandi")
+                      ).length;
+
+                      const isScoreHigh = deptScore >= 90;
+                      const isScoreMid = deptScore >= 75 && deptScore < 90;
 
                       return (
                         <div
-                          className={`p-5 rounded-2xl border-l-4 bg-gray-50 dark:bg-gray-900 ${statusDef.color.split(" ")[2]} card-interactive status-rail ${adminRail} ${isGlowing ? "shadow-[0_0_15px_rgba(239,68,68,0.5)] ring-1 ring-red-400 animate-[pulse_2s_ease-in-out_infinite]" : "shadow-sm"}`}
+                          key={dept}
+                          className="bg-white dark:bg-gray-800 rounded-3xl p-5 md:p-6 border border-gray-200/90 dark:border-gray-700/80 shadow-xs hover:shadow-md transition-all flex flex-col justify-between space-y-4 hover:-translate-y-0.5"
                         >
-                          <div
-                            className="flex flex-col cursor-pointer"
-                            onClick={() =>
-                              setExpandedAdminTaskId(
-                                isExpanded ? null : task.id,
-                              )
-                            }
-                          >
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <span className="font-bold text-gray-800 dark:text-gray-100 text-lg block">
-                                  {task.subject ||
-                                    (task.desc
-                                      ? task.desc.substring(0, 40) + "..."
-                                      : t("no_subject") || "Konu Belirtilmedi")}
-                                </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-                                  {task.createdAt}
-                                </span>
-                              </div>
-                              <span
-                                className={`text-[10px] px-2 py-1 rounded-full font-bold flex items-center ${statusDef.color.split(" ").slice(0, 2).join(" ")}`}
-                              >
-                                <Icon className="w-3 h-3 mr-1" />{" "}
-                                {t(statusDef.label_key)}
+                          <div className="space-y-3">
+                            {/* Card Top: Rank and Score */}
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                                #{index + 1} Sıralama
                               </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={`text-xl font-black tabular-nums ${
+                                  isScoreHigh
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : isScoreMid
+                                      ? "text-amber-600 dark:text-amber-400"
+                                      : "text-red-600 dark:text-red-400"
+                                }`}>
+                                  {deptScore}
+                                </span>
+                                <span className="text-xs font-bold text-gray-400">/ 100</span>
+                              </div>
                             </div>
-                            <div className="flex justify-between items-center mt-1">
-                              <div className="flex gap-2">
-                                <span
-                                  className={`text-[10px] px-2 py-1 rounded-lg font-medium ${(PRIORITIES[task.priority] || PRIORITIES["basit"]).color}`}
-                                >
-                                  {t(
-                                    (
-                                      PRIORITIES[task.priority] ||
-                                      PRIORITIES["basit"]
-                                    ).label_key,
-                                  )}{" "}
-                                  {t("risk")}
-                                </span>
-                                <span className="text-[10px] px-2 py-1 rounded-lg font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300">
-                                  {t(getDeptKey(task.dept))}
-                                </span>
+
+                            {/* Department Name */}
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                                <Building2 className="w-4 h-4" />
                               </div>
-                              <div className="flex items-center gap-3">
-                                {timeDisplay}
-                                {isExpanded ? (
-                                  <ChevronUp className="w-5 h-5 text-gray-400" />
-                                ) : (
-                                  <ChevronDown className="w-5 h-5 text-gray-400" />
-                                )}
-                              </div>
+                              <h4 className="font-extrabold text-base text-gray-900 dark:text-gray-100 truncate">
+                                {t(getDeptKey(dept))}
+                              </h4>
+                            </div>
+
+                            {/* Score Progress Bar */}
+                            <div className="w-full bg-gray-100 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  isScoreHigh
+                                    ? "bg-emerald-500"
+                                    : isScoreMid
+                                      ? "bg-amber-500"
+                                      : "bg-red-500"
+                                }`}
+                                style={{ width: `${Math.min(100, Math.max(0, deptScore))}%` }}
+                              />
+                            </div>
+
+                            {/* Status Pill */}
+                            <div>
+                              {redCount > 0 ? (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300 border border-red-200 dark:border-red-800">
+                                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse shrink-0" />
+                                  {redCount} Açık Sorun
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                  Sıfır Sorun • Güvenli
+                                </span>
+                              )}
                             </div>
                           </div>
 
-                          {isExpanded && (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 animate-fade-in">
-                              <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center">
-                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 w-full text-left">
-                                  {t("before")}
-                                </span>
-                                {task.imgUrl ? (
-                                  <div
-                                    className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full"
-                                    onClick={() =>
-                                      setPreviewModalImg(task.imgUrl)
-                                    }
-                                  >
-                                    <img
-                                      loading="lazy"
-                                      decoding="async"
-                                      src={task.imgUrl}
-                                      className="w-full h-40 object-cover group-hover:scale-105 transition-transform"
-                                    />
-                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                      <Maximize2 className="w-5 h-5" />
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs mb-2">
-                                    {t("no_photo")}
-                                  </div>
-                                )}
-                                <p className="text-sm text-gray-800 dark:text-gray-100 w-full text-left">
-                                  {task.desc}
-                                </p>
-                              </div>
-                              <div className="bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col items-center opacity-90">
-                                <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase mb-2 w-full text-left">
-                                  {t("solution_after")}
-                                </span>
-                                {task.status === "cozuldu" ||
-                                task.status === "onay_bekliyor" ? (
-                                  <>
-                                    {task.afterImgUrl ? (
-                                      <div
-                                        className="relative group cursor-pointer overflow-hidden rounded-lg mb-2 w-full"
-                                        onClick={() =>
-                                          setPreviewModalImg(task.afterImgUrl)
-                                        }
-                                      >
-                                        <img
-                                          loading="lazy"
-                                          decoding="async"
-                                          src={task.afterImgUrl}
-                                          className="w-full h-40 object-cover group-hover:scale-105 transition-transform"
-                                        />
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                                          <Maximize2 className="w-5 h-5" />
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="w-full h-32 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs mb-2">
-                                        {t("no_photo")}
-                                      </div>
-                                    )}
-                                    <p className="text-sm text-gray-700 dark:text-gray-200 italic w-full text-left">
-                                      "{task.chiefNote}"
-                                    </p>
-                                  </>
-                                ) : (
-                                  <div className="w-full h-full min-h-[8rem] bg-gray-50 dark:bg-gray-900 rounded-lg flex items-center justify-center text-gray-400 dark:text-gray-500 text-xs">
-                                    {t("stat_acik")}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
+                          {/* Footer: Resolution Ratio & Drill-down Button */}
+                          <div className="pt-3 border-t border-gray-100 dark:border-gray-700/70 flex items-center justify-between text-xs">
+                            <span className="text-gray-500 dark:text-gray-400 font-medium">
+                              <b>{deptResolvedCount}</b> / {deptTasksCount} Çözüldü
+                            </span>
+                            <button
+                              onClick={() => {
+                                setSelectedAdminDept(dept);
+                                setAdminDeptFilter("all");
+                                triggerHaptic("light");
+                              }}
+                              className="font-bold text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1 cursor-pointer"
+                            >
+                              <span>İncele</span>
+                              <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       );
-                    }}
-                  </TimerWrapper>
-                );
-              })}
-              {isAdminTasksPaginating && (
-                <TaskCardSkeleton count={2} />
+                    })}
+                  </div>
+                </div>
               )}
-              <PaginationControl
-                currentCount={adminTasksLimit}
-                totalCount={filterTasks.length}
-                pageSize={12}
-                isLoading={isAdminTasksPaginating}
-                onLoadMore={handleLoadMoreAdminTasks}
-                label={t("load_more_tasks") || "Daha Fazla İhlal Göster"}
-              />
-            </>
+            </div>
           )}
-          </div>
+
+          {/* TAB 3: DENETİM TAKVİMİ */}
+          {isgAnaTab === "calendar" && (
+            <div className="space-y-4">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700/80 p-6 md:p-8 animate-slide-up">
+                {/* Calendar Header with Selectors */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-3">
+                    <CalendarDays className="w-7 h-7 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 gap-1 border border-gray-200/80 dark:border-gray-600 shadow-inner">
+                      <select
+                        value={currentMonth}
+                        onChange={(e) => handleIsgSelectMonth(e.target.value)}
+                        className="bg-transparent font-black text-sm text-gray-900 dark:text-gray-100 px-3 py-1.5 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                      >
+                        {monthNames.map((name, idx) => (
+                          <option key={idx} value={idx} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+                            {name}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-gray-400 font-bold">/</span>
+                      <select
+                        value={currentYear}
+                        onChange={(e) => handleIsgSelectYear(e.target.value)}
+                        className="bg-transparent font-black text-sm text-gray-900 dark:text-gray-100 px-3 py-1.5 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
+                      >
+                        {Array.from({ length: 12 }, (_, i) => 2022 + i).map((y) => (
+                          <option key={y} value={y} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  {/* Navigation Buttons */}
+                  <div className="flex items-center space-x-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 shadow-inner border border-gray-200/80 dark:border-gray-600">
+                    <button
+                      type="button"
+                      onClick={handleIsgPrevMonth}
+                      className="px-3 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold cursor-pointer"
+                      title="Önceki Ay"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span className="hidden sm:inline">Önceki</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleIsgToday}
+                      className="px-3.5 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all shadow-xs cursor-pointer"
+                    >
+                      {t("filter_today") || "Bugün"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleIsgNextMonth}
+                      className="px-3 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold cursor-pointer"
+                      title="Sonraki Ay"
+                    >
+                      <span className="hidden sm:inline">Sonraki</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Weekday Names */}
+                <div className="grid grid-cols-7 gap-2 text-center mb-2.5">
+                  {dayNames.map((day) => (
+                    <div
+                      key={day}
+                      className="text-xs font-black text-gray-400 dark:text-gray-500 uppercase py-2 bg-gray-50 dark:bg-gray-900/50 rounded-xl"
+                    >
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Days Grid */}
+                <div className="grid grid-cols-7 gap-2">
+                  {Array.from({ length: startOffset }).map((_, i) => (
+                    <div
+                      key={`empty-${i}`}
+                      className="h-18 md:h-24 rounded-2xl bg-gray-50/50 dark:bg-gray-900/20 border border-gray-100 dark:border-gray-800/40 opacity-40"
+                    />
+                  ))}
+                  {Array.from({ length: daysInMonth }).map((_, i) => {
+                    const dayNum = i + 1;
+                    const formattedDateForCell = `${dayNum.toString().padStart(2, "0")}.${(currentMonth + 1).toString().padStart(2, "0")}.${currentYear}`;
+                    const isToday =
+                      dayNum === currDate.getDate() &&
+                      currentMonth === currDate.getMonth() &&
+                      currentYear === currDate.getFullYear();
+                    const dayTasks = tasksByDate[formattedDateForCell] || [];
+                    const hasOpenOrCritical = dayTasks.some(
+                      (t) => t.status === "acik" || t.priority === "kritik" || t.priority === "yuksek"
+                    );
+                    const isSelected = selectedAdminDate === formattedDateForCell;
+
+                    return (
+                      <div
+                        key={dayNum}
+                        onClick={() => {
+                          if (dayTasks.length > 0) {
+                            setSelectedAdminDate(isSelected ? null : formattedDateForCell);
+                            triggerHaptic("light");
+                          }
+                        }}
+                        className={`h-18 md:h-24 rounded-2xl border p-2 flex flex-col items-center justify-between transition-all select-none ${
+                          isSelected
+                            ? "bg-blue-100 dark:bg-blue-900/50 border-blue-500 ring-2 ring-blue-500/30 shadow-md scale-[1.02]"
+                            : isToday
+                              ? "bg-blue-50/80 dark:bg-blue-950/30 border-blue-400 dark:border-blue-600 ring-2 ring-blue-500/20 shadow-sm"
+                              : dayTasks.length > 0
+                                ? "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-blue-400 dark:hover:border-blue-500 cursor-pointer hover:shadow-md hover:-translate-y-0.5"
+                                : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-800/80 opacity-80"
+                        }`}
+                      >
+                        <span
+                          className={`text-xs md:text-sm font-black ${
+                            isToday
+                              ? "text-blue-600 dark:text-blue-400"
+                              : "text-gray-800 dark:text-gray-200"
+                          }`}
+                        >
+                          {dayNum}
+                        </span>
+
+                        {dayTasks.length > 0 ? (
+                          <div className="flex flex-col items-center w-full gap-0.5">
+                            <span className={`text-[10px] font-extrabold text-white px-2 py-0.5 rounded-full shadow-xs truncate w-full text-center ${
+                              hasOpenOrCritical ? "bg-red-500" : "bg-blue-600"
+                            }`}>
+                              {dayTasks.length} Tutanak
+                            </span>
+                          </div>
+                        ) : (
+                          <div />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Day Inspector Drawer if date is clicked */}
+              {selectedAdminDate && selectedDateTasks.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-blue-200 dark:border-blue-800/70 space-y-4 animate-slide-up">
+                  <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                      <h4 className="font-extrabold text-base text-gray-900 dark:text-gray-100">
+                        {selectedAdminDate} Tarihli Saha Denetimleri ({selectedDateTasks.length} Tutanak)
+                      </h4>
+                    </div>
+                    <button
+                      onClick={() => setSelectedAdminDate(null)}
+                      className="text-xs font-bold text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 flex items-center gap-1 cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                      Kapat
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {selectedDateTasks.map((task) => {
+                      const priorityDef = PRIORITIES[task.priority] || PRIORITIES["basit"];
+                      const statusDef = STATUS_INFO[task.status] || STATUS_INFO["acik"];
+                      return (
+                        <div
+                          key={task.id}
+                          className="bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2"
+                        >
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-blue-600 dark:text-blue-400">
+                              {t(getDeptKey(task.dept))}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${priorityDef.color}`}>
+                              {t(priorityDef.label_key)}
+                            </span>
+                          </div>
+                          <p className="font-extrabold text-sm text-gray-900 dark:text-gray-100 line-clamp-1">
+                            {task.subject || task.desc}
+                          </p>
+                          <div className="flex items-center justify-between text-xs text-gray-500 pt-1 border-t border-gray-200/60 dark:border-gray-700/60">
+                            <span>Durum: <b>{t(statusDef.label_key)}</b></span>
+                            {task.imgUrl && (
+                              <button
+                                onClick={() => setPreviewModalImg(task.imgUrl)}
+                                className="text-blue-600 dark:text-blue-400 font-bold hover:underline"
+                              >
+                                Fotoğrafı Gör
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       );
     }
 
-    const currDate = new Date();
-    const currentMonth = isgCalendarMonth;
-    const currentYear = isgCalendarYear;
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
-    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
-    const dayNames =
-      lang === "tr"
-        ? ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"]
-        : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const tasksByDate = {};
-    tasks.forEach((t) => {
-      if (!tasksByDate[t.createdAt]) tasksByDate[t.createdAt] = [];
-      tasksByDate[t.createdAt].push(t);
+    return null;
+  };
+
+  if (adminSystemMode === "home") {
+    const displayName = currentUser?.name ? currentUser.name.trim() : (currentUser?.username || "Yönetici");
+    const firstName = displayName.split(" ")[0];
+    const openTasksCount = tasks.filter((t) => t.status === "acik").length;
+    const resolvedTasksCount = tasks.filter((t) => t.status === "cozuldu").length;
+    const tonnage24 = get24HourTonnage ? get24HourTonnage() : 0;
+    const todayLoadsCount = loadings.filter((l) => {
+      const now = new Date();
+      const todayStr = `${now.getDate().toString().padStart(2, "0")}.${(now.getMonth() + 1).toString().padStart(2, "0")}.${now.getFullYear()}`;
+      return l.date === todayStr || l.createdAt === todayStr;
+    }).length;
+
+    const todayDateFormatted = new Date().toLocaleDateString(lang === "en" ? "en-US" : "tr-TR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
-    const monthNames =
-      lang === "tr"
-        ? [
-            "Ocak",
-            "Şubat",
-            "Mart",
-            "Nisan",
-            "Mayıs",
-            "Haziran",
-            "Temmuz",
-            "Ağustos",
-            "Eylül",
-            "Ekim",
-            "Kasım",
-            "Aralık",
-          ]
-        : [
-            "January",
-            "February",
-            "March",
-            "April",
-            "May",
-            "June",
-            "July",
-            "August",
-            "September",
-            "October",
-            "November",
-            "December",
-          ];
 
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 animate-slide-up">
-        <div className="flex justify-between items-center mb-6 border-b pb-4 border-gray-100 dark:border-gray-700">
-          <div>
-            <div className="flex flex-wrap items-center justify-between gap-4 w-full">
-              <div className="flex items-center gap-2">
-                <CalendarDays className="w-7 h-7 text-blue-600 dark:text-blue-400 shrink-0" />
-                <div className="flex items-center bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 gap-1 border border-gray-200 dark:border-gray-600 shadow-sm">
-                  <select
-                    value={currentMonth}
-                    onChange={(e) => handleIsgSelectMonth(e.target.value)}
-                    className="bg-transparent font-extrabold text-sm sm:text-base text-gray-800 dark:text-gray-100 px-2.5 py-1 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                  >
-                    {monthNames.map((name, idx) => (
-                      <option key={idx} value={idx} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-gray-400 font-bold">/</span>
-                  <select
-                    value={currentYear}
-                    onChange={(e) => handleIsgSelectYear(e.target.value)}
-                    className="bg-transparent font-extrabold text-sm sm:text-base text-gray-800 dark:text-gray-100 px-2.5 py-1 rounded-xl cursor-pointer outline-none hover:bg-white dark:hover:bg-gray-600 transition-colors"
-                  >
-                    {Array.from({ length: 12 }, (_, i) => 2022 + i).map((y) => (
-                      <option key={y} value={y} className="bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100">
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+      <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 animate-slide-up space-y-6 md:space-y-8">
+        {/* Executive Welcome Hero Banner */}
+        <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 md:p-10 shadow-xl border border-slate-700/60">
+          <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-1/3 -mb-10 w-60 h-60 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                <span>ADS Metal A.Ş. — {t("role_admin") || "Sistem Yöneticisi"}</span>
               </div>
 
-              <div className="flex items-center space-x-1.5 bg-gray-100 dark:bg-gray-700/80 rounded-2xl p-1 shadow-inner border border-gray-200 dark:border-gray-600">
-                <button
-                  type="button"
-                  onClick={handleIsgPrevMonth}
-                  className="px-2.5 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold shadow-sm"
-                  title="Önceki Ay"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline">Önceki</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={handleIsgToday}
-                  className="px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all shadow-sm"
-                >
-                  {t("filter_today") || "Bugün"}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleIsgNextMonth}
-                  className="px-2.5 py-1.5 hover:bg-white dark:hover:bg-gray-600 rounded-xl transition-all text-gray-700 dark:text-gray-200 flex items-center gap-1 text-xs font-bold shadow-sm"
-                  title="Sonraki Ay"
-                >
-                  <span className="hidden sm:inline">Sonraki</span>
-                  <ChevronRight className="w-4 h-4" />
-                </button>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white flex flex-wrap items-baseline gap-x-3.5 gap-y-2 overflow-visible tracking-normal py-1">
+                <span className="inline-block">
+                  {t("welcome_manager_title") || "Hoş Geldin,"}
+                </span>
+                <span className="inline-block text-cyan-300 dark:text-cyan-300 drop-shadow-sm font-black overflow-visible leading-relaxed pb-1">
+                  {firstName}
+                </span>
+                <span className="inline-block animate-bounce select-none self-center text-3xl sm:text-4xl shrink-0">
+                  👋
+                </span>
+              </h1>
+
+              <p className="text-slate-300 text-sm sm:text-base max-w-2xl leading-relaxed">
+                {t("portal_selection_desc") ||
+                  "Fabrika genelindeki operasyonları, İSG denetimlerini veya sevkiyat durumunu incelemek için bir modül seçin."}
+              </p>
+
+              <div className="pt-1 flex items-center gap-2 text-xs font-semibold text-slate-400">
+                <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
+                <span>{todayDateFormatted}</span>
               </div>
             </div>
           </div>
-        </div>
-        <div className="grid grid-cols-7 gap-2 text-center mb-3">
-          {dayNames.map((day) => (
-            <div
-              key={day}
-              className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase py-2 bg-gray-50 dark:bg-gray-900 rounded-lg"
-            >
-              {day}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-2">
-          {Array.from({ length: startOffset }).map((_, i) => (
-            <div
-              key={`empty-${i}`}
-              className="h-16 md:h-24 lg:h-28 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 opacity-50"
-            ></div>
-          ))}
-          {Array.from({ length: daysInMonth }).map((_, i) => {
-            const dayNum = i + 1;
-            const formattedDateForCell = `${dayNum.toString().padStart(2, "0")}.${(currentMonth + 1).toString().padStart(2, "0")}.${currentYear}`;
-            const isToday =
-              dayNum === currDate.getDate() &&
-              currentMonth === currDate.getMonth() &&
-              currentYear === currDate.getFullYear();
-            const dayTasks = tasksByDate[formattedDateForCell] || [];
 
-            return (
-              <div
-                key={dayNum}
-                onClick={() =>
-                  dayTasks.length > 0 &&
-                  setSelectedAdminDate(formattedDateForCell)
-                }
-                className={`h-16 md:h-24 lg:h-28 rounded-xl border flex flex-col items-center justify-start pt-2 cursor-pointer transition-all hover:-translate-y-1 ${isToday ? "bg-blue-50 border-blue-300 ring-2 ring-blue-100 shadow-sm" : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:border-gray-600"}`}
-              >
-                <span
-                  className={`text-sm md:text-base font-bold ${isToday ? "text-blue-700" : "text-gray-700 dark:text-gray-200"}`}
-                >
-                  {dayNum}
+          {/* Quick Metrics Bar */}
+          <div className="mt-8 pt-6 border-t border-slate-800/80 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider truncate">
+                  {t("executive_kpi_open") || "Açık İhlal"}
                 </span>
-                {dayTasks.length > 0 && (
-                  <span className="text-[9px] font-bold text-white bg-blue-500 px-2 py-0.5 rounded-full mt-1 shadow-sm text-center truncate w-3/4 sm:w-auto">
-                    {dayTasks.length}{" "}
-                    <span className="hidden sm:inline">Rapor</span>
-                  </span>
-                )}
+                <span className="relative flex h-2.5 w-2.5 shrink-0">
+                  {openTasksCount > 0 && (
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  )}
+                  <span
+                    className={`relative inline-flex rounded-full h-2.5 w-2.5 ${openTasksCount > 0 ? "bg-red-500" : "bg-emerald-500"}`}
+                  />
+                </span>
               </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
+              <p
+                className={`text-2xl font-black mt-1 ${openTasksCount > 0 ? "text-red-400" : "text-emerald-400"}`}
+              >
+                {openTasksCount}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                {openTasksCount > 0 ? "İnceleme Bekliyor" : "Tüm Birimler Temiz"}
+              </p>
+            </div>
 
-  const getRedTaskCount = useCallback(
-    (deptName) => {
-      return tasks.filter(
-        (t) =>
-          t.dept === deptName &&
-          (t.status === "acik" || t.status === "itiraz_edildi"),
-      ).length;
-    },
-    [tasks],
-  );
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider truncate">
+                  {t("executive_kpi_resolved") || "Onay Bekleyen"}
+                </span>
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+              </div>
+              <p className="text-2xl font-black text-amber-400 mt-1">
+                {resolvedTasksCount}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                Şef Çözümü Gönderildi
+              </p>
+            </div>
 
-  const sortedDeptsAdmin = useMemo(() => {
-    const depts =
-      currentUser.role === "sef" ? [currentUser.dept] : [...DEPARTMENTS];
-    return depts.sort((a, b) => getRedTaskCount(b) - getRedTaskCount(a));
-  }, [getRedTaskCount, currentUser]);
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider truncate">
+                  {t("executive_kpi_tonnage") || "Son 24s Sevkiyat"}
+                </span>
+                <Truck className="w-4 h-4 text-blue-400 shrink-0" />
+              </div>
+              <p className="text-2xl font-black text-blue-400 mt-1">
+                {tonnage24} <span className="text-sm font-semibold">Ton</span>
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                Bugün {todayLoadsCount} Araç
+              </p>
+            </div>
 
-  return (
-    <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
-      <div className="print:hidden bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6">
-        <div className="flex flex-col md:flex-row items-start md:items-center gap-4 md:gap-6 w-full xl:w-auto">
-          <div className="flex justify-between items-center w-full md:w-auto">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-1">
-                {t("admin_panel")}
-              </h1>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                {t("admin_desc")}
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider truncate">
+                  {t("next_reset") || "Puan Sıfırlama"}
+                </span>
+                <Calendar className="w-4 h-4 text-purple-400 shrink-0" />
+              </div>
+              <p className="text-lg font-black text-purple-300 mt-2 truncate">
+                {getLastFridayOfCurrentMonth()}
+              </p>
+              <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                Ay Sonu Sıfırlama
               </p>
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto mt-4 xl:mt-0">
-          <button
-            onClick={() => setShowPdfReportModal(true)}
-            className="flex items-center space-x-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white px-4 py-2.5 rounded-2xl font-bold shadow-md hover:shadow-lg transition-all text-sm cursor-pointer"
-          >
-            <FileText className="w-4 h-4" />
-            <span>Yönetim Raporu (PDF)</span>
-          </button>
-          {adminSystemMode === "isg" && (
-            <div className="flex items-center bg-blue-50 dark:bg-blue-900/30 px-5 py-2.5 rounded-2xl border border-blue-100 dark:border-blue-800">
-              <Calendar className="w-5 h-5 text-blue-600 dark:text-blue-400 mr-3" />
+
+        {/* Modules Grid - Clear Options */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-gray-100">
+                {t("portal_selection_title") || "Operasyonel Modüller"}
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                Gitmek istediğiniz yönetim alanına tıklayın
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {/* Card 1: İSG & Saha Tertip Denetimi */}
+            <div
+              onClick={() => {
+                navigate("/isg");
+                setAdminSystemMode("isg");
+                setAdminViewMode("calendar");
+                setSelectedAdminDept(null);
+              }}
+              className="group relative bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200/90 dark:border-gray-700/80 shadow-sm hover:shadow-xl hover:border-red-500/50 dark:hover:border-red-500/50 transition-all duration-300 cursor-pointer flex flex-col justify-between hover:-translate-y-1.5"
+            >
               <div>
-                <p className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase tracking-wider">
-                  {t("next_reset")}
-                </p>
-                <p className="text-base font-bold text-blue-900 dark:text-blue-200">
-                  {getLastFridayOfCurrentMonth()}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-red-600 to-orange-500 flex items-center justify-center text-white shadow-lg shadow-red-500/25 group-hover:scale-110 transition-transform">
+                    <ShieldAlert className="w-7 h-7" />
+                  </div>
+                  <span
+                    className={`text-xs font-black px-3 py-1 rounded-full ${
+                      openTasksCount > 0
+                        ? "bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-300"
+                        : "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                    }`}
+                  >
+                    {openTasksCount > 0 ? `${openTasksCount} Açık İhlal` : "Sorunsuz"}
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
+                  {t("module_isg_title") || "İSG & Saha Tertip Denetimi"}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-3 leading-relaxed">
+                  {t("module_isg_desc") ||
+                    "Fabrika saha denetimleri, departman risk haritası, gün bazlı İSG takvimi ve ihlal onayları."}
                 </p>
               </div>
+              <div className="pt-6 mt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-sm font-bold text-red-600 dark:text-red-400 group-hover:translate-x-1 transition-all">
+                <span>{t("btn_go_to_module") || "Modüle Git"}</span>
+                <ArrowRight className="w-5 h-5" />
+              </div>
             </div>
-          )}
+
+            {/* Card 2: Yükleme & Sevkiyat Takibi */}
+            <div
+              onClick={() => {
+                navigate("/yukleme");
+                setAdminSystemMode("yukleme");
+                setAdminViewMode("calendar");
+                setSelectedAdminDept(null);
+              }}
+              className="group relative bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200/90 dark:border-gray-700/80 shadow-sm hover:shadow-xl hover:border-blue-500/50 dark:hover:border-blue-500/50 transition-all duration-300 cursor-pointer flex flex-col justify-between hover:-translate-y-1.5"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-lg shadow-blue-500/25 group-hover:scale-110 transition-transform">
+                    <Truck className="w-7 h-7" />
+                  </div>
+                  <span className="text-xs font-black px-3 py-1 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300">
+                    {tonnage24} Ton (Son 24s)
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {t("module_yukleme_title") || "Yükleme & Sevkiyat Takibi"}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-3 leading-relaxed">
+                  {t("module_yukleme_desc") ||
+                    "Tır ve araç yüklemeleri, 24 saatlik tonaj takipleri, sevkiyat takvimi ve lojistik kayıtları."}
+                </p>
+              </div>
+              <div className="pt-6 mt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-sm font-bold text-blue-600 dark:text-blue-400 group-hover:translate-x-1 transition-all">
+                <span>{t("btn_go_to_module") || "Modüle Git"}</span>
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 3: Liderlik Tablosu & Puanlar */}
+            <div
+              onClick={() => {
+                navigate("/leaderboard");
+                setAdminSystemMode("leaderboard");
+                setAdminViewMode("leaderboard");
+                setSelectedAdminDept(null);
+              }}
+              className="group relative bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200/90 dark:border-gray-700/80 shadow-sm hover:shadow-xl hover:border-emerald-500/50 dark:hover:border-emerald-500/50 transition-all duration-300 cursor-pointer flex flex-col justify-between hover:-translate-y-1.5"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform">
+                    <Trophy className="w-7 h-7" />
+                  </div>
+                  <span className="text-xs font-black px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                    Aylık Sıralama
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                  {t("module_leaderboard_title") || "Liderlik Tablosu & Puanlar"}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-3 leading-relaxed">
+                  {t("module_leaderboard_desc") ||
+                    "Bölümler arası güvenlik puan sıralaması, ceza ve bonus puan geçmişi, aylık lig durumu."}
+                </p>
+              </div>
+              <div className="pt-6 mt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-sm font-bold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-all">
+                <span>{t("btn_go_to_module") || "Modüle Git"}</span>
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 4: Analiz & Yönetim Raporları */}
+            <div
+              onClick={() => {
+                navigate("/analysis");
+                setAdminSystemMode("analysis");
+                setAdminViewMode("analysis");
+                setSelectedAdminDept(null);
+              }}
+              className="group relative bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200/90 dark:border-gray-700/80 shadow-sm hover:shadow-xl hover:border-indigo-500/50 dark:hover:border-indigo-500/50 transition-all duration-300 cursor-pointer flex flex-col justify-between hover:-translate-y-1.5"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform">
+                    <Activity className="w-7 h-7" />
+                  </div>
+                  <span className="text-xs font-black px-3 py-1 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
+                    Grafikler & Trendler
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                  {t("module_analysis_title") || "Analiz & Yönetim Raporları"}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-3 leading-relaxed">
+                  {t("module_analysis_desc") ||
+                    "İhlal kategorileri analizi, sıklık grafikleri, trendler ve departman karşılaştırmaları."}
+                </p>
+              </div>
+              <div className="pt-6 mt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-sm font-bold text-indigo-600 dark:text-indigo-400 group-hover:translate-x-1 transition-all">
+                <span>{t("btn_go_to_module") || "Modüle Git"}</span>
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 5: Kullanıcı & Şef Hesapları */}
+            <div
+              onClick={() => {
+                navigate("/users");
+                setAdminSystemMode("users");
+                setAdminViewMode("users");
+                setSelectedAdminDept(null);
+              }}
+              className="group relative bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200/90 dark:border-gray-700/80 shadow-sm hover:shadow-xl hover:border-purple-500/50 dark:hover:border-purple-500/50 transition-all duration-300 cursor-pointer flex flex-col justify-between hover:-translate-y-1.5"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-pink-600 flex items-center justify-center text-white shadow-lg shadow-purple-500/25 group-hover:scale-110 transition-transform">
+                    <Users className="w-7 h-7" />
+                  </div>
+                  <span className="text-xs font-black px-3 py-1 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">
+                    {users.length} Kayıtlı Kullanıcı
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors">
+                  {t("module_users_title") || "Kullanıcı & Şef Hesapları"}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-3 leading-relaxed">
+                  {t("module_users_desc") ||
+                    "Birim şefleri, İSG uzmanı ve yüklemeci hesapları, yeni kullanıcı kaydı ve şifre yönetimi."}
+                </p>
+              </div>
+              <div className="pt-6 mt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-sm font-bold text-purple-600 dark:text-purple-400 group-hover:translate-x-1 transition-all">
+                <span>{t("btn_go_to_module") || "Modüle Git"}</span>
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* Card 6: Gelen Bildirimler & Talepler */}
+            <div
+              onClick={() => {
+                navigate("/feedbacks");
+                setAdminSystemMode("feedbacks");
+                setAdminViewMode("feedbacks");
+                setSelectedAdminDept(null);
+              }}
+              className="group relative bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-200/90 dark:border-gray-700/80 shadow-sm hover:shadow-xl hover:border-pink-500/50 dark:hover:border-pink-500/50 transition-all duration-300 cursor-pointer flex flex-col justify-between hover:-translate-y-1.5"
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-pink-600 to-rose-500 flex items-center justify-center text-white shadow-lg shadow-pink-500/25 group-hover:scale-110 transition-transform">
+                    <MessageSquare className="w-7 h-7" />
+                  </div>
+                  <span className="text-xs font-black px-3 py-1 rounded-full bg-pink-100 text-pink-700 dark:bg-pink-950/40 dark:text-pink-300">
+                    Gelen Kutusu
+                  </span>
+                </div>
+                <h3 className="text-xl font-black text-gray-900 dark:text-gray-100 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">
+                  {t("module_feedbacks_title") || "Gelen Bildirimler & Talepler"}
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-3 leading-relaxed">
+                  {t("module_feedbacks_desc") ||
+                    "Saha personeli ve şeflerden gelen geri bildirimler, hata bildirimleri ve öneriler."}
+                </p>
+              </div>
+              <div className="pt-6 mt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-sm font-bold text-pink-600 dark:text-pink-400 group-hover:translate-x-1 transition-all">
+                <span>{t("btn_go_to_module") || "Modüle Git"}</span>
+                <ArrowRight className="w-5 h-5" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8">
+      {/* Top Breadcrumb Navigation: Return to Executive Hub */}
+      <div className="print:hidden mb-4 flex flex-wrap items-center justify-between gap-3">
+        <button
+          onClick={() => {
+            navigate("/");
+            setAdminSystemMode("home");
+            setSelectedAdminDept(null);
+          }}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-200 rounded-2xl font-bold text-sm transition-all hover:bg-gray-100 dark:hover:bg-gray-700 shadow-sm group cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1 text-blue-600 dark:text-blue-400" />
+          <span>{t("back_to_menu") || "Ana Menüye Dön"}</span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider hidden sm:inline">
+            Aktif Modül:
+          </span>
+          <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 uppercase">
+            {adminSystemMode === "isg"
+              ? "İSG & Saha Tertip"
+              : adminSystemMode === "yukleme"
+                ? "Yükleme & Sevkiyat"
+                : adminSystemMode === "leaderboard"
+                  ? "Liderlik Tablosu"
+                  : adminSystemMode === "analysis"
+                    ? "Analiz & Rapor"
+                    : adminSystemMode === "users"
+                      ? "Kullanıcı Yönetimi"
+                      : adminSystemMode}
+          </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {adminSystemMode === "isg" && (
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <div className="p-5 border-b border-gray-100 dark:border-gray-700 flex items-center bg-gray-50 dark:bg-gray-900 justify-between">
-                <div className="flex items-center">
-                  <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-                  <h3 className="font-bold text-gray-800 dark:text-gray-100">
-                    {t("risk_map")}
-                  </h3>
-                </div>
-              </div>
-              <div className="divide-y divide-gray-50">
-                {sortedDeptsAdmin.map((dept, index) => {
-                  const redCount = getRedTaskCount(dept);
-                  const isSelected = selectedAdminDept === dept;
-                  const borderRail = isSelected
-                    ? "border-blue-500 bg-blue-50/80 dark:bg-blue-900/30"
-                    : redCount > 0
-                      ? "border-red-500 hover:bg-red-50/30 dark:hover:bg-red-950/20"
-                      : "border-emerald-500 hover:bg-emerald-50/30 dark:hover:bg-emerald-950/20";
-                  return (
-                    <div
-                      key={dept}
-                      onClick={() => {
-                        setSelectedAdminDept(dept);
-                        setAdminDeptFilter("all");
-                        window.scrollTo(0, 0);
-                      }}
-                      className={`flex justify-between items-center p-4 cursor-pointer transition-all duration-200 group border-l-4 ${borderRail} hover:translate-x-1`}
-                    >
-                      <div className="flex items-center">
-                        <span className="w-6 text-center text-sm font-bold mr-3 text-gray-400 dark:text-gray-500">
-                          {index + 1}.
-                        </span>
-                        <span
-                          className={`font-bold ${isSelected ? "text-blue-700 dark:text-blue-400" : "text-gray-700 dark:text-gray-200 group-hover:text-blue-600"}`}
-                        >
-                          {t(getDeptKey(dept))}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        {redCount > 0 ? (
-                          <div className="flex items-center bg-red-50 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-3 py-1.5 rounded-full border border-red-100 dark:border-red-800 mr-2 shadow-xs">
-                            <span className="font-bold text-xs flex items-center">
-                              <CountUp end={redCount} />
-                              <span className="ml-1">{t("problem")}</span>
-                            </span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-3 py-1.5 rounded-full border border-green-100 dark:border-green-800 mr-2 opacity-90">
-                            <span className="font-bold text-xs">
-                              {t("no_problem")}
-                            </span>
-                          </div>
-                        )}
-                        <ChevronRight
-                          className={`w-5 h-5 transition-transform ${isSelected ? "text-blue-500 translate-x-1" : "text-gray-300 dark:text-gray-600"}`}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-        <div
-          className={
-            adminSystemMode === "isg" ? "lg:col-span-2" : "lg:col-span-3"
-          }
-        >
+        <div className="lg:col-span-3">
           {renderRightPanel()}
         </div>
       </div>
@@ -7660,13 +11424,13 @@ const AdminDashboard = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setBonusType("add")}
-                    className={`py-3 rounded-xl font-bold flex items-center justify-center transition-colors ${bonusType === "add" ? "bg-green-100 text-green-700 border-2 border-green-500" : "bg-gray-50 dark:bg-gray-700 text-gray-500 border-2 border-transparent"}`}
+                    className={`py-3 rounded-xl font-bold flex items-center justify-center transition-colors cursor-pointer ${bonusType === "add" ? "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300 border-2 border-green-500" : "bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-2 border-transparent"}`}
                   >
                     <Plus className="w-5 h-5 mr-1" /> Puan Ekle
                   </button>
                   <button
                     onClick={() => setBonusType("subtract")}
-                    className={`py-3 rounded-xl font-bold flex items-center justify-center transition-colors ${bonusType === "subtract" ? "bg-red-100 text-red-700 border-2 border-red-500" : "bg-gray-50 dark:bg-gray-700 text-gray-500 border-2 border-transparent"}`}
+                    className={`py-3 rounded-xl font-bold flex items-center justify-center transition-colors cursor-pointer ${bonusType === "subtract" ? "bg-red-100 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-2 border-red-500" : "bg-gray-50 dark:bg-gray-700 text-gray-500 dark:text-gray-300 border-2 border-transparent"}`}
                   >
                     <ArrowDownRight className="w-5 h-5 mr-1" /> Puan Düş
                   </button>
@@ -7736,7 +11500,7 @@ const AdminDashboard = () => {
                   setShowUpdateUserModal(false);
                   setUserToUpdate(null);
                 }}
-                className="px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                className="px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
               >
                 İptal
               </button>
@@ -7768,7 +11532,7 @@ const AdminDashboard = () => {
                   setShowDeleteUserModal(false);
                   setUserToDelete(null);
                 }}
-                className="px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 transition-colors"
+                className="px-5 py-2.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-xl font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
               >
                 İptal
               </button>
@@ -7822,7 +11586,7 @@ const AdminDashboard = () => {
                     setShowDeleteModal(false);
                     setDeleteCountdown(10);
                   }}
-                  className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-bold rounded-xl hover:bg-gray-200"
+                  className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 font-bold rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
                 >
                   {t("cancel")}
                 </button>
@@ -7873,14 +11637,34 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [isFirebaseLoading, setIsFirebaseLoading] = useState(true);
   const [lang, setLang] = useState(localStorage.getItem("isg_lang") || "tr");
-  const [darkMode, setDarkMode] = useState(
-    localStorage.getItem("isg_dark") === "true",
-  );
+  const [darkMode, setDarkMode] = useState(() => {
+    try {
+      const saved = localStorage.getItem("isg_dark");
+      if (saved !== null) {
+        return saved === "true";
+      }
+      return (
+        window.matchMedia &&
+        window.matchMedia("(prefers-color-scheme: dark)").matches
+      );
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
-    if (darkMode) document.documentElement.classList.add("dark");
-    else document.documentElement.classList.remove("dark");
-    localStorage.setItem("isg_dark", darkMode);
+    try {
+      if (darkMode) {
+        document.documentElement.classList.add("dark");
+        if (document.body) document.body.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+        if (document.body) document.body.classList.remove("dark");
+      }
+      localStorage.setItem("isg_dark", String(darkMode));
+    } catch (e) {
+      console.error("Dark mode sync error:", e);
+    }
   }, [darkMode]);
 
   const [users, setUsers] = useState([]);
@@ -7890,7 +11674,7 @@ export default function App() {
   const [pointLogs, setPointLogs] = useState([]);
   const [loadings, setLoadings] = useState([]);
 
-  const [adminSystemMode, setAdminSystemMode] = useState("isg");
+  const [adminSystemMode, setAdminSystemMode] = useState("home");
   const [adminViewMode, setAdminViewMode] = useState("list");
   const [showPdfReportModal, setShowPdfReportModal] = useState(false);
 

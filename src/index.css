@@ -25,7 +25,12 @@
   --animate-pulse: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+@variant dark (&:where(.dark, .dark *));
 @custom-variant dark (&:where(.dark, .dark *));
+
+html {
+  color-scheme: light;
+}
 
 html.dark {
   color-scheme: dark;
