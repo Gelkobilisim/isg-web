@@ -36,7 +36,10 @@ export default function PdfReportModal({
   departments = [],
   currentUser = {},
   points = {},
+  lang = "tr",
+  t = (k) => k,
 }) {
+  const isEn = lang === "en";
   const [reportType, setReportType] = useState("isg"); // "isg", "yukleme", "combined"
   const [dateRange, setDateRange] = useState("30"); // "7", "30", "month", "all"
   const [selectedDept, setSelectedDept] = useState("all");
@@ -227,12 +230,12 @@ export default function PdfReportModal({
     };
   }, [filteredLoadings]);
 
-  const reportDateStr = new Date().toLocaleDateString("tr-TR", {
+  const reportDateStr = new Date().toLocaleDateString(isEn ? "en-US" : "tr-TR", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
-  const reportTimeStr = new Date().toLocaleTimeString("tr-TR", {
+  const reportTimeStr = new Date().toLocaleTimeString(isEn ? "en-US" : "tr-TR", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -311,7 +314,13 @@ export default function PdfReportModal({
     window.print();
   };
 
-  if (!isOpen) return null;
+  const isAdmin =
+    currentUser?.role === "admin" ||
+    currentUser?.role === "yonetici" ||
+    currentUser?.username === "agiradar" ||
+    currentUser?.username === "agiradarsahin";
+
+  if (!isOpen || !isAdmin) return null;
 
   // Render Page 1 Content Template
   const renderPage1Content = () => (
@@ -1125,12 +1134,14 @@ export default function PdfReportModal({
               </span>
               <h2 className="text-lg sm:text-xl font-black text-gray-900 dark:text-gray-100">
                 {reportType === "yukleme"
-                  ? "Resmi Lojistik & Sevkiyat Yönetim Raporu (2 Sayfa A4 PDF)"
-                  : "Resmi Yönetim & Denetim Raporu (2 Sayfa A4 PDF)"}
+                  ? (isEn ? "Official Logistics & Shipment Management Report (2-Page A4 PDF)" : "Resmi Lojistik & Sevkiyat Yönetim Raporu (2 Sayfa A4 PDF)")
+                  : (isEn ? "Official Management & Inspection Report (2-Page A4 PDF)" : "Resmi Yönetim & Denetim Raporu (2 Sayfa A4 PDF)")}
               </h2>
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              İndir butonuna bastığınızda seçilen rapora özel veriler ve yetkili imzaları tek bir PDF dosyasında hazırlanır.
+              {isEn
+                ? "When you click download, tailored data and authorized signatures will be prepared in a single PDF document."
+                : "İndir butonuna bastığınızda seçilen rapora özel veriler ve yetkili imzaları tek bir PDF dosyasında hazırlanır."}
             </p>
           </div>
 
@@ -1143,12 +1154,12 @@ export default function PdfReportModal({
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>PDF Hazırlanıyor...</span>
+                  <span>{isEn ? "Generating PDF..." : "PDF Hazırlanıyor..."}</span>
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  <span>PDF İndir (2 Sayfa Tam)</span>
+                  <span>{isEn ? "Download PDF (Full 2 Pages)" : "PDF İndir (2 Sayfa Tam)"}</span>
                 </>
               )}
             </button>
@@ -1157,7 +1168,7 @@ export default function PdfReportModal({
               className="hidden md:flex items-center space-x-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-bold px-3 py-2 rounded-xl text-xs transition-all"
             >
               <Printer className="w-4 h-4" />
-              <span>Yazdır</span>
+              <span>{isEn ? "Print" : "Yazdır"}</span>
             </button>
             <button
               onClick={onClose}
@@ -1176,9 +1187,9 @@ export default function PdfReportModal({
               onChange={(e) => setReportType(e.target.value)}
               className="bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-xs rounded-xl p-2 font-bold outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              <option value="yukleme">🚚 Sevkiyat ve Lojistik Raporu</option>
-              <option value="isg">🛡️ İSG ve İhlal Faaliyet Raporu</option>
-              <option value="combined">🏭 Genel Fabrika Performans Raporu</option>
+              <option value="yukleme">{isEn ? "🚚 Shipment & Logistics Report" : "🚚 Sevkiyat ve Lojistik Raporu"}</option>
+              <option value="isg">{isEn ? "🛡️ OHS & Violation Activity Report" : "🛡️ İSG ve İhlal Faaliyet Raporu"}</option>
+              <option value="combined">{isEn ? "🏭 General Factory Performance Report" : "🏭 Genel Fabrika Performans Raporu"}</option>
             </select>
 
             <select
@@ -1186,10 +1197,10 @@ export default function PdfReportModal({
               onChange={(e) => setDateRange(e.target.value)}
               className="bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-xs rounded-xl p-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500"
             >
-              <option value="7">Son 7 Gün (Haftalık Özet)</option>
-              <option value="30">Son 30 Gün (Aylık Özet)</option>
-              <option value="month">Bu Ayın 1'inden Bugüne</option>
-              <option value="all">Tüm Kayıtlar</option>
+              <option value="7">{isEn ? "Last 7 Days (Weekly Summary)" : "Son 7 Gün (Haftalık Özet)"}</option>
+              <option value="30">{isEn ? "Last 30 Days (Monthly Summary)" : "Son 30 Gün (Aylık Özet)"}</option>
+              <option value="month">{isEn ? "Month to Date" : "Bu Ayın 1'inden Bugüne"}</option>
+              <option value="all">{isEn ? "All Records" : "Tüm Kayıtlar"}</option>
             </select>
 
             <select
@@ -1199,11 +1210,13 @@ export default function PdfReportModal({
               className="bg-gray-50 dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 text-xs rounded-xl p-2 font-medium outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
             >
               <option value="all">
-                {reportType === "yukleme" ? "Tüm Sevkiyat Rotaları" : "Tüm Departmanlar (Fabrika Geneli)"}
+                {reportType === "yukleme"
+                  ? (isEn ? "All Shipment Routes" : "Tüm Sevkiyat Rotaları")
+                  : (isEn ? "All Departments (Factory-wide)" : "Tüm Departmanlar (Fabrika Geneli)")}
               </option>
               {departments.map((d) => (
                 <option key={d} value={d}>
-                  {d}
+                  {t(d) || d}
                 </option>
               ))}
             </select>
@@ -1216,20 +1229,20 @@ export default function PdfReportModal({
                 onClick={() => setActivePreviewPage(1)}
                 className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${activePreviewPage === 1 ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:text-gray-900"}`}
               >
-                Sayfa 1 (Özet)
+                {isEn ? "Page 1 (Summary)" : "Sayfa 1 (Özet)"}
               </button>
               <button
                 onClick={() => setActivePreviewPage(2)}
                 className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${activePreviewPage === 2 ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-600 dark:text-gray-300 hover:text-gray-900"}`}
               >
-                Sayfa 2 (İmzalar)
+                {isEn ? "Page 2 (Signatures)" : "Sayfa 2 (İmzalar)"}
               </button>
             </div>
 
             <button
               onClick={() => setPreviewScale(previewScale === "fit" ? "full" : "fit")}
               className="p-1.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-600 dark:text-gray-300 rounded-lg text-xs font-medium flex items-center space-x-1"
-              title="Mobil Önizleme Boyutu"
+              title={isEn ? "Preview Scale" : "Mobil Önizleme Boyutu"}
             >
               {previewScale === "fit" ? (
                 <>
@@ -1239,7 +1252,7 @@ export default function PdfReportModal({
               ) : (
                 <>
                   <ZoomOut className="w-4 h-4" />
-                  <span className="hidden sm:inline">Sığdır</span>
+                  <span className="hidden sm:inline">{isEn ? "Fit" : "Sığdır"}</span>
                 </>
               )}
             </button>
@@ -1249,8 +1262,8 @@ export default function PdfReportModal({
         {/* Scrollable Document Preview Area (For viewing on screen) */}
         <div className="flex-1 overflow-y-auto overflow-x-auto p-2 sm:p-6 bg-slate-200 dark:bg-slate-950 flex flex-col items-center">
           <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2 font-medium flex items-center space-x-1">
-            <span>Önizleme: Sayfa {activePreviewPage} / 2</span>
-            <span>• "PDF İndir" butonuna bastığınızda iki sayfa da birlikte indirilir.</span>
+            <span>{isEn ? `Preview: Page ${activePreviewPage} / 2` : `Önizleme: Sayfa ${activePreviewPage} / 2`}</span>
+            <span>• {isEn ? "Both pages are downloaded together in one PDF." : '"PDF İndir" butonuna bastığınızda iki sayfa da birlikte indirilir.'}</span>
           </div>
 
           <div

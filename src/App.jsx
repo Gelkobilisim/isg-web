@@ -1,5 +1,5 @@
 import { triggerHaptic } from "./utils/haptics";
-import { DICT } from "./i18n";
+import { DICT, getCountryName } from "./i18n";
 import { Toaster, toast } from "react-hot-toast";
 import { CountUp } from "./components/CountUp";
 import React, {
@@ -578,8 +578,8 @@ const TimerWrapper = ({ children }) => {
   return children(now);
 };
 
-const AppContext = React.createContext();
-const useAppContext = () => React.useContext(AppContext);
+export const AppContext = React.createContext();
+export const useAppContext = () => React.useContext(AppContext);
 
 const ImageLightboxModal = () => {
   const ctx = useAppContext();
@@ -915,9 +915,12 @@ const LoginScreen = () => {
       <div className="w-full max-w-4xl flex justify-end items-center gap-3 z-40 mb-6 mt-2 px-2 md:px-0 md:absolute md:top-8 md:right-8 md:mt-0 flex-wrap">
         <PWAInstallButton variant="rounded" />
         <button
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={() => {
+            triggerHaptic("light");
+            setDarkMode(!darkMode);
+          }}
           className="group flex items-center justify-center gap-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-4 py-2.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-gray-800 dark:text-gray-100 hover:scale-105 transition-all duration-300 border border-white/50 dark:border-gray-700/50"
-          title={darkMode ? "Açık Mod" : "Karanlık Mod"}
+          title={darkMode ? (t("light_mode") || "Açık Mod") : (t("dark_mode") || "Koyu Mod")}
         >
           {darkMode ? (
             <Sun className="w-5 h-5 text-amber-500 group-hover:rotate-90 transition-transform duration-500" />
@@ -925,7 +928,7 @@ const LoginScreen = () => {
             <Moon className="w-5 h-5 text-indigo-500 group-hover:-rotate-12 transition-transform duration-500" />
           )}
           <span className="text-sm font-bold hidden sm:inline-block">
-            {darkMode ? "Açık Mod" : "Koyu Mod"}
+            {darkMode ? (t("light_mode") || "Açık Mod") : (t("dark_mode") || "Koyu Mod")}
           </span>
         </button>
         <button
@@ -939,13 +942,19 @@ const LoginScreen = () => {
 
       <div className="bg-white dark:bg-gray-800/90 backdrop-blur-md p-1.5 rounded-full shadow-2xl mb-8 flex space-x-1 border border-white/40 z-10">
         <button
-          onClick={() => setLoginTheme("isg")}
+          onClick={() => {
+            triggerHaptic("selection");
+            setLoginTheme("isg");
+          }}
           className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${isISG ? "bg-blue-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800"}`}
         >
           <ShieldAlert className="w-4 h-4 mr-2" /> {t("isg_tab")}
         </button>
         <button
-          onClick={() => setLoginTheme("yukleme")}
+          onClick={() => {
+            triggerHaptic("selection");
+            setLoginTheme("yukleme");
+          }}
           className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all flex items-center ${!isISG ? "bg-orange-600 text-white shadow-sm" : "text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800"}`}
         >
           <Truck className="w-4 h-4 mr-2" /> {t("yukleme_tab")}
@@ -973,7 +982,7 @@ const LoginScreen = () => {
             }`}
           />
 
-          {/* Top Badge: System Mode Indicator */}
+            {/* Top Badge: System Mode Indicator */}
           <div className="relative z-10 flex items-center justify-between">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider shadow-sm border ${
@@ -985,17 +994,17 @@ const LoginScreen = () => {
               {isISG ? (
                 <>
                   <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                  <span>İSG & Tertip Portalı</span>
+                  <span>{t("isg_portal_title") || "İSG & Tertip Portalı"}</span>
                 </>
               ) : (
                 <>
                   <Truck className="w-3.5 h-3.5 text-orange-400" />
-                  <span>Lojistik & Sevkiyat</span>
+                  <span>{t("sys_yukleme_title") || "Lojistik & Sevkiyat"}</span>
                 </>
               )}
             </span>
             <span className="text-[11px] font-bold text-gray-400 tracking-wider">
-              KURUMSAL PORTAL
+              {lang === "tr" ? "KURUMSAL PORTAL" : "ENTERPRISE PORTAL"}
             </span>
           </div>
 
@@ -1052,30 +1061,30 @@ const LoginScreen = () => {
                 <>
                   <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
                     <ShieldAlert className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Sıfır İş Kazası & Proaktif Denetim</span>
+                    <span>{t("login_bullet_zero_accidents") || "Sıfır İş Kazası & Proaktif Denetim"}</span>
                   </div>
                   <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
                     <Clock className="w-4 h-4 text-blue-400 shrink-0" />
-                    <span>Anlık İhlal & Termin Süresi Takibi</span>
+                    <span>{t("login_bullet_instant_tracking") || "Anlık İhlal & Termin Süresi Takibi"}</span>
                   </div>
                   <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
                     <TrendingUp className="w-4 h-4 text-cyan-400 shrink-0" />
-                    <span>Departman Başarı & Teşvik Puanlama</span>
+                    <span>{t("login_bullet_dept_points") || "Departman Başarı & Teşvik Puanlama"}</span>
                   </div>
                 </>
               ) : (
                 <>
                   <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
                     <Truck className="w-4 h-4 text-amber-400 shrink-0" />
-                    <span>Canlı Plaka, Şoför & Tır Takibi</span>
+                    <span>{t("login_bullet_truck_tracking") || "Canlı Plaka, Şoför & Tır Takibi"}</span>
                   </div>
                   <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
                     <Scale className="w-4 h-4 text-orange-400 shrink-0" />
-                    <span>Günlük Tonaj & Sevkiyat Raporları</span>
+                    <span>{t("login_bullet_tonnage_reports") || "Günlük Tonaj & Sevkiyat Raporları"}</span>
                   </div>
                   <div className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-semibold text-gray-200 backdrop-blur-xs">
                     <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span>Fotoğraflı Teslimat & Onay Zinciri</span>
+                    <span>{t("login_bullet_photo_delivery") || "Fotoğraflı Teslimat & Onay Zinciri"}</span>
                   </div>
                 </>
               )}
@@ -1086,9 +1095,9 @@ const LoginScreen = () => {
           <div className="relative z-10 flex items-center justify-between text-[11px] text-gray-400 pt-4 border-t border-white/10">
             <span className="flex items-center gap-1.5">
               <Building2 className="w-3.5 h-3.5 text-gray-400" />
-              <span>Anadolu OSB Fabrikası</span>
+              <span>{t("factory_location") || "Anadolu OSB Fabrikası"}</span>
             </span>
-            <span className="font-semibold text-gray-300">Güvenli Çalışma Alanı</span>
+            <span className="font-semibold text-gray-300">{t("safe_workplace") || "Güvenli Çalışma Alanı"}</span>
           </div>
         </div>
 
@@ -1133,7 +1142,7 @@ const LoginScreen = () => {
               }`}
             >
               <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-              <span>GÜVENLİ GİRİŞ PORTALI</span>
+              <span>{t("secure_login_portal") || "GÜVENLİ GİRİŞ PORTALI"}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-1.5">
               {t("welcome") || "Hoş Geldiniz"}
@@ -1149,9 +1158,9 @@ const LoginScreen = () => {
                 <div className="flex items-center gap-2.5">
                   <Clock className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
                   <div>
-                    <div className="font-bold">Güvenlik Kilidi Aktif</div>
+                    <div className="font-bold">{t("security_lockout_active") || "Güvenlik Kilidi Aktif"}</div>
                     <div className="text-xs font-normal text-amber-700 dark:text-amber-300">
-                      Hatalı denemeler nedeniyle geçici kilit.
+                      {t("security_lockout_desc") || "Hatalı denemeler nedeniyle geçici kilit."}
                     </div>
                   </div>
                 </div>
@@ -1182,7 +1191,7 @@ const LoginScreen = () => {
                   autoCorrect="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Kullanıcı adınızı girin"
+                  placeholder={t("ph_username") || "Kullanıcı adınızı girin"}
                   className={`w-full border rounded-2xl pl-11 pr-4 py-3.5 outline-none transition-all font-semibold text-sm ${
                     isISG
                       ? "border-gray-200 dark:border-gray-700/80 bg-gray-50/80 dark:bg-gray-900/70 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-900 focus:ring-4 focus:ring-blue-500/15"
@@ -1220,7 +1229,7 @@ const LoginScreen = () => {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-200 transition-colors cursor-pointer"
-                  aria-label={showPassword ? "Şifreyi gizle" : "Şifreyi göster"}
+                  aria-label={showPassword ? (lang === "tr" ? "Şifreyi gizle" : "Hide password") : (lang === "tr" ? "Şifreyi göster" : "Show password")}
                 >
                   <div className="p-1.5 rounded-xl hover:bg-gray-200/60 dark:hover:bg-gray-800 transition-colors">
                     {showPassword ? (
@@ -1291,7 +1300,7 @@ const LoginScreen = () => {
                 <div className="flex flex-col text-left">
                   <div className="flex items-center gap-2">
                     <span className="text-xs sm:text-sm font-extrabold text-gray-800 dark:text-gray-100">
-                      Bu Cihazı Bildirim İçin Kaydet
+                      {t("register_device_for_notif") || "Bu Cihazı Bildirim İçin Kaydet"}
                     </span>
                     <span
                       className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
@@ -1300,11 +1309,11 @@ const LoginScreen = () => {
                           : "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
                       }`}
                     >
-                      {registerDevice ? "Aktif" : "Önerilen"}
+                      {registerDevice ? (t("active") || "Aktif") : (t("recommended") || "Önerilen")}
                     </span>
                   </div>
                   <span className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight mt-0.5">
-                    Giriş yaptığınız bu cihaza anlık sesli bildirimler iletilsin.
+                    {t("device_notif_hint") || "Giriş yaptığınız bu cihaza anlık sesli bildirimler iletilsin."}
                   </span>
                 </div>
               </div>
@@ -1343,15 +1352,14 @@ const LoginScreen = () => {
                 <>
                   <Lock className="w-5 h-5" />
                   <span>
-                    Kilitli ({Math.floor(lockoutSeconds / 60)}:
-                    {String(lockoutSeconds % 60).padStart(2, "0")})
+                    {(lang === "en" ? "Locked" : "Kilitli") + " (" + Math.floor(lockoutSeconds / 60) + ":" + String(lockoutSeconds % 60).padStart(2, "0") + ")"}
                   </span>
                 </>
               ) : isSubmitting || welcomeState ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin" />
                   <span>
-                    {welcomeState ? "Giriş Yapılıyor..." : "Doğrulanıyor..."}
+                    {welcomeState ? (t("logging_in") || "Giriş Yapılıyor...") : (t("verifying") || "Doğrulanıyor...")}
                   </span>
                 </>
               ) : (
@@ -1365,7 +1373,7 @@ const LoginScreen = () => {
             {/* Bottom Security Trust Badge */}
             <div className="flex items-center justify-center gap-2 pt-1 text-[11px] font-semibold text-gray-400 dark:text-gray-500">
               <Lock className="w-3.5 h-3.5" />
-              <span>256-Bit SSL Uçtan Uca Güvenli Bağlantı</span>
+              <span>{t("ssl_security_badge") || "256-Bit SSL Uçtan Uca Güvenli Bağlantı"}</span>
             </div>
           </form>
 
@@ -1415,29 +1423,29 @@ const LoginScreen = () => {
               {/* Title & Welcome Text */}
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20 mb-3">
                 <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-spin" />
-                <span>ADS TAKİP SİSTEMİ</span>
+                <span>{t("ads_tracking_system") || "ADS TAKİP SİSTEMİ"}</span>
               </div>
 
               <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white mb-2">
-                Hoş Geldiniz!
+                {t("welcome_exclamation") || "Hoş Geldiniz!"}
               </h2>
 
               <p className="text-base sm:text-lg font-bold text-gray-200 mb-1">
-                Sayın <span className="text-blue-400 font-extrabold">{welcomeState.user.name || welcomeState.user.username}</span>
+                {t("dear_salutation") || "Sayın"} <span className="text-blue-400 font-extrabold">{welcomeState.user.name || welcomeState.user.username}</span>
               </p>
 
               {/* Role badge */}
               <div className="mt-1 mb-6">
                 <span className="inline-flex items-center px-3 py-1 rounded-lg text-xs font-extrabold bg-white/5 border border-white/10 text-gray-300">
                   {welcomeState.user.role === "admin"
-                    ? "🛡️ Sistem Yöneticisi"
+                    ? `🛡️ ${t("role_admin") || "Sistem Yöneticisi"}`
                     : welcomeState.user.role === "mod"
-                    ? "⛑️ İSG Uzmanı"
+                    ? `⛑️ ${t("role_mod") || "İSG Uzmanı"}`
                     : welcomeState.user.role === "sef"
-                    ? `🏢 ${welcomeState.user.dept || ""} Birim Şefi`
+                    ? `🏢 ${welcomeState.user.dept ? t(getDeptKey(welcomeState.user.dept)) + " " : ""}${t("role_sef") || "Birim Şefi"}`
                     : welcomeState.user.role === "yuklemeci"
-                    ? "🚚 Yükleme Sorumlusu"
-                    : "👷 Personel / Yüklenici"}
+                    ? `🚚 ${t("role_yuklemeci") || "Yükleme Sorumlusu"}`
+                    : `👷 ${t("role_guest") || "Personel / Yüklenici"}`}
                 </span>
               </div>
 
@@ -1446,9 +1454,9 @@ const LoginScreen = () => {
                 <div className="flex items-center justify-center gap-2 text-sm font-bold text-blue-300 mb-3">
                   <Loader2 className="w-4 h-4 animate-spin text-blue-400" />
                   <span>
-                    {welcomeState.step === 0 && "Kimlik doğrulandı, oturum açılıyor..."}
-                    {welcomeState.step === 1 && "Çalışma alanı ve izinler hazırlanıyor..."}
-                    {welcomeState.step === 2 && "Panele aktarılıyorsunuz..."}
+                    {welcomeState.step === 0 && (t("welcome_step_0") || "Kimlik doğrulandı, oturum açılıyor...")}
+                    {welcomeState.step === 1 && (t("welcome_step_1") || "Çalışma alanı ve izinler hazırlanıyor...")}
+                    {welcomeState.step === 2 && (t("welcome_step_2") || "Panele aktarılıyorsunuz...")}
                   </span>
                 </div>
 
@@ -1470,20 +1478,20 @@ const LoginScreen = () => {
                 {/* 3 Step Indicator Badges */}
                 <div className="grid grid-cols-3 gap-2 mt-3 text-[11px] font-semibold text-gray-400">
                   <span className={welcomeState.step >= 0 ? "text-emerald-400 font-bold" : ""}>
-                    ✓ Doğrulama
+                    ✓ {t("step_verification") || "Doğrulama"}
                   </span>
                   <span className={welcomeState.step >= 1 ? "text-emerald-400 font-bold" : ""}>
-                    {welcomeState.step >= 1 ? "✓ Hazırlık" : "• Hazırlık"}
+                    {welcomeState.step >= 1 ? "✓ " : "• "}{t("step_preparation") || "Hazırlık"}
                   </span>
                   <span className={welcomeState.step >= 2 ? "text-blue-400 font-bold" : ""}>
-                    {welcomeState.step >= 2 ? "🚀 Başlatılıyor" : "• Başlat"}
+                    {welcomeState.step >= 2 ? "🚀 " : "• "}{t("step_launching") || "Başlatılıyor"}
                   </span>
                 </div>
               </div>
 
               <div className="flex items-center justify-center gap-2 text-xs text-gray-500">
                 <Lock className="w-3.5 h-3.5 text-gray-500" />
-                <span>256-bit Güvenli Oturum Açma</span>
+                <span>{t("ssl_login_badge") || "256-bit Güvenli Oturum Açma"}</span>
               </div>
             </motion.div>
           </motion.div>
@@ -1563,17 +1571,19 @@ const MainLayout = ({ theme = "blue", children }) => {
     toggleSoundAlerts,
   } = ctx;
 
-  let roleText = currentUser.role;
+  let roleText = t(currentUser.role) || currentUser.role;
   if (
     currentUser.username === "agiradar" ||
     currentUser.username === "agiradarsahin"
   )
-    roleText = `Geliştirici (Developer) Hesabı`;
+    roleText = lang === "en" ? "Developer Account" : "Geliştirici (Developer) Hesabı";
   else if (currentUser.role === "sef")
-    roleText = `${t(getDeptKey(currentUser.dept))} Birimi`;
-  else if (currentUser.role === "yuklemeci") roleText = `Yükleme Sorumlusu`;
+    roleText = `${t(getDeptKey(currentUser.dept))} ${lang === "en" ? "Unit" : "Birimi"}`;
+  else if (currentUser.role === "yuklemeci") roleText = t("role_yuklemeci") || "Yükleme Sorumlusu";
   else if (currentUser.role === "yuklenici" || currentUser.role === "worker")
-    roleText = `Yüklenici / Personel`;
+    roleText = t("role_guest") || "Yüklenici / Personel";
+  else if (currentUser.role === "admin") roleText = t("role_admin") || "Sistem Yöneticisi";
+  else if (currentUser.role === "mod") roleText = t("role_mod") || "İSG Uzmanı";
 
   const [showDebug, setShowDebug] = useState(false);
   const [showNotifHistoryModal, setShowNotifHistoryModal] = useState(false);
@@ -1649,10 +1659,12 @@ const MainLayout = ({ theme = "blue", children }) => {
 
       setShowFeedbackModal(false);
       setFeedbackText("");
-      alert("Geri bildiriminiz için teşekkürler! Başarıyla iletildi.");
+      triggerHaptic("success");
+      toast.success("Geri bildiriminiz için teşekkürler! Başarıyla iletildi.");
     } catch (error) {
       console.error("Feedback error", error);
-      alert(
+      triggerHaptic("error");
+      toast.error(
         `Gönderilirken bir hata oluştu: ${error.message || "Bağlantı sorunu olabilir."}`,
       );
     } finally {
@@ -1783,7 +1795,7 @@ const MainLayout = ({ theme = "blue", children }) => {
 
         <nav className="flex-1 overflow-y-auto p-4 space-y-2">
           <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">
-            Ana Menü
+            {t("main_menu") || "Ana Menü"}
           </div>
 
           {currentUser.role !== "yuklemeci" && (
@@ -1889,7 +1901,7 @@ const MainLayout = ({ theme = "blue", children }) => {
               className={`w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-colors ${adminSystemMode === "feedbacks" ? "bg-pink-50 text-pink-700 dark:bg-pink-900/20 dark:text-pink-400" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
             >
               <MessageSquare className="w-5 h-5 mr-3 shrink-0" />
-              <span>Gelen Bildirimler</span>
+              <span>{t("incoming_notifications") || "Gelen Bildirimler"}</span>
             </button>
           )}
 
@@ -1905,7 +1917,7 @@ const MainLayout = ({ theme = "blue", children }) => {
               className="w-full flex items-center px-3 py-2.5 font-bold rounded-xl transition-all text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 cursor-pointer"
             >
               <FileText className="w-5 h-5 mr-3 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <span>Rapor Oluştur (PDF)</span>
+              <span>{t("create_report_pdf") || "Rapor Oluştur (PDF)"}</span>
             </button>
           )}
         </nav>
@@ -1917,7 +1929,7 @@ const MainLayout = ({ theme = "blue", children }) => {
               onClick={() => setShowDebug(true)}
               className="w-full flex items-center px-3 py-2.5 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50 font-bold rounded-xl transition-colors text-sm"
             >
-              <Activity className="w-4 h-4 mr-3 shrink-0" /> Debug Konsolu
+              <Activity className="w-4 h-4 mr-3 shrink-0" /> {t("debug_console") || "Debug Konsolu"}
             </button>
           )}
           <button
@@ -1927,8 +1939,7 @@ const MainLayout = ({ theme = "blue", children }) => {
             }}
             className="w-full flex items-center px-3 py-2.5 text-blue-600 bg-blue-50 hover:bg-blue-100 dark:text-blue-400 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 font-bold rounded-xl transition-colors text-sm"
           >
-            <MessageSquare className="w-5 h-5 mr-3 shrink-0" /> Sorun Bildir /
-            Feedback
+            <MessageSquare className="w-5 h-5 mr-3 shrink-0" /> {t("feedback_btn") || "Geri Bildirim & Hata Bildir"}
           </button>
           <button
             onClick={() => {
@@ -1937,7 +1948,7 @@ const MainLayout = ({ theme = "blue", children }) => {
             }}
             className="w-full flex items-center px-3 py-2.5 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-400 dark:bg-indigo-900/20 dark:hover:bg-indigo-900/40 font-bold rounded-xl transition-colors text-sm mt-2"
           >
-            <Bell className="w-5 h-5 mr-3 shrink-0" /> Bildirim Geçmişi
+            <Bell className="w-5 h-5 mr-3 shrink-0" /> {t("notification_history") || "Bildirim Geçmişi"}
           </button>
           <button
             onClick={toggleLang}
@@ -1947,7 +1958,10 @@ const MainLayout = ({ theme = "blue", children }) => {
             {lang === "tr" ? "EN (English)" : "TR (Türkçe)"}
           </button>
           <button
-            onClick={() => setDarkMode(!darkMode)}
+            onClick={() => {
+              triggerHaptic("light");
+              setDarkMode(!darkMode);
+            }}
             className="w-full flex items-center px-3 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-xl transition-colors text-sm"
           >
             {darkMode ? (
@@ -1955,7 +1969,7 @@ const MainLayout = ({ theme = "blue", children }) => {
             ) : (
               <Moon className="w-5 h-5 mr-3 shrink-0" />
             )}
-            {darkMode ? "Açık Tema" : "Koyu Tema"}
+            {darkMode ? (t("light_theme") || "Açık Tema") : (t("dark_theme") || "Koyu Tema")}
           </button>
           {notificationStatus !== "unsupported" && (
             <button
@@ -1966,8 +1980,8 @@ const MainLayout = ({ theme = "blue", children }) => {
               {notificationStatus === "granted" &&
               localStorage.getItem("isg_notification_device_owner") ===
                 currentUser?.id
-                ? "Bildirimler Açık"
-                : "Bildirimleri Aç"}
+                ? (t("notifications_on") || "Bildirimler Açık")
+                : (t("notifications_enable") || "Bildirimleri Aç")}
             </button>
           )}
           <div className="mt-2 w-full">
@@ -1977,7 +1991,7 @@ const MainLayout = ({ theme = "blue", children }) => {
             onClick={logout}
             className="w-full flex items-center px-3 py-2.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 font-bold rounded-xl transition-colors mt-2 text-sm"
           >
-            <LogOut className="w-5 h-5 mr-3 shrink-0" /> {t("logout")}
+            <LogOut className="w-5 h-5 mr-3 shrink-0" /> {t("logout_btn") || t("logout") || "Çıkış Yap"}
           </button>
           <div className="pt-2 text-center">
             <span className="text-[10px] italic font-light text-gray-400/40 dark:text-gray-500/40 select-none tracking-widest">
@@ -2022,7 +2036,10 @@ const MainLayout = ({ theme = "blue", children }) => {
               )}
             </button>
             <button
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => {
+                triggerHaptic("light");
+                setDarkMode(!darkMode);
+              }}
               className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               title="Tema"
             >
@@ -2090,7 +2107,10 @@ const MainLayout = ({ theme = "blue", children }) => {
               )}
             </button>
             <button
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={() => {
+                triggerHaptic("light");
+                setDarkMode(!darkMode);
+              }}
               className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
               title="Tema Değiştir"
             >
@@ -2136,19 +2156,19 @@ const MainLayout = ({ theme = "blue", children }) => {
                   onClick={() => setDebugTab("users")}
                   className={`px-3 py-1.5 sm:px-4 sm:py-2 font-bold text-xs sm:text-sm rounded-lg transition-colors whitespace-nowrap ${debugTab === "users" ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                 >
-                  Kullanıcılar & Tokenlar
+                  {t("debug_users") || "Kullanıcılar & Tokenlar"}
                 </button>
                 <button
                   onClick={() => setDebugTab("logs")}
                   className={`px-3 py-1.5 sm:px-4 sm:py-2 font-bold text-xs sm:text-sm rounded-lg transition-colors flex items-center whitespace-nowrap ${debugTab === "logs" ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                 >
-                  <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 shrink-0" /> Gönderim Hataları (Log)
+                  <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 shrink-0" /> {t("debug_logs") || "Gönderim Hataları (Log)"}
                 </button>
                 <button
                   onClick={() => setDebugTab("tools")}
                   className={`px-3 py-1.5 sm:px-4 sm:py-2 font-bold text-xs sm:text-sm rounded-lg transition-colors flex items-center whitespace-nowrap ${debugTab === "tools" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"}`}
                 >
-                  <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 shrink-0" /> Test & Bakım
+                  <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 shrink-0" /> {t("debug_tools") || "Test & Bakım"}
                 </button>
               </div>
 
@@ -2158,12 +2178,10 @@ const MainLayout = ({ theme = "blue", children }) => {
                     <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                       <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center text-sm sm:text-base">
                         <Send className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-blue-500 shrink-0" />
-                        Birim Test Bildirimi
+                        {t("debug_test_title") || "Birim Test Bildirimi"}
                       </h4>
                       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
-                        Seçtiğiniz departmandaki şeflere anlık bir test
-                        bildirimi göndererek cihazlarının açık/aktif olup
-                        olmadığını test edebilirsiniz.
+                        {t("debug_test_desc") || "Seçtiğiniz departmandaki şeflere anlık bir test bildirimi göndererek cihazlarının açık/aktif olup olmadığını test edebilirsiniz."}
                       </p>
                       <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                         <select
@@ -2171,11 +2189,11 @@ const MainLayout = ({ theme = "blue", children }) => {
                           value={testDept}
                           onChange={(e) => setTestDept(e.target.value)}
                         >
-                          <option value="">Departman Seçin...</option>
-                          <option value="all">Tüm Departmanlar (Herkes)</option>
+                          <option value="">{t("debug_select_dept") || "Departman Seçin..."}</option>
+                          <option value="all">{t("debug_all_depts") || "Tüm Departmanlar (Herkes)"}</option>
                           {DEPARTMENTS.map((d) => (
                             <option key={d} value={d}>
-                              {d}
+                              {t(getDeptKey(d)) || d}
                             </option>
                           ))}
                         </select>
@@ -2186,18 +2204,18 @@ const MainLayout = ({ theme = "blue", children }) => {
                               playNotificationSound("chime");
                               triggerHaptic("success");
                             }}
-                            title="Bildirim Zil Sesini Çal"
+                            title={lang === "en" ? "Play Notification Chime" : "Bildirim Zil Sesini Çal"}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors shadow-sm text-xs sm:text-sm shrink-0"
                           >
                             <Volume2 className="w-4 h-4" />
-                            <span>Sesi Test Et</span>
+                            <span>{t("debug_test_sound") || "Sesi Test Et"}</span>
                           </button>
                           <button
                             onClick={handleTestNotification}
                             disabled={!testDept || isTesting}
                             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center transition-colors shadow-sm text-xs sm:text-sm shrink-0"
                           >
-                            {isTesting ? "Gönderiliyor..." : "Gönder"}
+                            {isTesting ? (t("debug_sending") || "Gönderiliyor...") : (t("debug_send") || "Gönder")}
                           </button>
                         </div>
                       </div>
@@ -2206,13 +2224,10 @@ const MainLayout = ({ theme = "blue", children }) => {
                     <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                       <h4 className="font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center text-sm sm:text-base">
                         <Trash2 className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-red-500 shrink-0" />
-                        Ölü Token Temizliği
+                        {t("debug_cleanup_title") || "Ölü Token Temizliği"}
                       </h4>
                       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-3 sm:mb-4">
-                        Uygulamayı silmiş veya bildirim iznini iptal etmiş
-                        kullanıcıların geçersiz token'larını test edip
-                        veritabanından siler. Bu işlem, hatalı gönderim
-                        loglarını azaltır.
+                        {t("debug_cleanup_desc") || "Uygulamayı silmiş veya bildirim iznini iptal etmiş kullanıcıların geçersiz token'larını test edip veritabanından siler. Bu işlem, hatalı gönderim loglarını azaltır."}
                       </p>
                       <button
                         onClick={handleTokenCleanup}
@@ -2220,19 +2235,15 @@ const MainLayout = ({ theme = "blue", children }) => {
                         className="bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 font-bold py-2.5 px-4 rounded-lg w-full flex justify-center items-center transition-colors border border-red-200 dark:border-red-800 text-xs sm:text-sm"
                       >
                         {isCleaning
-                          ? "Temizleniyor..."
-                          : "Kayıtsız Cihazları (Ölü Token) Temizle"}
+                          ? (t("debug_cleaning") || "Temizleniyor...")
+                          : (t("debug_cleanup_btn") || "Kayıtsız Cihazları (Ölü Token) Temizle")}
                       </button>
                     </div>
                   </div>
                 ) : debugTab === "users" ? (
                   <>
                     <div className="bg-purple-50 dark:bg-purple-900/20 p-3 sm:p-4 rounded-xl border border-purple-100 dark:border-purple-800 mb-3 sm:mb-4 text-xs sm:text-sm text-purple-800 dark:text-purple-300 leading-relaxed">
-                      Bu ekran, rapor atıldığında kimlere bildirim gideceğini
-                      anlamanız içindir. Bir şefe bildirim gitmesi için hem{" "}
-                      <strong>Departman eşleşmesi</strong> gereklidir hem de o
-                      cihazın <strong>Geçerli Bir Token'ı (Yeşil Işık)</strong>{" "}
-                      olmalıdır.
+                      {t("debug_users_banner") || "Bu ekran, rapor atıldığında kimlere bildirim gideceğini anlamanız içindir. Bir şefe bildirim gitmesi için hem Departman eşleşmesi gereklidir hem de o cihazın Geçerli Bir Token'ı (Yeşil Işık) olmalıdır."}
                     </div>
 
                     {(() => {
@@ -2252,7 +2263,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                         <div className="grid grid-cols-3 gap-1.5 sm:gap-4 mb-3 sm:mb-4">
                           <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm text-center">
                             <span className="text-[10px] sm:text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium leading-tight truncate w-full">
-                              Hesaplar
+                              {t("debug_accounts") || "Hesaplar"}
                             </span>
                             <span className="text-base sm:text-2xl font-bold text-gray-800 dark:text-gray-100 mt-0.5">
                               {total}
@@ -2260,10 +2271,10 @@ const MainLayout = ({ theme = "blue", children }) => {
                           </div>
                           <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 p-2 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm text-center">
                             <span className="text-[10px] sm:text-xs md:text-sm text-green-600 dark:text-green-400 font-medium leading-tight truncate w-full">
-                              Aktif Kullanıcı / Cihaz
+                              {t("debug_active_users") || "Aktif Kullanıcı / Cihaz"}
                             </span>
                             <span className="text-base sm:text-2xl font-bold text-green-700 dark:text-green-300 mt-0.5">
-                              {active} <span className="text-xs font-normal text-green-600">({totalDeviceTokens} Cihaz)</span>
+                              {active} <span className="text-xs font-normal text-green-600">({totalDeviceTokens} {t("debug_devices") || "Cihaz"})</span>
                             </span>
                           </div>
                           <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2 sm:p-4 rounded-xl flex flex-col items-center justify-center shadow-sm relative overflow-hidden text-center">
@@ -2272,7 +2283,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                               style={{ width: `${ratio}%` }}
                             ></div>
                             <span className="text-[10px] sm:text-xs md:text-sm text-blue-700 dark:text-blue-300 font-medium leading-tight relative z-10 drop-shadow-sm truncate w-full">
-                              Kayıt Oranı
+                              {t("debug_reg_ratio") || "Kayıt Oranı"}
                             </span>
                             <span className="text-base sm:text-2xl font-bold text-blue-800 dark:text-blue-200 relative z-10 drop-shadow-sm mt-0.5">
                               %{ratio}
@@ -2301,21 +2312,21 @@ const MainLayout = ({ theme = "blue", children }) => {
                             </div>
                             <div className="text-xs mt-1.5 text-gray-600 dark:text-gray-400 flex flex-wrap gap-1 sm:gap-1.5 items-center">
                               <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium">
-                                Rol: {u.role}
+                                {t("debug_role") || "Rol"}: {u.role}
                               </span>
                               {u.dept && (
                                 <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium">
-                                  Birim: {u.dept}
+                                  {t("debug_unit") || "Birim"}: {t(getDeptKey(u.dept)) || u.dept}
                                 </span>
                               )}
                               {u.lastPing && (
                                 <span className="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded text-[10px] sm:text-[11px] font-medium flex items-center">
                                   <Activity className="w-3 h-3 mr-1 shrink-0" />
                                   <span>
-                                    Son Ping:{" "}
+                                    {t("debug_last_ping") || "Son Ping"}:{" "}
                                     {u.lastPing?.toDate
-                                      ? u.lastPing.toDate().toLocaleString("tr-TR")
-                                      : new Date(u.lastPing).toLocaleString("tr-TR")}
+                                      ? u.lastPing.toDate().toLocaleString(lang === "en" ? "en-US" : "tr-TR")
+                                      : new Date(u.lastPing).toLocaleString(lang === "en" ? "en-US" : "tr-TR")}
                                   </span>
                                 </span>
                               )}
@@ -2325,11 +2336,11 @@ const MainLayout = ({ theme = "blue", children }) => {
                             {deviceCount > 0 ? (
                               <div className="flex items-center text-green-600 dark:text-green-400 font-bold text-xs bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-full border border-green-200 dark:border-green-800">
                                 <CheckCircle className="w-3.5 h-3.5 mr-1 shrink-0" />
-                                <span>Token Var {deviceCount > 1 ? `(${deviceCount} Cihaz)` : ""}</span>
+                                <span>{t("debug_token_active") || "Token Var"} {deviceCount > 1 ? `(${deviceCount} ${t("debug_devices") || "Cihaz"})` : ""}</span>
                               </div>
                             ) : (
                               <div className="flex items-center text-red-500 font-bold text-xs bg-red-50 dark:bg-red-900/20 px-2.5 py-1 rounded-full border border-red-200 dark:border-red-800">
-                                <XCircle className="w-3.5 h-3.5 mr-1 shrink-0" /> Cihaz Kayıtlı Değil
+                                <XCircle className="w-3.5 h-3.5 mr-1 shrink-0" /> {t("debug_token_none") || "Cihaz Kayıtlı Değil"}
                               </div>
                             )}
                           </div>
@@ -2342,7 +2353,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                   <div className="space-y-2 sm:space-y-3">
                     {notifLogs.length === 0 ? (
                       <div className="text-center text-gray-500 p-8 border border-dashed rounded-xl border-gray-300 dark:border-gray-700 text-xs sm:text-sm">
-                        Kayıtlı log bulunamadı.
+                        {lang === "en" ? "No notification logs found." : "Kayıtlı log bulunamadı."}
                       </div>
                     ) : (
                       notifLogs.map((log) => (
@@ -2361,22 +2372,22 @@ const MainLayout = ({ theme = "blue", children }) => {
                             </div>
                             <div className="text-[11px] sm:text-xs text-gray-500 shrink-0">
                               {log.timestamp?.toDate
-                                ? log.timestamp.toDate().toLocaleString("tr-TR")
+                                ? log.timestamp.toDate().toLocaleString(lang === "en" ? "en-US" : "tr-TR")
                                 : ""}
                             </div>
                           </div>
                           <div className="flex flex-wrap gap-1 sm:gap-2 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
                             <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded">
-                              Hedef: {log.dept}
+                              {lang === "en" ? "Target" : "Hedef"}: {t(getDeptKey(log.dept)) || log.dept}
                             </span>
                             <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded">
-                              Bulunan Cihaz: {log.targetCount}
+                              {lang === "en" ? "Devices Found" : "Bulunan Cihaz"}: {log.targetCount}
                             </span>
                             <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded">
-                              Başarılı: {log.successCount}
+                              {lang === "en" ? "Success" : "Başarılı"}: {log.successCount}
                             </span>
                             <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-0.5 rounded">
-                              Hatalı: {log.failureCount}
+                              {lang === "en" ? "Failed" : "Hatalı"}: {log.failureCount}
                             </span>
                           </div>
                           {log.failureCount > 0 &&
@@ -2388,7 +2399,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                                     key={i}
                                     className="mb-1 border-b border-red-100 dark:border-red-900/50 pb-1 last:border-0 last:pb-0 last:mb-0"
                                   >
-                                    <span className="font-bold">Hata:</span>{" "}
+                                    <span className="font-bold">{lang === "en" ? "Error:" : "Hata:"}</span>{" "}
                                     {f.error} <br />
                                     <span className="text-[10px] opacity-75">
                                       Token: {f.token?.substring(0, 20)}...
@@ -2412,7 +2423,7 @@ const MainLayout = ({ theme = "blue", children }) => {
             <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up flex flex-col max-h-[85vh]">
               <div className="p-5 bg-indigo-600 text-white flex justify-between items-center shrink-0">
                 <h3 className="font-bold text-xl flex items-center">
-                  <Bell className="w-6 h-6 mr-3" /> Bildirim Geçmişi
+                  <Bell className="w-6 h-6 mr-3" /> {t("notification_history") || "Bildirim Geçmişi"}
                 </h3>
                 <button
                   onClick={() => setShowNotifHistoryModal(false)}
@@ -2428,12 +2439,12 @@ const MainLayout = ({ theme = "blue", children }) => {
                   </div>
                 ) : notifHistoryData.length === 0 ? (
                   <div className="text-center text-gray-500 dark:text-gray-400 p-8 bg-white dark:bg-gray-800 rounded-2xl shadow-sm">
-                    Henüz hiç bildiriminiz yok.
+                    {t("no_notifications_yet") || "Henüz hiç bildiriminiz yok."}
                   </div>
                 ) : (
                   <div className="space-y-3">
                     <div className="text-xs text-center text-gray-400 dark:text-gray-500 mb-2">
-                      Silmek için sağa veya sola kaydırın
+                      {t("swipe_to_delete") || "Silmek için sağa veya sola kaydırın"}
                     </div>
                     <AnimatePresence mode="popLayout">
                       {notifHistoryData.map((notif) => (
@@ -2475,8 +2486,8 @@ const MainLayout = ({ theme = "blue", children }) => {
                                 className={`mr-3 mt-0.5 flex-shrink-0 transition-colors ${notif.read ? "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" : "text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300"}`}
                                 title={
                                   notif.read
-                                    ? "Okunmadı olarak işaretle"
-                                    : "Okundu olarak işaretle"
+                                    ? (t("mark_unread") || "Okunmadı olarak işaretle")
+                                    : (t("mark_read") || "Okundu olarak işaretle")
                                 }
                               >
                                 {notif.read ? (
@@ -2495,13 +2506,13 @@ const MainLayout = ({ theme = "blue", children }) => {
                               {notif.timestamp?.toDate
                                 ? notif.timestamp
                                     .toDate()
-                                    .toLocaleString("tr-TR", {
+                                    .toLocaleString(lang === "en" ? "en-US" : "tr-TR", {
                                       hour: "2-digit",
                                       minute: "2-digit",
                                       day: "numeric",
                                       month: "short",
                                     })
-                                : "Şimdi"}
+                                : (t("just_now") || "Şimdi")}
                             </span>
                           </div>
                           <p
@@ -2523,7 +2534,7 @@ const MainLayout = ({ theme = "blue", children }) => {
             <div className="bg-white dark:bg-gray-800 w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden animate-slide-up">
               <div className="p-6 bg-blue-600 text-white flex justify-between items-center">
                 <h3 className="font-bold text-xl flex items-center">
-                  <Bug className="w-6 h-6 mr-3" /> Sorun Bildir / Geri Bildirim
+                  <Bug className="w-6 h-6 mr-3" /> {t("feedback_modal_title") || "Sorun Bildir / Geri Bildirim"}
                 </h3>
                 <button
                   onClick={() => setShowFeedbackModal(false)}
@@ -2538,7 +2549,7 @@ const MainLayout = ({ theme = "blue", children }) => {
               >
                 <div>
                   <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                    Karşılaştığınız sorunu veya önerinizi yazın:
+                    {t("feedback_modal_prompt") || "Karşılaştığınız sorunu veya önerinizi yazın:"}
                   </label>
                   <textarea
                     required
@@ -2546,7 +2557,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                     value={feedbackText}
                     onChange={(e) => setFeedbackText(e.target.value)}
                     className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-4 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 text-gray-800 dark:text-gray-100"
-                    placeholder="Uygulamada bir hata mı aldınız veya bir öneriniz mi var? Buraya detaylıca yazabilirsiniz..."
+                    placeholder={t("feedback_modal_placeholder") || "Uygulamada bir hata mı aldınız veya bir öneriniz mi var? Buraya detaylıca yazabilirsiniz..."}
                   ></textarea>
                 </div>
                 <div className="flex space-x-3 pt-4 border-t border-gray-100 dark:border-gray-700">
@@ -2555,14 +2566,14 @@ const MainLayout = ({ theme = "blue", children }) => {
                     onClick={() => setShowFeedbackModal(false)}
                     className="flex-1 py-4 font-bold text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                   >
-                    İptal
+                    {t("cancel")}
                   </button>
                   <button
                     type="submit"
                     disabled={isSubmittingFeedback}
                     className="flex-1 py-4 font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg transition-colors disabled:opacity-50 flex items-center justify-center"
                   >
-                    {isSubmittingFeedback ? "Gönderiliyor..." : "Gönder"}
+                    {isSubmittingFeedback ? (t("feedback_sending") || "Gönderiliyor...") : (t("debug_send") || "Gönder")}
                   </button>
                 </div>
               </form>
@@ -2657,6 +2668,11 @@ const YuklemeciDashboard = () => {
 
   const handleStartLoading = (e) => {
     e.preventDefault();
+    if (!imgPreview) {
+      toast.error(t("err_photo_required") || "Lütfen araç/yük fotoğrafını çekin veya yükleyin! Fotoğraf zorunludur.");
+      triggerHaptic("error");
+      return;
+    }
     createLoading(
       formState.plaka,
       formState.sofor,
@@ -2683,6 +2699,11 @@ const YuklemeciDashboard = () => {
   };
 
   const handleFinishLoading = () => {
+    if (!finishModal.imgPreview) {
+      toast.error(t("err_photo_required") || "Lütfen yükleme tamamlama/bağlama fotoğrafı yükleyin! Fotoğraf zorunludur.");
+      triggerHaptic("error");
+      return;
+    }
     finishLoading(finishModal.loadId, finishModal.note, finishModal.imgPreview);
     setFinishModal({ isOpen: false, loadId: null, note: "", imgPreview: null });
   };
@@ -2697,13 +2718,18 @@ const YuklemeciDashboard = () => {
           <p className="text-orange-100 font-medium">{t("yuk_desc")}</p>
         </div>
         <div className="z-10 flex flex-wrap items-center gap-3">
-          <button
-            onClick={() => setShowPdfReportModal(true)}
-            className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/30 text-white font-bold text-sm flex items-center space-x-2 transition-all cursor-pointer shadow-sm"
-          >
-            <FileText className="w-4 h-4" />
-            <span>Sevkiyat Raporu (PDF)</span>
-          </button>
+          {(currentUser?.role === "admin" ||
+            currentUser?.role === "yonetici" ||
+            currentUser?.username === "agiradar" ||
+            currentUser?.username === "agiradarsahin") && (
+            <button
+              onClick={() => setShowPdfReportModal(true)}
+              className="bg-white/20 hover:bg-white/30 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/30 text-white font-bold text-sm flex items-center space-x-2 transition-all cursor-pointer shadow-sm"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Sevkiyat Raporu (PDF)</span>
+            </button>
+          )}
           <div className="bg-white dark:bg-gray-800/10 backdrop-blur-md px-5 py-3 rounded-2xl border border-white/20 flex items-center space-x-3">
             <div className="bg-white dark:bg-gray-800/20 p-2 rounded-xl">
               <Scale className="w-6 h-6 text-white" />
@@ -2814,7 +2840,7 @@ const YuklemeciDashboard = () => {
                   >
                     {COUNTRIES.map((c) => (
                       <option key={c} value={c}>
-                        {c}
+                        {getCountryName(c, lang)}
                       </option>
                     ))}
                   </select>
@@ -2901,8 +2927,11 @@ const YuklemeciDashboard = () => {
               </div>
             </div>
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                {t("cam_pre")}
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center justify-between">
+                <span>{t("cam_pre")}</span>
+                <span className="text-xs font-extrabold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800">
+                  Zorunlu Alan *
+                </span>
               </label>
               <input
                 type="file"
@@ -2917,23 +2946,32 @@ const YuklemeciDashboard = () => {
               />
               <label
                 htmlFor="preLoadCamera"
-                className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-orange-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden"
+                className={`w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed ${
+                  imgPreview
+                    ? "border-emerald-500 ring-2 ring-emerald-500/20"
+                    : "border-red-300 dark:border-red-700/60 hover:border-orange-500"
+                } rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-all group overflow-hidden`}
               >
                 {imgPreview ? (
-                  <img
-                    loading="lazy"
-                    decoding="async"
-                    src={imgPreview}
-                    className="w-full h-full object-cover"
-                  />
+                  <div className="relative w-full h-full">
+                    <img
+                      loading="lazy"
+                      decoding="async"
+                      src={imgPreview}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute bottom-2 right-2 bg-emerald-600 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow-md flex items-center gap-1">
+                      <CheckCircle className="w-3.5 h-3.5" /> Fotoğraf Yüklendi
+                    </div>
+                  </div>
                 ) : (
                   <>
-                    <div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110">
-                      <Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-orange-500" />
+                    <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                      <Camera className="w-6 h-6 text-red-600 dark:text-red-400" />
                     </div>
-                    <span className="text-sm font-bold">{t("cam_open")}</span>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      {t("optional")}
+                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{t("cam_open")}</span>
+                    <span className="text-xs font-semibold text-red-500 dark:text-red-400 mt-1">
+                      {t("required_photo") || "Fotoğraf yüklemek zorunludur *"}
                     </span>
                   </>
                 )}
@@ -3038,7 +3076,7 @@ const YuklemeciDashboard = () => {
                       {t("dest_country")}
                     </span>
                     <span className="font-bold text-gray-800 dark:text-gray-100">
-                      {load.destCountry || "-"}
+                      {getCountryName(load.destCountry, lang) || "-"}
                     </span>
                   </div>
                   <div>
@@ -3062,7 +3100,7 @@ const YuklemeciDashboard = () => {
                       {t("tonnage")}
                     </span>
                     <span className="font-extrabold text-orange-700 dark:text-orange-400">
-                      {load.tonnage ? `${load.tonnage} Ton` : "-"}
+                      {load.tonnage ? `${load.tonnage} ${t("tonnage_unit") || "Ton"}` : "-"}
                     </span>
                   </div>
                 </div>
@@ -3156,8 +3194,11 @@ const YuklemeciDashboard = () => {
             </div>
             <div className="p-6 md:p-8 space-y-6">
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                  {t("cam_post")}
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center justify-between">
+                  <span>{t("cam_post")}</span>
+                  <span className="text-xs font-extrabold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/50 px-2 py-0.5 rounded-full border border-red-200 dark:border-red-800">
+                    Zorunlu Alan *
+                  </span>
                 </label>
                 <input
                   type="file"
@@ -3174,21 +3215,33 @@ const YuklemeciDashboard = () => {
                 />
                 <label
                   htmlFor="postLoadCamera"
-                  className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden"
+                  className={`w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed ${
+                    finishModal.imgPreview
+                      ? "border-emerald-500 ring-2 ring-emerald-500/20"
+                      : "border-red-300 dark:border-red-700/60 hover:border-green-500"
+                  } rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-all group overflow-hidden`}
                 >
                   {finishModal.imgPreview ? (
-                    <img
-                      loading="lazy"
-                      decoding="async"
-                      src={finishModal.imgPreview}
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="relative w-full h-full">
+                      <img
+                        loading="lazy"
+                        decoding="async"
+                        src={finishModal.imgPreview}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute bottom-2 right-2 bg-emerald-600 text-white text-[11px] font-bold px-2 py-1 rounded-lg shadow-md flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" /> Fotoğraf Yüklendi
+                      </div>
+                    </div>
                   ) : (
                     <>
-                      <div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110">
-                        <Camera className="w-6 h-6 text-gray-500 dark:text-gray-400 group-hover:text-green-500" />
+                      <div className="bg-red-50 dark:bg-red-900/30 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
+                        <Camera className="w-6 h-6 text-red-600 dark:text-red-400" />
                       </div>
-                      <span className="text-sm font-bold">{t("cam_open")}</span>
+                      <span className="text-sm font-bold text-gray-800 dark:text-gray-200">{t("cam_open")}</span>
+                      <span className="text-xs font-semibold text-red-500 dark:text-red-400 mt-1">
+                        {t("required_photo") || "Fotoğraf yüklemek zorunludur *"}
+                      </span>
                     </>
                   )}
                 </label>
@@ -3249,6 +3302,11 @@ const YukleniciDashboard = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formState.subject.trim()) {
+      triggerHaptic("error");
+      toast.error(t("err_fill_all") || "Lütfen gerekli alanları doldurun.");
+      return;
+    }
     createTask(
       formState.dept,
       formState.priority,
@@ -3264,7 +3322,8 @@ const YukleniciDashboard = () => {
       desc: "",
     });
     setImgPreview(null);
-    alert(t("success_created") || "İhlal kaydı oluşturuldu.");
+    triggerHaptic("success");
+    toast.success(t("success_created") || "İhlal kaydı oluşturuldu.");
   };
 
   return (
@@ -3454,6 +3513,11 @@ const ModDashboard = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!formState.subject.trim()) {
+      triggerHaptic("error");
+      toast.error(t("err_fill_all") || "Lütfen gerekli alanları doldurun.");
+      return;
+    }
     createTask(
       formState.dept,
       formState.priority,
@@ -3471,6 +3535,7 @@ const ModDashboard = () => {
     });
     setIsCustomDeadline(false);
     setImgPreview(null);
+    triggerHaptic("success");
     toast.success(
       t("success_created") || "İhlal kaydı başarıyla oluşturuldu.",
       {
@@ -3484,11 +3549,13 @@ const ModDashboard = () => {
     e.preventDefault();
     if (actionModal.action === "approve") {
       updateTaskStatus(actionModal.taskId, "kapatildi", modNote, "", "");
+      triggerHaptic("success");
       toast.success("İşlem onaylandı ve kapatıldı.", {
         style: { borderRadius: "12px", background: "#333", color: "#fff" },
       });
     } else if (actionModal.action === "reject") {
       updateTaskStatus(actionModal.taskId, "acik", modNote, "", "");
+      triggerHaptic("warning");
       toast.error("Yanıt reddedildi ve geri gönderildi.", {
         style: { borderRadius: "12px", background: "#333", color: "#fff" },
       });
@@ -3512,7 +3579,7 @@ const ModDashboard = () => {
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100">
             <ShieldAlert className="w-8 h-8 mr-3 text-blue-500" />
-            İSG Uzmanı Paneli
+            {t("isg_expert_panel") || "İSG Uzmanı Paneli"}
           </h2>
 
           <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-full md:w-auto">
@@ -3521,7 +3588,7 @@ const ModDashboard = () => {
               className={`flex-1 md:flex-none px-3 py-2 sm:px-6 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${activeTab === "create" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
               <span className="flex items-center justify-center">
-                <Plus className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0" /> İhlal Oluştur
+                <Plus className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0" /> {t("create_violation") || "İhlal Oluştur"}
               </span>
             </button>
             <button
@@ -3530,7 +3597,7 @@ const ModDashboard = () => {
             >
               <span className="flex items-center justify-center">
                 <CheckSquare className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0" />
-                Yanıtları Kontrol Et
+                {t("check_responses_tab") || "Yanıtları Kontrol Et"}
                 {reviewTasks.length > 0 && (
                   <span className="ml-1.5 sm:ml-2 bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs">
                     {reviewTasks.length}
@@ -3614,16 +3681,16 @@ const ModDashboard = () => {
                     }}
                     className="flex-1 border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100 text-sm"
                   >
-                    <option value="1">1 Saat (Durdurma / Acil)</option>
-                    <option value="2">2 Saat (Acil Müdahale)</option>
-                    <option value="4">4 Saat (Yarım Vardiya)</option>
-                    <option value="8">8 Saat (Vardiya Sonu)</option>
-                    <option value="12">12 Saat</option>
-                    <option value="24">24 Saat (1 Gün - Standart)</option>
-                    <option value="48">48 Saat (2 Gün)</option>
-                    <option value="72">72 Saat (3 Gün)</option>
-                    <option value="168">168 Saat (1 Hafta)</option>
-                    <option value="custom">⚙️ Farklı Süre Gir...</option>
+                    <option value="1">1 {t("hours_unit") || "Saat"} ({lang === "en" ? "Stop / Urgent" : "Durdurma / Acil"})</option>
+                    <option value="2">2 {t("hours_unit") || "Saat"} ({lang === "en" ? "Urgent Action" : "Acil Müdahale"})</option>
+                    <option value="4">4 {t("hours_unit") || "Saat"} ({lang === "en" ? "Half Shift" : "Yarım Vardiya"})</option>
+                    <option value="8">8 {t("hours_unit") || "Saat"} ({lang === "en" ? "Shift End" : "Vardiya Sonu"})</option>
+                    <option value="12">12 {t("hours_unit") || "Saat"}</option>
+                    <option value="24">24 {t("hours_unit") || "Saat"} ({lang === "en" ? "1 Day - Standard" : "1 Gün - Standart"})</option>
+                    <option value="48">48 {t("hours_unit") || "Saat"} ({lang === "en" ? "2 Days" : "2 Gün"})</option>
+                    <option value="72">72 {t("hours_unit") || "Saat"} ({lang === "en" ? "3 Days" : "3 Gün"})</option>
+                    <option value="168">168 {t("hours_unit") || "Saat"} ({lang === "en" ? "1 Week" : "1 Hafta"})</option>
+                    <option value="custom">{t("deadline_custom") || "⚙️ Farklı Süre Gir..."}</option>
                   </select>
                   {isCustomDeadline && (
                     <div className="flex items-center gap-1">
@@ -3637,9 +3704,9 @@ const ModDashboard = () => {
                           setFormState({ ...formState, deadlineHours: val });
                         }}
                         className="w-20 border border-blue-500 dark:border-blue-400 rounded-xl p-3 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100 text-center text-sm"
-                        placeholder="Saat"
+                        placeholder={t("hours_unit") || "Saat"}
                       />
-                      <span className="text-xs font-bold text-gray-500">saat</span>
+                      <span className="text-xs font-bold text-gray-500">{t("hours_unit") || "saat"}</span>
                     </div>
                   )}
                 </div>
@@ -3651,10 +3718,10 @@ const ModDashboard = () => {
               <div className="flex items-center text-blue-900 dark:text-blue-200 font-semibold">
                 <Clock className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400 shrink-0 animate-pulse" />
                 <span>
-                  <strong>Birim Şefine Verilen Süre:</strong> {formState.deadlineHours} Saat
+                  <strong>{t("time_given_to_chief") || "Birim Şefine Verilen Süre"}:</strong> {formState.deadlineHours} {t("hours_unit") || "Saat"}
                   <span className="text-gray-400 dark:text-gray-500 mx-2">•</span>
-                  <strong>Son Teslim Vakti:</strong>{" "}
-                  {new Date(Date.now() + (Number(formState.deadlineHours) || 24) * 60 * 60 * 1000).toLocaleString("tr-TR", {
+                  <strong>{t("target_completion") || "Son Teslim Vakti"}:</strong>{" "}
+                  {new Date(Date.now() + (Number(formState.deadlineHours) || 24) * 60 * 60 * 1000).toLocaleString(lang === "en" ? "en-US" : "tr-TR", {
                     day: "numeric",
                     month: "long",
                     weekday: "short",
@@ -3664,7 +3731,7 @@ const ModDashboard = () => {
                 </span>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">Hızlı Süre:</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">{t("quick_duration") || "Hızlı Süre"}:</span>
                 {[2, 4, 8, 24, 48].map((h) => (
                   <button
                     key={h}
@@ -3679,14 +3746,14 @@ const ModDashboard = () => {
                         : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`}
                   >
-                    {h}s
+                    {h}{lang === "en" ? "h" : "s"}
                   </button>
                 ))}
               </div>
             </div>
             <div>
               <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                Konu / Başlık
+                {t("subject_title") || "Konu / Başlık"}
               </label>
               <input
                 type="text"
@@ -3696,7 +3763,7 @@ const ModDashboard = () => {
                   setFormState({ ...formState, subject: e.target.value })
                 }
                 className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100"
-                placeholder="Örn: Baret Kullanımı"
+                placeholder={t("ph_subject") || (lang === "en" ? "e.g., Hard Hat Compliance" : "Örn: Baret Kullanımı")}
               />
             </div>
             <div>
@@ -4131,8 +4198,12 @@ const SefDashboard = () => {
         afterImgPreview,
         "",
       );
+      triggerHaptic("success");
+      toast.success("Çözüm kanıtı yüklendi, uzman onayı bekleniyor.");
     } else if (actionModal.type === "object") {
       updateTaskStatus(actionModal.taskId, "itiraz_edildi", note, "", "");
+      triggerHaptic("warning");
+      toast.success("İtirazınız uzman incelemesine gönderildi.");
     }
     setActionModal({ isOpen: false, taskId: null, type: null });
     setNote("");
@@ -4661,12 +4732,15 @@ const AdminDashboard = () => {
       });
       const data = await res.json();
       if (data && data.success) {
+        triggerHaptic("success");
         toast.success(data.message || `"${usernameToUnlock}" kilidi kaldırıldı!`);
         fetchLockedAccounts();
       } else {
+        triggerHaptic("error");
         toast.error(data?.error || "Hesap kilidi kaldırılamadı.");
       }
     } catch (err) {
+      triggerHaptic("error");
       toast.error("Bağlantı hatası: Kilit açılamadı.");
     }
   }, [fetchLockedAccounts]);
@@ -4881,6 +4955,7 @@ const AdminDashboard = () => {
   const handleCreateUser = async (e) => {
     e.preventDefault();
     if (users.find((u) => u.username.toLowerCase() === newUser.username.toLowerCase())) {
+      triggerHaptic("error");
       toast.error(t("err_username_taken") || "Bu kullanıcı adı zaten kullanımda!");
       return;
     }
@@ -4907,6 +4982,7 @@ const AdminDashboard = () => {
       if (!res.ok || !data.success) {
         throw new Error(data?.error || "Kullanıcı oluşturulamadı.");
       }
+      triggerHaptic("success");
       toast.success("Kullanıcı ve şifresi güvenli (bcrypt) olarak oluşturuldu.");
     } catch (apiErr) {
       console.warn("API create user error:", apiErr);
@@ -4919,6 +4995,7 @@ const AdminDashboard = () => {
         dept: finalDept,
       };
       await setDoc(doc(db, "users", newUserId), userObj);
+      triggerHaptic("success");
       toast.success("Kullanıcı oluşturuldu.");
     }
 
@@ -5001,10 +5078,13 @@ const AdminDashboard = () => {
       if (!res.ok || !data.success) {
         throw new Error(data?.error || "Kullanıcı silinemedi.");
       }
+      triggerHaptic("heavy");
       toast.success("Kullanıcı başarıyla silindi.");
     } catch (apiErr) {
       console.warn("API delete user fallback:", apiErr);
       await deleteDoc(doc(db, "users", userToDelete)).catch(() => {});
+      triggerHaptic("heavy");
+      toast.success("Kullanıcı silindi.");
     }
     setShowDeleteUserModal(false);
     setUserToDelete(null);
@@ -5022,11 +5102,13 @@ const AdminDashboard = () => {
 
   const submitCustomBonus = async () => {
     if (!bonusAmount || !bonusReason) {
+      triggerHaptic("error");
       toast.error(t("err_fill_all") || "Lütfen tüm alanları doldurun.");
       return;
     }
     const num = parseInt(bonusAmount, 10);
     if (isNaN(num) || num <= 0) {
+      triggerHaptic("error");
       toast.error(
         t("err_valid_bonus") || "Geçerli ve pozitif bir puan miktarı girin.",
       );
@@ -5048,6 +5130,12 @@ const AdminDashboard = () => {
       dateStr: new Date().toLocaleString("tr-TR"),
     });
 
+    triggerHaptic("success");
+    toast.success(
+      bonusType === "add"
+        ? `${bonusDept} birimine ${num} puan eklendi.`
+        : `${bonusDept} biriminden ${num} puan düşüldü.`,
+    );
     setBonusModalOpen(false);
   };
 
@@ -5073,6 +5161,8 @@ const AdminDashboard = () => {
       }
     }
 
+    triggerHaptic("heavy");
+    toast.success("Seçilen geçmiş kayıtlar başarıyla temizlendi.");
     setShowDeleteModal(false);
     setDeleteCountdown(10);
   };
@@ -5521,7 +5611,8 @@ const AdminDashboard = () => {
         await updateDoc(doc(db, "system", "points"), initialPoints);
         setShowResetModal(false);
         setResetCountdown(10);
-        alert(
+        triggerHaptic("heavy");
+        toast.success(
           t("success_reset") ||
             "Geçmiş başarıyla kaydedildi ve tüm puanlar sıfırlandı!",
         );
@@ -8130,6 +8221,7 @@ export default function App() {
   });
 
   const toggleSoundAlerts = useCallback(() => {
+    triggerHaptic("light");
     setSoundAlerts((prev) => {
       const next = !prev;
       localStorage.setItem("isg_sound_alerts", next ? "true" : "false");
@@ -8158,6 +8250,7 @@ export default function App() {
   const t = useCallback((key) => DICT[lang][key] || key, [lang]);
 
   const toggleLang = useCallback(() => {
+    triggerHaptic("light");
     const newLang = lang === "tr" ? "en" : "tr";
     setLang(newLang);
     localStorage.setItem("isg_lang", newLang);
@@ -8644,11 +8737,13 @@ export default function App() {
   }, [lang]);
 
   const logout = useCallback(() => {
+    triggerHaptic("medium");
     setShowLogoutModal(true);
     setLogoutCountdown(5);
   }, []);
 
   const executeLogout = useCallback(async (disableNotifications) => {
+    triggerHaptic("heavy");
     if (disableNotifications) {
       const loggedInUserId = localStorage.getItem("isg_logged_in_user");
       const isNotificationActive =
@@ -9027,6 +9122,10 @@ export default function App() {
       not,
       imgUrl,
     ) => {
+      if (!imgUrl) {
+        toast.error("Yükleme kaydı için araç/yük fotoğrafı zorunludur!");
+        return;
+      }
       const loadId = Date.now().toString();
       const newLoad = {
         id: loadId,
@@ -9056,6 +9155,7 @@ export default function App() {
   );
 
   const startLoadingProcess = useCallback(async (loadId) => {
+    triggerHaptic("medium");
     const loadRef = doc(db, "loadings", loadId);
     await updateDoc(loadRef, {
       status: "yukleniyor",
@@ -9063,6 +9163,11 @@ export default function App() {
   }, []);
 
   const finishLoading = useCallback(async (loadId, postNot, postImgUrl) => {
+    if (!postImgUrl) {
+      triggerHaptic("error");
+      toast.error("Yüklemeyi tamamlamak için bitiş/bağlama fotoğrafı zorunludur!");
+      return;
+    }
     const loadRef = doc(db, "loadings", loadId);
     await updateDoc(loadRef, {
       status: "tamamlandi",
@@ -9070,6 +9175,7 @@ export default function App() {
       postImgUrl: postImgUrl || "",
       finishedAtTime: formatTime(new Date()),
     });
+    triggerHaptic("success");
   }, []);
 
   // 24 Hour Tonnage Analytics Calculation
@@ -9333,15 +9439,14 @@ export default function App() {
                                 <AlertTriangle className="w-5 h-5 mr-3 shrink-0 mt-0.5 sm:mt-0" />
                                 <span>
                                   <strong>
-                                    Cihazınız bildirim sistemine kayıtlı değil!
+                                    {t("device_not_registered_title") || "Cihazınız bildirim sistemine kayıtlı değil!"}
                                   </strong>{" "}
                                   <br className="sm:hidden" />
-                                  Bildirimleri (yeni görevler, ihlaller vb.)
-                                  anında alabilmek için bu cihazı sisteme
-                                  kaydetmeniz gerekmektedir.{" "}
+                                  {t("device_not_registered_desc") || "Bildirimleri (yeni görevler, ihlaller vb.) anında alabilmek için bu cihazı sisteme kaydetmeniz gerekmektedir."}{" "}
                                   <span className="hidden sm:inline">
-                                    Nasıl kayıt olurum? Yandaki butona tıklayıp
-                                    tarayıcınızdan izin verin.
+                                    {lang === "en"
+                                      ? "How to register? Click the button and grant browser permission."
+                                      : "Nasıl kayıt olurum? Yandaki butona tıklayıp tarayıcınızdan izin verin."}
                                   </span>
                                 </span>
                               </div>
@@ -9351,8 +9456,8 @@ export default function App() {
                                 className="bg-white text-red-600 px-4 py-2 sm:py-1.5 rounded-lg font-bold shadow-sm hover:bg-gray-100 transition-colors whitespace-nowrap w-full sm:w-auto disabled:opacity-60 disabled:cursor-not-allowed"
                               >
                                 {isRegisteringDevice
-                                  ? "Kaydediliyor..."
-                                  : "Cihazı Şimdi Kaydet"}
+                                  ? (t("registering") || "Kaydediliyor...")
+                                  : (t("register_device_btn") || "Cihazı Şimdi Kaydet")}
                               </button>
                             </div>
                           )}
@@ -9386,12 +9491,11 @@ export default function App() {
                           <div className="bg-white dark:bg-gray-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-slide-up">
                             <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center">
                               <LogOut className="w-6 h-6 mr-2 text-red-500" />
-                              Çıkış Yap
+                              {t("logout")}
                             </h3>
                             <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm">
-                              Çıkış yapmak üzeresiniz. Lütfen bildirim
-                              tercihinizle birlikte nasıl çıkış yapmak
-                              istediğinizi seçin.
+                              {t("logout_confirm_desc") ||
+                                "Çıkış yapmak üzeresiniz. Lütfen bildirim tercihinizle birlikte nasıl çıkış yapmak istediğinizi seçin."}
                             </p>
                             <div className="flex flex-col space-y-3">
                               <button
@@ -9399,7 +9503,7 @@ export default function App() {
                                 disabled={logoutCountdown > 0}
                                 className={`w-full py-3 rounded-xl font-bold flex justify-center items-center transition-colors ${logoutCountdown > 0 ? "bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700" : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"}`}
                               >
-                                Sadece Çıkış Yap{" "}
+                                {t("logout_only") || "Sadece Çıkış Yap"}{" "}
                                 {logoutCountdown > 0
                                   ? `(${logoutCountdown})`
                                   : ""}
@@ -9409,7 +9513,7 @@ export default function App() {
                                 disabled={logoutCountdown > 0}
                                 className={`w-full py-3 rounded-xl font-bold shadow-md flex justify-center items-center transition-colors ${logoutCountdown > 0 ? "bg-red-300 text-white cursor-not-allowed dark:bg-red-900/50 dark:text-red-300" : "bg-red-600 text-white hover:bg-red-700"}`}
                               >
-                                Bildirimleri Kapatıp Çıkış Yap{" "}
+                                {t("logout_and_disable_notif") || "Bildirimleri Kapatıp Çıkış Yap"}{" "}
                                 {logoutCountdown > 0
                                   ? `(${logoutCountdown})`
                                   : ""}
@@ -9418,7 +9522,7 @@ export default function App() {
                                 onClick={() => setShowLogoutModal(false)}
                                 className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium"
                               >
-                                İptal
+                                {t("cancel")}
                               </button>
                             </div>
                           </div>
@@ -9433,6 +9537,8 @@ export default function App() {
                         departments={DEPARTMENTS}
                         currentUser={currentUser}
                         points={points}
+                        lang={lang}
+                        t={t}
                       />
                     </>
                   </ProtectedRoute>

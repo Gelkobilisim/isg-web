@@ -27,6 +27,8 @@ export const PWAInstallButton = ({ className, variant = 'default' }) => {
     }
   };
 
+  const isEn = typeof window !== 'undefined' && localStorage.getItem('app_lang') === 'en';
+
   const baseClass = className || (variant === 'rounded' 
     ? "group flex items-center justify-center gap-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-4 py-2.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-gray-800 dark:text-gray-100 hover:scale-105 transition-all duration-300 border border-white/50 dark:border-gray-700/50"
     : "flex items-center justify-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors w-full sm:w-auto");
@@ -36,7 +38,7 @@ export const PWAInstallButton = ({ className, variant = 'default' }) => {
       <button onClick={handleClick} className={baseClass}>
         <Download className={variant === 'rounded' ? "w-5 h-5 text-green-500 group-hover:-translate-y-0.5 transition-transform" : "w-4 h-4"} />
         <span className={variant === 'rounded' ? "text-sm font-bold hidden sm:inline-block" : ""}>
-          Ana Ekrana Ekle
+          {isEn ? "Install App" : "Ana Ekrana Ekle"}
         </span>
       </button>
 
@@ -62,10 +64,10 @@ export const PWAInstallButton = ({ className, variant = 'default' }) => {
                   <div>
                     <h3 className="text-xl font-extrabold text-gray-900 dark:text-white flex items-center gap-2">
                       <Smartphone className="w-6 h-6 text-indigo-500" />
-                      Uygulamayı Kur
+                      {isEn ? "Install App" : "Uygulamayı Kur"}
                     </h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Daha hızlı erişim için ana ekrana ekleyin.
+                      {isEn ? "Add to home screen for faster access." : "Daha hızlı erişim için ana ekrana ekleyin."}
                     </p>
                   </div>
                   <button onClick={() => setShowGuide(false)} className="p-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors">
@@ -80,7 +82,11 @@ export const PWAInstallButton = ({ className, variant = 'default' }) => {
                         <Share className="w-6 h-6" />
                       </div>
                       <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-snug">
-                        Tarayıcınızın alt menüsündeki <strong className="text-blue-600 dark:text-blue-400">Paylaş</strong> butonuna dokunun.
+                        {isEn ? (
+                          <>Tap the <strong className="text-blue-600 dark:text-blue-400">Share</strong> button in your browser's bottom bar.</>
+                        ) : (
+                          <>Tarayıcınızın alt menüsündeki <strong className="text-blue-600 dark:text-blue-400">Paylaş</strong> butonuna dokunun.</>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">
@@ -88,7 +94,11 @@ export const PWAInstallButton = ({ className, variant = 'default' }) => {
                         <PlusSquare className="w-6 h-6" />
                       </div>
                       <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-snug">
-                        Aşağı kaydırıp <strong className="text-gray-900 dark:text-white">Ana Ekrana Ekle</strong> (Add to Home Screen) seçeneğini seçin.
+                        {isEn ? (
+                          <>Scroll down and tap <strong className="text-gray-900 dark:text-white">Add to Home Screen</strong>.</>
+                        ) : (
+                          <>Aşağı kaydırıp <strong className="text-gray-900 dark:text-white">Ana Ekrana Ekle</strong> seçeneğini seçin.</>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -99,7 +109,11 @@ export const PWAInstallButton = ({ className, variant = 'default' }) => {
                         <MoreVertical className="w-6 h-6" />
                       </div>
                       <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-snug">
-                        Tarayıcınızın sağ üst köşesindeki <strong className="text-gray-900 dark:text-white">Seçenekler (3 nokta)</strong> menüsüne dokunun.
+                        {isEn ? (
+                          <>Tap the <strong className="text-gray-900 dark:text-white">Options (3 dots)</strong> menu in the top right.</>
+                        ) : (
+                          <>Tarayıcınızın sağ üst köşesindeki <strong className="text-gray-900 dark:text-white">Seçenekler (3 nokta)</strong> menüsüne dokunun.</>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-4 bg-gray-50 dark:bg-gray-900/50 p-4 rounded-2xl border border-gray-100 dark:border-gray-700">
@@ -107,7 +121,11 @@ export const PWAInstallButton = ({ className, variant = 'default' }) => {
                         <Download className="w-6 h-6" />
                       </div>
                       <p className="text-sm text-gray-700 dark:text-gray-300 font-medium leading-snug">
-                        Menüden <strong className="text-green-600 dark:text-green-400">Ana Ekrana Ekle</strong> veya <strong className="text-green-600 dark:text-green-400">Uygulamayı Yükle</strong> seçeneğine dokunun.
+                        {isEn ? (
+                          <>Select <strong className="text-green-600 dark:text-green-400">Add to Home screen</strong> or <strong className="text-green-600 dark:text-green-400">Install App</strong>.</>
+                        ) : (
+                          <>Menüden <strong className="text-green-600 dark:text-green-400">Ana Ekrana Ekle</strong> veya <strong className="text-green-600 dark:text-green-400">Uygulamayı Yükle</strong> seçeneğine dokunun.</>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -117,7 +135,7 @@ export const PWAInstallButton = ({ className, variant = 'default' }) => {
                   onClick={() => setShowGuide(false)}
                   className="w-full mt-6 bg-gray-900 hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-100 text-white dark:text-gray-900 font-bold py-4 rounded-2xl transition-colors shadow-lg"
                 >
-                  Anladım
+                  {isEn ? "Got it" : "Anladım"}
                 </button>
               </div>
             </motion.div>

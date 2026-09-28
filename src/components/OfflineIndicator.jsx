@@ -27,10 +27,12 @@ export const OfflineIndicator = () => {
 
   if (isOnline) return null;
 
+  const isEn = typeof window !== 'undefined' && localStorage.getItem('app_lang') === 'en';
+
   return (
     <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[100] flex items-center gap-3 rounded-2xl bg-amber-500 px-4 py-2 text-sm font-bold text-white shadow-xl animate-slide-up">
       <WifiOff className="w-5 h-5 animate-pulse" />
-      Çevrimdışı Mod (Önbellek kullanılıyor)
+      {isEn ? "Offline Mode (Using cached data)" : "Çevrimdışı Mod (Önbellek kullanılıyor)"}
     </div>
   );
 };

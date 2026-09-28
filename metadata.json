@@ -1,0 +1,7 @@
+{
+  "name": "ADS Takip - İSG ve Sevkiyat Yönetim Portalı",
+  "description": "ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
