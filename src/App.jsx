@@ -624,8 +624,52 @@ const TimerWrapper = ({ children }) => {
   return children(now);
 };
 
-export const AppContext = React.createContext();
-export const useAppContext = () => React.useContext(AppContext);
+export const AppContext = React.createContext({
+  lang: typeof window !== "undefined" ? localStorage.getItem("isg_lang") || "tr" : "tr",
+  setLang: () => {},
+  toggleLang: () => {},
+  t: (k) => DICT["tr"]?.[k] || k,
+  tasks: [],
+  users: [],
+  loadings: [],
+  points: {},
+  currentUser: null,
+});
+
+export const useAppContext = () => {
+  const context = React.useContext(AppContext);
+  const fallbackLang =
+    (typeof window !== "undefined" ? localStorage.getItem("isg_lang") : null) || "tr";
+  if (!context) {
+    return {
+      lang: fallbackLang,
+      setLang: () => {},
+      toggleLang: () => {},
+      t: (key) => DICT[fallbackLang]?.[key] || DICT["tr"]?.[key] || key,
+      currentUser: null,
+      tasks: [],
+      users: [],
+      loadings: [],
+      points: {},
+    };
+  }
+  if (!context.lang) {
+    context.lang = fallbackLang;
+  }
+  if (!context.t) {
+    context.t = (key) => DICT[context.lang]?.[key] || DICT["tr"]?.[key] || key;
+  }
+  return context;
+};
+
+export const useLanguage = () => {
+  const ctx = useAppContext();
+  const lang = ctx?.lang || (typeof window !== "undefined" ? localStorage.getItem("isg_lang") : null) || "tr";
+  const t = ctx?.t || ((key) => DICT[lang]?.[key] || DICT["tr"]?.[key] || key);
+  const setLang = ctx?.setLang || (() => {});
+  const toggleLang = ctx?.toggleLang || (() => {});
+  return { lang, t, setLang, toggleLang };
+};
 
 const ImageLightboxModal = () => {
   const ctx = useAppContext();
@@ -847,7 +891,7 @@ const LoginScreen = () => {
       }
       if (
         loginTheme === "yukleme" &&
-        (account.role === "sef" || account.role === "mod")
+        (account.role === "sef" || account.role === "mod" || account.role === "isg" || account.role === "isgci")
       ) {
         setLoginErr(t("err_yukleme_module"));
         setIsSubmitting(false);
@@ -1491,7 +1535,7 @@ const LoginScreen = () => {
                       <ShieldAlert className="w-4 h-4 text-blue-400 shrink-0" />
                       <span>{t("role_admin") || "Sistem Yöneticisi"}</span>
                     </>
-                  ) : welcomeState.user.role === "mod" ? (
+                  ) : (welcomeState.user.role === "mod" || welcomeState.user.role === "isg" || welcomeState.user.role === "isgci") ? (
                     <>
                       <HardHat className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span>{t("role_mod") || "İSG Uzmanı"}</span>
@@ -1663,7 +1707,7 @@ const MainLayout = ({ theme = "blue", children }) => {
   else if (currentUser.role === "yuklenici" || currentUser.role === "worker")
     roleText = t("role_guest") || "Yüklenici / Personel";
   else if (currentUser.role === "admin") roleText = t("role_admin") || "Sistem Yöneticisi";
-  else if (currentUser.role === "mod") roleText = t("role_mod") || "İSG Uzmanı";
+  else if (currentUser.role === "mod" || currentUser.role === "isg" || currentUser.role === "isgci") roleText = t("role_mod") || "İSG Uzmanı";
 
   const [showDebug, setShowDebug] = useState(false);
   const [showNotifHistoryModal, setShowNotifHistoryModal] = useState(false);
@@ -3369,7 +3413,7 @@ const YuklemeciDashboard = () => {
 
 const YukleniciDashboard = () => {
   const ctx = useAppContext();
-  const { t, createTask } = ctx;
+  const { t, createTask, lang = "tr" } = ctx || {};
 
   const [imgPreview, setImgPreview] = React.useState(null);
   const [formState, setFormState] = React.useState({
@@ -3553,7 +3597,7 @@ const YukleniciDashboard = () => {
 };
 const ModDashboard = () => {
   const ctx = useAppContext();
-  const { t, tasks, createTask, updateTaskStatus } = ctx;
+  const { t, tasks = [], createTask, updateTaskStatus, lang = "tr" } = ctx || {};
 
   const [activeTab, setActiveTab] = React.useState("create"); // 'create' or 'review'
   const [actionModal, setActionModal] = React.useState({
@@ -4179,7 +4223,8 @@ const SefDashboard = () => {
     updateTaskStatus,
     setPreviewModalImg,
     setPreviewModalTitle,
-  } = ctx;
+    lang = "tr",
+  } = ctx || {};
   const [actionModal, setActionModal] = React.useState({
     isOpen: false,
     taskId: null,
@@ -4579,7 +4624,7 @@ const SefDashboard = () => {
 
 const FeedbacksAdmin = () => {
   const ctx = useAppContext();
-  const { db, setAdminSystemMode, t } = ctx;
+  const { db, setAdminSystemMode, t, lang = "tr" } = ctx || {};
   const navigate = useNavigate();
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12245,7 +12290,9 @@ export default function App() {
                   const isTargetUser =
                     (notifRole === "sef" && notifDept === newTask.dept) ||
                     notifRole === "admin" ||
-                    notifRole === "mod";
+                    notifRole === "mod" ||
+                    notifRole === "isg" ||
+                    notifRole === "isgci";
                   if (isTargetUser) {
                     const isCritical =
                       newTask.priority === "kritik" ||
@@ -12318,7 +12365,10 @@ export default function App() {
                   }
                 } else if (oldTask.status !== newTask.status) {
                   const isTargetAdmin =
-                    notifRole === "admin" || notifRole === "mod";
+                    notifRole === "admin" ||
+                    notifRole === "mod" ||
+                    notifRole === "isg" ||
+                    notifRole === "isgci";
                   const isTargetChief =
                     notifRole === "sef" && notifDept === newTask.dept;
 
@@ -13258,7 +13308,11 @@ export default function App() {
                             currentUser?.username === "agiradarsahin" ? (
                             <MemoAdminDashboard />
                           ) : null}
-                          {currentUser?.role === "mod" && <MemoModDashboard />}
+                          {(currentUser?.role === "mod" ||
+                            currentUser?.role === "isg" ||
+                            currentUser?.role === "isgci") && (
+                            <MemoModDashboard />
+                          )}
                           {currentUser?.role === "sef" && <MemoSefDashboard />}
                           {currentUser?.role === "yuklemeci" && (
                             <MemoYuklemeciDashboard />
