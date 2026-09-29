@@ -26,6 +26,7 @@ import {
   CheckCircle,
   XCircle,
   LogOut,
+  Filter,
   Clock,
   ShieldAlert,
   ShieldCheck,
@@ -751,12 +752,14 @@ const ImageLightboxModal = () => {
           loading="lazy"
           decoding="async"
           src={previewModalImg}
-          alt="Büyütülmüş Fotoğraf"
+          alt={lang === "en" ? "Zoomed Photo" : "Büyütülmüş Fotoğraf"}
           className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl border border-white/20"
         />
         <p className="text-white/70 text-xs mt-3 flex items-center">
-          <Maximize2 className="w-3.5 h-3.5 mr-1" /> Kapatmak için görsele veya
-          boşluğa tıklayabilirsiniz
+          <Maximize2 className="w-3.5 h-3.5 mr-1" />{" "}
+          {lang === "en"
+            ? "Click on the image or the background to close"
+            : "Kapatmak için görsele veya boşluğa tıklayabilirsiniz"}
         </p>
       </div>
     </div>
@@ -1021,13 +1024,40 @@ const LoginScreen = () => {
             {darkMode ? (t("light_mode") || "Açık Mod") : (t("dark_mode") || "Koyu Mod")}
           </span>
         </button>
-        <button
-          onClick={toggleLang}
-          className="group flex items-center gap-2 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-5 py-2.5 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] text-sm font-bold text-gray-800 dark:text-gray-100 hover:scale-105 transition-all duration-300 border border-white/50 dark:border-gray-700/50"
-        >
-          <Globe className="w-5 h-5 text-blue-500" />
-          <span>{lang === "tr" ? "English" : "Türkçe"}</span>
-        </button>
+        <div className="flex items-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-md p-1 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-white/50 dark:border-gray-700/50">
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("selection");
+              if (lang !== "tr") setLang("tr");
+            }}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              lang === "tr"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            }`}
+            title="Türkçe"
+          >
+            <span>🇹🇷</span>
+            <span>TR</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic("selection");
+              if (lang !== "en") setLang("en");
+            }}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer ${
+              lang === "en"
+                ? "bg-blue-600 text-white shadow-xs"
+                : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+            }`}
+            title="English"
+          >
+            <span>🇬🇧</span>
+            <span>EN</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-gray-800/90 backdrop-blur-md p-1.5 rounded-full shadow-2xl mb-8 flex space-x-1 border border-white/40 z-10">
@@ -2080,13 +2110,44 @@ const MainLayout = ({ theme = "blue", children }) => {
           >
             <Bell className="w-5 h-5 mr-3 shrink-0" /> {t("notification_history") || "Bildirim Geçmişi"}
           </button>
-          <button
-            onClick={toggleLang}
-            className="w-full flex items-center px-3 py-2.5 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 font-medium rounded-xl transition-colors text-sm"
-          >
-            <Globe className="w-5 h-5 mr-3 shrink-0" />{" "}
-            {lang === "tr" ? "EN (English)" : "TR (Türkçe)"}
-          </button>
+          <div className="w-full p-1 bg-gray-100/90 dark:bg-gray-800/90 rounded-2xl flex items-center justify-between border border-gray-200/80 dark:border-gray-700/80 mt-1 mb-1">
+            <span className="text-xs font-bold text-gray-600 dark:text-gray-300 pl-2.5 flex items-center gap-1.5">
+              <Globe className="w-4 h-4 text-blue-500 shrink-0" />
+              <span>{t("language_label") || "Dil / Language"}</span>
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  if (lang !== "tr") setLang("tr");
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  lang === "tr"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+                title="Türkçe"
+              >
+                TR
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic("selection");
+                  if (lang !== "en") setLang("en");
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                  lang === "en"
+                    ? "bg-blue-600 text-white shadow-xs"
+                    : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                }`}
+                title="English"
+              >
+                EN
+              </button>
+            </div>
+          </div>
           <button
             onClick={() => {
               triggerHaptic("light");
@@ -2151,13 +2212,21 @@ const MainLayout = ({ theme = "blue", children }) => {
           </div>
           <div className="flex items-center space-x-1">
             <button
+              onClick={toggleLang}
+              className="p-1.5 px-2 text-xs font-black text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors flex items-center gap-1 border border-gray-200/60 dark:border-gray-700/60"
+              title={lang === "tr" ? "Switch interface to English" : "Arayüzü Türkçe'ye çevir"}
+            >
+              <Globe className="w-3.5 h-3.5 text-blue-500" />
+              <span>{lang === "tr" ? "EN" : "TR"}</span>
+            </button>
+            <button
               onClick={toggleSoundAlerts}
               className={`p-2 rounded-lg transition-colors ${
                 soundAlerts
                   ? "text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30"
                   : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
               }`}
-              title={soundAlerts ? "Sesli Uyarılar: Açık" : "Sesli Uyarılar: Kapalı"}
+              title={soundAlerts ? (t("sound_alerts_on") || "Sesli Uyarılar: Açık") : (t("sound_alerts_off") || "Sesli Uyarılar: Kapalı")}
             >
               {soundAlerts ? (
                 <Volume2 className="w-4 h-4" />
@@ -2171,7 +2240,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                 setDarkMode(!darkMode);
               }}
               className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-              title="Tema"
+              title={t("change_theme") || "Tema"}
             >
               {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
             </button>
@@ -2200,20 +2269,31 @@ const MainLayout = ({ theme = "blue", children }) => {
                 }`}
               ></span>
               {adminSystemMode === "yukleme"
-                ? "Sevkiyat & Lojistik Modülü"
-                : "İSG & Kalite Portalı"}
+                ? (t("yukleme_module_badge") || "Sevkiyat & Lojistik Modülü")
+                : (t("isg_portal_badge") || "İSG & Kalite Portalı")}
             </span>
             <span className="text-xs text-gray-300 dark:text-gray-600">•</span>
             <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-              ADS Metal A.Ş. — Anadolu OSB
+              {t("factory_header_sub") || "ADS Metal A.Ş. — Anadolu OSB"}
             </span>
           </div>
 
           <div className="flex items-center space-x-3">
+            <button
+              onClick={toggleLang}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200/80 dark:border-gray-700/80 bg-gray-50 dark:bg-gray-800 text-xs font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition-all cursor-pointer shadow-2xs"
+              title={lang === "tr" ? "Switch interface to English" : "Arayüzü Türkçe'ye çevir"}
+            >
+              <Globe className="w-4 h-4 text-blue-500" />
+              <span className="font-extrabold">{lang === "tr" ? "English" : "Türkçe"}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 font-mono font-bold">
+                {lang === "tr" ? "EN" : "TR"}
+              </span>
+            </button>
             <div className="flex items-center gap-2 bg-gray-100/70 dark:bg-gray-800/70 px-3 py-1.5 rounded-xl border border-gray-200/60 dark:border-gray-700/60 text-xs">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></div>
               <span className="font-bold text-gray-800 dark:text-gray-100 truncate pb-0.5 max-w-[160px]">
-                {currentUser?.name || "Kullanıcı"}
+                {currentUser?.name || t("user") || "Kullanıcı"}
               </span>
               <span className="text-[10px] text-gray-400 shrink-0">({roleText})</span>
             </div>
@@ -2226,8 +2306,8 @@ const MainLayout = ({ theme = "blue", children }) => {
               }`}
               title={
                 soundAlerts
-                  ? "Sesli Uyarılar: Açık (Test sesi için tıklayın)"
-                  : "Sesli Uyarılar: Kapalı"
+                  ? (t("sound_alerts_on") || "Sesli Uyarılar: Açık (Test sesi için tıklayın)")
+                  : (t("sound_alerts_off") || "Sesli Uyarılar: Kapalı")
               }
             >
               {soundAlerts ? (
@@ -2242,7 +2322,7 @@ const MainLayout = ({ theme = "blue", children }) => {
                 setDarkMode(!darkMode);
               }}
               className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              title="Tema Değiştir"
+              title={t("change_theme") || "Tema Değiştir"}
             >
               {darkMode ? (
                 <Sun className="w-4 h-4 text-amber-400" />
@@ -3597,200 +3677,641 @@ const YukleniciDashboard = () => {
 };
 const ModDashboard = () => {
   const ctx = useAppContext();
-  const { t, tasks = [], createTask, updateTaskStatus, lang = "tr" } = ctx || {};
+  const {
+    t,
+    tasks = [],
+    createTask,
+    updateTaskStatus,
+    lang = "tr",
+    currentUser,
+    setPreviewModalImg,
+    setPreviewModalTitle,
+    DEPARTMENTS: ctxDepts,
+    getDeptKey: ctxGetDeptKey,
+  } = ctx || {};
 
-  const [activeTab, setActiveTab] = React.useState("create"); // 'create' or 'review'
+  const deptsList = ctxDepts || [
+    "Boyahane",
+    "Kaynaklı imalat",
+    "Lazer",
+    "Altyapı",
+    "Güç",
+    "KAYNAKHANE",
+  ];
+  const getDeptTranslation = (dept) => {
+    if (ctxGetDeptKey && t) {
+      return t(ctxGetDeptKey(dept)) || dept;
+    }
+    return dept;
+  };
+
+  // Tabs: 'create' (Yeni İhlal), 'review' (Onay Bekleyenler), 'tasks' (Saha İhlal Takibi)
+  const [activeTab, setActiveTab] = React.useState("create");
+
+  // Action Modal for Approving / Rejecting Reviews
   const [actionModal, setActionModal] = React.useState({
     isOpen: false,
     taskId: null,
     action: null,
+    task: null,
   });
   const [modNote, setModNote] = React.useState("");
+
+  // Create Form State
   const [imgPreview, setImgPreview] = React.useState(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [formState, setFormState] = React.useState({
-    dept: "Boyahane",
+    dept: deptsList[0] || "Boyahane",
     priority: "yuksek",
     subject: "",
     desc: "",
     deadlineHours: 24,
   });
   const [isCustomDeadline, setIsCustomDeadline] = React.useState(false);
+
+  // Review Tab Filter & Search
+  const [reviewSearch, setReviewSearch] = React.useState("");
+  const [reviewTypeFilter, setReviewTypeFilter] = React.useState("all"); // 'all' | 'onay_bekliyor' | 'itiraz_edildi'
   const [reviewLimit, setReviewLimit] = React.useState(10);
   const [isReviewPaginating, setIsReviewPaginating] = React.useState(false);
 
+  // All Tasks Tab Filter & Search
+  const [taskSearch, setTaskSearch] = React.useState("");
+  const [taskDeptFilter, setTaskDeptFilter] = React.useState("all");
+  const [taskStatusFilter, setTaskStatusFilter] = React.useState("all");
+  const [taskPriorityFilter, setTaskPriorityFilter] = React.useState("all");
+  const [taskLimit, setTaskLimit] = React.useState(12);
+  const [isTaskPaginating, setIsTaskPaginating] = React.useState(false);
+
+  // Quick Subject Templates for Fast 1-Tap Entry
+  const QUICK_TEMPLATES = [
+    { title: "Baret & KKD Eksikliği", titleEn: "Helmet & PPE Non-Compliance", priority: "yuksek", hours: 24 },
+    { title: "Yangın Tüpü Önü Kapalı", titleEn: "Fire Extinguisher Blocked", priority: "kritik", hours: 4 },
+    { title: "Düzensiz Malzeme İstifi", titleEn: "Disorganized Material Stacking", priority: "orta", hours: 24 },
+    { title: "Kablo & Elektrik Tehlikesi", titleEn: "Electrical / Cable Hazard", priority: "kritik", hours: 2 },
+    { title: "Yüksekte Emniyetsiz Çalışma", titleEn: "Unsafe Work at Height", priority: "kritik", hours: 2 },
+    { title: "Forklift & Yaya Yolu İhlali", titleEn: "Forklift & Walkway Violation", priority: "yuksek", hours: 8 },
+    { title: "Kaygan Zemin & Sıvı Sızıntısı", titleEn: "Slippery Floor & Fluid Leak", priority: "yuksek", hours: 4 },
+    { title: "Makine Koruyucu Eksikliği", titleEn: "Missing Machine Safety Guard", priority: "kritik", hours: 4 },
+  ];
+
+  // Key KPI Calculations
+  const pendingReviewTasks = React.useMemo(() => {
+    return tasks
+      .filter((t) => t.status === "onay_bekliyor" || t.status === "itiraz_edildi")
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  }, [tasks]);
+
+  const openTasks = React.useMemo(() => {
+    return tasks.filter((t) => t.status === "acik");
+  }, [tasks]);
+
+  const criticalTasks = React.useMemo(() => {
+    return tasks.filter(
+      (t) =>
+        (t.priority === "kritik" || t.priority === "yuksek") &&
+        t.status !== "kapatildi",
+    );
+  }, [tasks]);
+
+  const resolvedTasks = React.useMemo(() => {
+    return tasks.filter(
+      (t) => t.status === "kapatildi" || t.status === "cozuldu",
+    );
+  }, [tasks]);
+
+  // Filtered Review Tasks
+  const filteredReviewTasks = React.useMemo(() => {
+    return pendingReviewTasks.filter((task) => {
+      if (reviewTypeFilter !== "all" && task.status !== reviewTypeFilter) {
+        return false;
+      }
+      if (reviewSearch.trim()) {
+        const query = reviewSearch.toLowerCase();
+        const matchSubject = (task.subject || "").toLowerCase().includes(query);
+        const matchDesc = (task.desc || "").toLowerCase().includes(query);
+        const matchDept = (task.dept || "").toLowerCase().includes(query);
+        const matchChief = (task.chiefNote || "").toLowerCase().includes(query);
+        if (!matchSubject && !matchDesc && !matchDept && !matchChief) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [pendingReviewTasks, reviewTypeFilter, reviewSearch]);
+
+  // Filtered All Tasks
+  const filteredAllTasks = React.useMemo(() => {
+    return tasks
+      .filter((task) => {
+        if (taskDeptFilter !== "all" && task.dept !== taskDeptFilter) {
+          return false;
+        }
+        if (taskStatusFilter !== "all") {
+          if (taskStatusFilter === "cozuldu") {
+            if (task.status !== "cozuldu" && task.status !== "kapatildi") return false;
+          } else if (task.status !== taskStatusFilter) {
+            return false;
+          }
+        }
+        if (taskPriorityFilter !== "all" && task.priority !== taskPriorityFilter) {
+          return false;
+        }
+        if (taskSearch.trim()) {
+          const query = taskSearch.toLowerCase();
+          const matchSubject = (task.subject || "").toLowerCase().includes(query);
+          const matchDesc = (task.desc || "").toLowerCase().includes(query);
+          const matchDept = (task.dept || "").toLowerCase().includes(query);
+          if (!matchSubject && !matchDesc && !matchDept) return false;
+        }
+        return true;
+      })
+      .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+  }, [tasks, taskDeptFilter, taskStatusFilter, taskPriorityFilter, taskSearch]);
+
+  // Handlers
   const handleLoadMoreReview = () => {
     setIsReviewPaginating(true);
     setTimeout(() => {
       setReviewLimit((prev) => prev + 10);
       setIsReviewPaginating(false);
-    }, 400);
+    }, 350);
   };
 
-  const reviewTasks = React.useMemo(() => {
-    return tasks
-      .filter(
-        (t) => t.status === "onay_bekliyor" || t.status === "itiraz_edildi",
-      )
-      .sort((a, b) => b.timestamp - a.timestamp);
-  }, [tasks]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formState.subject.trim()) {
-      triggerHaptic("error");
-      toast.error(t("err_fill_all") || "Lütfen gerekli alanları doldurun.");
-      return;
-    }
-    createTask(
-      formState.dept,
-      formState.priority,
-      formState.subject,
-      formState.desc,
-      Number(formState.deadlineHours) || 24,
-      imgPreview,
-    );
-    setFormState({
-      dept: "Boyahane",
-      priority: "yuksek",
-      subject: "",
-      desc: "",
-      deadlineHours: 24,
-    });
-    setIsCustomDeadline(false);
-    setImgPreview(null);
-    triggerHaptic("success");
-    toast.success(
-      t("success_created") || "İhlal kaydı başarıyla oluşturuldu.",
-      {
-        style: { borderRadius: "12px", background: "#333", color: "#fff" },
-      },
-    );
-    setActiveTab("review");
+  const handleLoadMoreTasks = () => {
+    setIsTaskPaginating(true);
+    setTimeout(() => {
+      setTaskLimit((prev) => prev + 12);
+      setIsTaskPaginating(false);
+    }, 350);
   };
 
-  const handleActionSubmit = (e) => {
-    e.preventDefault();
-    if (actionModal.action === "approve") {
-      updateTaskStatus(actionModal.taskId, "kapatildi", modNote, "", "");
-      triggerHaptic("success");
-      toast.success("İşlem onaylandı ve kapatıldı.", {
-        style: { borderRadius: "12px", background: "#333", color: "#fff" },
-      });
-    } else if (actionModal.action === "reject") {
-      updateTaskStatus(actionModal.taskId, "acik", modNote, "", "");
-      triggerHaptic("warning");
-      toast.error("Yanıt reddedildi ve geri gönderildi.", {
-        style: { borderRadius: "12px", background: "#333", color: "#fff" },
-      });
-    }
-    setActionModal({ isOpen: false, taskId: null, action: null });
-    setModNote("");
-  };
-
-  const handleImageUpload = (file, setter) => {
+  const handleImageUpload = (file) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onloadend = () => {
-      setter(reader.result);
+      setImgPreview(reader.result);
     };
     reader.readAsDataURL(file);
   };
 
-  return (
-    <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 animate-slide-up">
-      <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100">
-            <ShieldAlert className="w-8 h-8 mr-3 text-blue-500" />
-            {t("isg_expert_panel") || "İSG Uzmanı Paneli"}
-          </h2>
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formState.subject.trim()) {
+      triggerHaptic("error");
+      toast.error(t("err_fill_all") || "Lütfen bir ihlal konusu / başlığı girin.");
+      return;
+    }
+    if (isSubmitting) return;
 
-          <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl w-full md:w-auto">
+    setIsSubmitting(true);
+    try {
+      await createTask(
+        formState.dept,
+        formState.priority,
+        formState.subject.trim(),
+        formState.desc.trim(),
+        Number(formState.deadlineHours) || 24,
+        imgPreview,
+      );
+
+      triggerHaptic("success");
+      toast.success(
+        lang === "en"
+          ? "Safety violation reported successfully."
+          : `İSG İhlal kaydı açıldı: "${formState.dept}" birimine bildirim iletildi.`,
+      );
+
+      setFormState({
+        dept: formState.dept,
+        priority: "yuksek",
+        subject: "",
+        desc: "",
+        deadlineHours: 24,
+      });
+      setIsCustomDeadline(false);
+      setImgPreview(null);
+    } catch (err) {
+      console.error("Create task error:", err);
+      toast.error(lang === "en" ? "An error occurred while creating violation record." : "İhlal kaydı oluşturulurken bir hata meydana geldi.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleActionSubmit = async (e) => {
+    e.preventDefault();
+    if (!actionModal.taskId || !actionModal.action) return;
+
+    const isApprove = actionModal.action === "approve";
+    const newStatus = isApprove ? "kapatildi" : "acik";
+
+    try {
+      await updateTaskStatus(
+        actionModal.taskId,
+        newStatus,
+        "",
+        "",
+        modNote.trim(),
+      );
+
+      triggerHaptic(isApprove ? "success" : "warning");
+      toast.success(
+        isApprove
+          ? (lang === "en" ? "Violation closed and confirmed." : "İhlal çözümü onaylandı ve kayıt başarıyla kapatıldı.")
+          : (lang === "en" ? "Response rejected, sent back to chief." : "Yanıt reddedildi, ihlal tekrar çözülmesi için birim şefine geri gönderildi."),
+      );
+    } catch (err) {
+      console.error("Action submit error:", err);
+      toast.error(lang === "en" ? "Action could not be performed." : "İşlem gerçekleştirilemedi.");
+    } finally {
+      setActionModal({ isOpen: false, taskId: null, action: null, task: null });
+      setModNote("");
+    }
+  };
+
+  // Target deadline calculation
+  const targetDate = new Date(
+    Date.now() + (Number(formState.deadlineHours) || 24) * 60 * 60 * 1000,
+  );
+  const formattedTargetDate = targetDate.toLocaleString(
+    lang === "en" ? "en-US" : "tr-TR",
+    {
+      day: "numeric",
+      month: "short",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    },
+  );
+
+  return (
+    <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 animate-slide-up space-y-6">
+      {/* 1. Executive Top Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-200 dark:border-gray-700/80 transition-all">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+          <div className="flex items-start sm:items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700 text-white flex items-center justify-center shadow-lg shadow-teal-500/20 shrink-0">
+              <HardHat className="w-8 h-8" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
+                  {lang === "en"
+                    ? "OHS Specialist Action Portal"
+                    : "İSG Uzmanı Saha & Aksiyon Paneli"}
+                </h1>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                  {lang === "en" ? "Live Inspection" : "Saha Denetimi Aktif"}
+                </div>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 max-w-2xl font-normal leading-relaxed">
+                {lang === "en"
+                  ? "Detect field hazards, assign timed violation tasks with automated scoring, and verify chief corrective actions."
+                  : "Saha tehlike tespiti, terminli ihlal atamaları, şef çözüm/itiraz değerlendirmeleri ve canlı süreç takibi."}
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Header CTA */}
+          <div className="flex items-center gap-2.5 self-stretch sm:self-auto shrink-0">
             <button
-              onClick={() => setActiveTab("create")}
-              className={`flex-1 md:flex-none px-3 py-2 sm:px-6 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${activeTab === "create" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              onClick={() => {
+                triggerHaptic("selection");
+                setActiveTab("create");
+              }}
+              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
             >
-              <span className="flex items-center justify-center">
-                <Plus className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0" /> {t("create_violation") || "İhlal Oluştur"}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab("review")}
-              className={`flex-1 md:flex-none px-3 py-2 sm:px-6 sm:py-2.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${activeTab === "review" ? "bg-white dark:bg-gray-800 text-blue-600 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
-            >
-              <span className="flex items-center justify-center">
-                <CheckSquare className="w-4 h-4 mr-1.5 sm:mr-2 shrink-0" />
-                {t("check_responses_tab") || "Yanıtları Kontrol Et"}
-                {reviewTasks.length > 0 && (
-                  <span className="ml-1.5 sm:ml-2 bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full text-[10px] sm:text-xs">
-                    {reviewTasks.length}
-                  </span>
-                )}
-              </span>
+              <Plus className="w-4 h-4" />
+              <span>{lang === "en" ? "New Inspection" : "Yeni İhlal Bildir"}</span>
             </button>
           </div>
         </div>
       </div>
 
+      {/* 2. Quick Metrics Strip - 4 Balanced Cards, Equal Baseline & Height */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Metric 1: Pending Reviews */}
+        <div
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("review");
+            setReviewTypeFilter("all");
+          }}
+          className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer min-h-[115px] flex flex-col justify-between ${
+            activeTab === "review"
+              ? "bg-amber-50/90 dark:bg-amber-950/30 border-amber-300 dark:border-amber-700 ring-2 ring-amber-500/20 shadow-sm"
+              : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-xs"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-bold">
+              {lang === "en" ? "Pending Reviews" : "Onay Bekleyenler"}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+              <CheckSquare className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="my-1.5">
+            <p className="text-2xl sm:text-3xl font-black tabular-nums leading-none text-amber-600 dark:text-amber-400">
+              <CountUp end={pendingReviewTasks.length} duration={600} />
+            </p>
+          </div>
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
+            <span>{lang === "en" ? "Solutions & Objections" : "Şef çözümleri & itirazlar"}</span>
+          </div>
+        </div>
+
+        {/* Metric 2: Open Field Tasks */}
+        <div
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("tasks");
+            setTaskStatusFilter("acik");
+          }}
+          className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer min-h-[115px] flex flex-col justify-between ${
+            activeTab === "tasks" && taskStatusFilter === "acik"
+              ? "bg-blue-50/90 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700 ring-2 ring-blue-500/20 shadow-sm"
+              : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-xs"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-bold">
+              {lang === "en" ? "Open Field Tasks" : "Açık Saha İhlalleri"}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="my-1.5">
+            <p className="text-2xl sm:text-3xl font-black tabular-nums leading-none text-blue-600 dark:text-blue-400">
+              <CountUp end={openTasks.length} duration={600} />
+            </p>
+          </div>
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
+            <span>{lang === "en" ? "Action pending by units" : "Birimlerin çözmesi gereken"}</span>
+          </div>
+        </div>
+
+        {/* Metric 3: Critical & High Priority */}
+        <div
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("tasks");
+            setTaskPriorityFilter("kritik");
+          }}
+          className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer min-h-[115px] flex flex-col justify-between ${
+            activeTab === "tasks" && taskPriorityFilter === "kritik"
+              ? "bg-red-50/90 dark:bg-red-950/30 border-red-300 dark:border-red-700 ring-2 ring-red-500/20 shadow-sm"
+              : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-xs"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-bold">
+              {lang === "en" ? "Critical Risks" : "Acil & Kritik Risk"}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+              <ShieldAlert className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="my-1.5">
+            <p className="text-2xl sm:text-3xl font-black tabular-nums leading-none text-red-600 dark:text-red-400">
+              <CountUp end={criticalTasks.length} duration={600} />
+            </p>
+          </div>
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
+            <span>{lang === "en" ? "High & critical priority" : "Öncelikli müdahale"}</span>
+          </div>
+        </div>
+
+        {/* Metric 4: Resolved & Closed */}
+        <div
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("tasks");
+            setTaskStatusFilter("cozuldu");
+          }}
+          className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer min-h-[115px] flex flex-col justify-between ${
+            activeTab === "tasks" && taskStatusFilter === "cozuldu"
+              ? "bg-emerald-50/90 dark:bg-emerald-950/30 border-emerald-300 dark:border-emerald-700 ring-2 ring-emerald-500/20 shadow-sm"
+              : "bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-gray-300 dark:hover:border-gray-600 shadow-xs"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-gray-600 dark:text-gray-300 text-xs sm:text-sm font-bold">
+              {lang === "en" ? "Resolved Total" : "Giderilen İhlaller"}
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-4 h-4" />
+            </div>
+          </div>
+          <div className="my-1.5">
+            <p className="text-2xl sm:text-3xl font-black tabular-nums leading-none text-emerald-600 dark:text-emerald-400">
+              <CountUp end={resolvedTasks.length} duration={600} />
+            </p>
+          </div>
+          <div className="text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">
+            <span>{lang === "en" ? "Confirmed closed tasks" : "Başarıyla kapatılanlar"}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Modern Segmented Tab Navigation */}
+      <div className="bg-gray-100/80 dark:bg-gray-800/80 p-1.5 rounded-2xl flex items-center gap-1 border border-gray-200/80 dark:border-gray-700/60 overflow-x-auto">
+        <button
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("create");
+          }}
+          className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+            activeTab === "create"
+              ? "bg-white dark:bg-gray-900 text-emerald-700 dark:text-emerald-400 shadow-sm shadow-black/5"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+          }`}
+        >
+          <Plus className="w-4 h-4 shrink-0" />
+          <span>{lang === "en" ? "New Inspection" : "1. Yeni İhlal Bildir"}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("review");
+          }}
+          className={`flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer relative ${
+            activeTab === "review"
+              ? "bg-white dark:bg-gray-900 text-amber-700 dark:text-amber-400 shadow-sm shadow-black/5"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+          }`}
+        >
+          <CheckSquare className="w-4 h-4 shrink-0" />
+          <span>{lang === "en" ? "Pending Reviews" : "2. Onay Bekleyenler"}</span>
+          {pendingReviewTasks.length > 0 && (
+            <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] font-black bg-amber-500 text-white animate-pulse">
+              {pendingReviewTasks.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("tasks");
+          }}
+          className={`flex-1 min-w-[160px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+            activeTab === "tasks"
+              ? "bg-white dark:bg-gray-900 text-blue-700 dark:text-blue-400 shadow-sm shadow-black/5"
+              : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+          }`}
+        >
+          <List className="w-4 h-4 shrink-0" />
+          <span>{lang === "en" ? "Field Overview" : "3. Saha İhlal Takibi"}</span>
+          <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500">
+            ({tasks.length})
+          </span>
+        </button>
+      </div>
+
+      {/* 4. TAB 1: YENİ İHLAL BİLDİR (SAHA TESPİT FORMU) */}
       {activeTab === "create" && (
-        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 animate-slide-up">
-          <h2 className="text-xl md:text-2xl font-extrabold mb-6 flex items-center text-gray-800 dark:text-gray-100">
-            <AlertTriangle className="w-6 h-6 mr-3 text-blue-500" />{" "}
-            {t("create_violation") || "İhlal Kaydı Oluştur"}
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-200 dark:border-gray-700/80 animate-slide-up space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700/80 gap-3">
+            <div>
+              <h2 className="text-lg md:text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-500" />
+                {lang === "en" ? "New Hazard / Violation Entry" : "Yeni Saha İhlal Tutanağı Düzenle"}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {lang === "en"
+                  ? "Select target department, define priority and deadline, attach optional photo evidence."
+                  : "İlgili departmanı seçin, öncelik ve termin süresini belirleyin, fotoğraf ile destekleyin."}
+              </p>
+            </div>
+            <div className="text-xs text-gray-400 dark:text-gray-500 font-medium">
+              {lang === "en" ? "Automated Penalty Scoring Active" : "Otomatik Puan ve Bildirim Sistemi Devrede"}
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Quick 1-Tap Subject Templates */}
+            <div>
+              <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 mb-2">
+                {lang === "en" ? "FAST TEMPLATES (1-TAP AUTOFILL)" : "HIZLI ŞABLONLAR (1-TIKLA DOLDUR)"}
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_TEMPLATES.map((tmpl, idx) => {
+                  const templateTitle = lang === "en" ? (tmpl.titleEn || tmpl.title) : tmpl.title;
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic("selection");
+                        setFormState((prev) => ({
+                          ...prev,
+                          subject: templateTitle,
+                          priority: tmpl.priority,
+                          deadlineHours: tmpl.hours,
+                        }));
+                        setIsCustomDeadline(false);
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
+                        formState.subject === templateTitle
+                          ? "bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-300 ring-2 ring-emerald-500/20"
+                          : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                      }`}
+                    >
+                      {templateTitle}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Department & Priority & Deadline Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* 1. Department */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                  {t("department") || "Departman"}
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                  {lang === "en" ? "Target Department" : "Sorumlu Departman"} <span className="text-red-500">*</span>
                 </label>
-                <select
-                  required
-                  value={formState.dept}
-                  onChange={(e) =>
-                    setFormState({ ...formState, dept: e.target.value })
-                  }
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100"
-                >
-                  {DEPARTMENTS.map((dept) => (
-                    <option key={dept} value={dept}>
-                      {t(getDeptKey(dept)) || dept}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <select
+                    required
+                    value={formState.dept}
+                    onChange={(e) =>
+                      setFormState({ ...formState, dept: e.target.value })
+                    }
+                    className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm font-bold text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all cursor-pointer"
+                  >
+                    {deptsList.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {getDeptTranslation(dept)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
+
+              {/* 2. Priority Selection */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                  {t("priority") || "Öncelik Seviyesi"}
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                  {lang === "en" ? "Risk Level" : "Öncelik & Risk Seviyesi"} <span className="text-red-500">*</span>
                 </label>
-                <select
-                  required
-                  value={formState.priority}
-                  onChange={(e) =>
-                    setFormState({ ...formState, priority: e.target.value })
-                  }
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100"
-                >
-                  <option value="kritik">{t("pri_kritik") || "Kritik"}</option>
-                  <option value="yuksek">{t("high") || "Yüksek"}</option>
-                  <option value="orta">{t("medium") || "Orta"}</option>
-                  <option value="dusuk">{t("low") || "Düşük"}</option>
-                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { key: "kritik", label: lang === "en" ? "Critical" : "Kritik", points: "-20 P", color: "red" },
+                    { key: "yuksek", label: lang === "en" ? "High" : "Yüksek", points: "-20 P", color: "orange" },
+                    { key: "orta", label: lang === "en" ? "Medium" : "Orta", points: "-15 P", color: "amber" },
+                    { key: "dusuk", label: lang === "en" ? "Low" : "Düşük", points: "-10 P", color: "blue" },
+                  ].map((p) => {
+                    const isSelected = formState.priority === p.key;
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic("selection");
+                          setFormState({ ...formState, priority: p.key });
+                        }}
+                        className={`p-2.5 rounded-xl border text-xs font-bold flex items-center justify-between transition-all cursor-pointer ${
+                          isSelected
+                            ? p.color === "red"
+                              ? "bg-red-50 dark:bg-red-950/40 border-red-400 dark:border-red-700 text-red-700 dark:text-red-300 ring-2 ring-red-500/20"
+                              : p.color === "orange"
+                                ? "bg-orange-50 dark:bg-orange-950/40 border-orange-400 dark:border-orange-700 text-orange-700 dark:text-orange-300 ring-2 ring-orange-500/20"
+                                : p.color === "amber"
+                                  ? "bg-amber-50 dark:bg-amber-950/40 border-amber-400 dark:border-amber-700 text-amber-700 dark:text-amber-300 ring-2 ring-amber-500/20"
+                                  : "bg-blue-50 dark:bg-blue-950/40 border-blue-400 dark:border-blue-700 text-blue-700 dark:text-blue-300 ring-2 ring-blue-500/20"
+                            : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                        }`}
+                      >
+                        <span>{p.label}</span>
+                        <span className="text-[10px] opacity-75 font-mono">{p.points}</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* 3. Deadline Hours */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center justify-between">
-                  <span className="flex items-center">
-                    <Clock className="w-4 h-4 mr-1.5 text-blue-500" />
-                    Çözüm Süresi (Termin)
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-emerald-600" />
+                    {lang === "en" ? "Deadline (Hours)" : "Çözüm Termini"}
                   </span>
-                  <span className="text-xs font-extrabold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 rounded-md">
-                    {formState.deadlineHours} Saat
+                  <span className="text-emerald-600 dark:text-emerald-400 font-extrabold text-xs">
+                    {formState.deadlineHours} {lang === "en" ? "hours" : "saat"}
                   </span>
                 </label>
                 <div className="flex gap-2">
                   <select
                     value={
-                      [1, 2, 4, 8, 12, 24, 48, 72, 168].includes(Number(formState.deadlineHours)) && !isCustomDeadline
+                      [1, 2, 4, 8, 12, 24, 48, 72, 168].includes(
+                        Number(formState.deadlineHours),
+                      ) && !isCustomDeadline
                         ? String(formState.deadlineHours)
                         : "custom"
                     }
@@ -3799,24 +4320,28 @@ const ModDashboard = () => {
                         setIsCustomDeadline(true);
                       } else {
                         setIsCustomDeadline(false);
-                        setFormState({ ...formState, deadlineHours: Number(e.target.value) });
+                        setFormState({
+                          ...formState,
+                          deadlineHours: Number(e.target.value),
+                        });
                       }
                     }}
-                    className="flex-1 border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100 text-sm"
+                    className="flex-1 px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm font-bold text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all cursor-pointer"
                   >
-                    <option value="1">1 {t("hours_unit") || "Saat"} ({lang === "en" ? "Stop / Urgent" : "Durdurma / Acil"})</option>
-                    <option value="2">2 {t("hours_unit") || "Saat"} ({lang === "en" ? "Urgent Action" : "Acil Müdahale"})</option>
-                    <option value="4">4 {t("hours_unit") || "Saat"} ({lang === "en" ? "Half Shift" : "Yarım Vardiya"})</option>
-                    <option value="8">8 {t("hours_unit") || "Saat"} ({lang === "en" ? "Shift End" : "Vardiya Sonu"})</option>
-                    <option value="12">12 {t("hours_unit") || "Saat"}</option>
-                    <option value="24">24 {t("hours_unit") || "Saat"} ({lang === "en" ? "1 Day - Standard" : "1 Gün - Standart"})</option>
-                    <option value="48">48 {t("hours_unit") || "Saat"} ({lang === "en" ? "2 Days" : "2 Gün"})</option>
-                    <option value="72">72 {t("hours_unit") || "Saat"} ({lang === "en" ? "3 Days" : "3 Gün"})</option>
-                    <option value="168">168 {t("hours_unit") || "Saat"} ({lang === "en" ? "1 Week" : "1 Hafta"})</option>
-                    <option value="custom">{t("deadline_custom") || "⚙️ Farklı Süre Gir..."}</option>
+                    <option value="1">1 {lang === "en" ? "Hour (Emergency Stop)" : "Saat (Durdurma / Acil)"}</option>
+                    <option value="2">2 {lang === "en" ? "Hours (Urgent Intervention)" : "Saat (Acil Müdahale)"}</option>
+                    <option value="4">4 {lang === "en" ? "Hours (Half Shift)" : "Saat (Yarım Vardiya)"}</option>
+                    <option value="8">8 {lang === "en" ? "Hours (Shift End)" : "Saat (Vardiya Sonu)"}</option>
+                    <option value="12">12 {lang === "en" ? "Hours" : "Saat"}</option>
+                    <option value="24">24 {lang === "en" ? "Hours (1 Day Standard)" : "Saat (1 Gün Standart)"}</option>
+                    <option value="48">48 {lang === "en" ? "Hours (2 Days)" : "Saat (2 Gün)"}</option>
+                    <option value="72">72 {lang === "en" ? "Hours (3 Days)" : "Saat (3 Gün)"}</option>
+                    <option value="168">168 {lang === "en" ? "Hours (1 Week)" : "Saat (1 Hafta)"}</option>
+                    <option value="custom">⚙️ {lang === "en" ? "Custom Duration..." : "Özel Süre Gir..."}</option>
                   </select>
+
                   {isCustomDeadline && (
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 w-28">
                       <input
                         type="number"
                         min="1"
@@ -3826,46 +4351,39 @@ const ModDashboard = () => {
                           const val = Math.max(1, parseInt(e.target.value, 10) || 1);
                           setFormState({ ...formState, deadlineHours: val });
                         }}
-                        className="w-20 border border-blue-500 dark:border-blue-400 rounded-xl p-3 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-gray-800 dark:text-gray-100 text-center text-sm"
-                        placeholder={t("hours_unit") || "Saat"}
+                        className="w-full px-3 py-3.5 bg-white dark:bg-gray-900 border border-emerald-500 rounded-2xl text-center text-sm font-bold text-gray-900 dark:text-gray-100 outline-none"
                       />
-                      <span className="text-xs font-bold text-gray-500">{t("hours_unit") || "saat"}</span>
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
-            {/* Canlı Termin ve Son Çözüm Tarihi Rozeti */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200/80 dark:border-blue-900/60 rounded-2xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-sm">
-              <div className="flex items-center text-blue-900 dark:text-blue-200 font-semibold">
-                <Clock className="w-4 h-4 mr-2 text-blue-600 dark:text-blue-400 shrink-0 animate-pulse" />
+            {/* Target Live Date Indicator */}
+            <div className="bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 font-semibold">
+                <Clock className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span>
-                  <strong>{t("time_given_to_chief") || "Birim Şefine Verilen Süre"}:</strong> {formState.deadlineHours} {t("hours_unit") || "Saat"}
-                  <span className="text-gray-400 dark:text-gray-500 mx-2">•</span>
-                  <strong>{t("target_completion") || "Son Teslim Vakti"}:</strong>{" "}
-                  {new Date(Date.now() + (Number(formState.deadlineHours) || 24) * 60 * 60 * 1000).toLocaleString(lang === "en" ? "en-US" : "tr-TR", {
-                    day: "numeric",
-                    month: "long",
-                    weekday: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  <strong>{lang === "en" ? "Target Completion Time" : "Şefe Tanınan Son Teslim Zamanı"}:</strong>{" "}
+                  <span className="font-bold underline ml-1">{formattedTargetDate}</span>
                 </span>
               </div>
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">{t("quick_duration") || "Hızlı Süre"}:</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                  {lang === "en" ? "Quick:" : "Hızlı Süre:"}
+                </span>
                 {[2, 4, 8, 24, 48].map((h) => (
                   <button
                     key={h}
                     type="button"
                     onClick={() => {
+                      triggerHaptic("selection");
                       setIsCustomDeadline(false);
                       setFormState({ ...formState, deadlineHours: h });
                     }}
                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                       Number(formState.deadlineHours) === h && !isCustomDeadline
-                        ? "bg-blue-600 text-white shadow-sm scale-105"
+                        ? "bg-emerald-600 text-white shadow-xs"
                         : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                     }`}
                   >
@@ -3874,9 +4392,12 @@ const ModDashboard = () => {
                 ))}
               </div>
             </div>
+
+            {/* Subject Input */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                {t("subject_title") || "Konu / Başlık"}
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                {lang === "en" ? "Subject / Hazard Title" : "İhlal Konusu / Başlık"}{" "}
+                <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -3885,331 +4406,862 @@ const ModDashboard = () => {
                 onChange={(e) =>
                   setFormState({ ...formState, subject: e.target.value })
                 }
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100"
-                placeholder={t("ph_subject") || (lang === "en" ? "e.g., Hard Hat Compliance" : "Örn: Baret Kullanımı")}
+                placeholder={
+                  lang === "en"
+                    ? "e.g., Lack of Helmet in Welding Area"
+                    : "Örn: Kaynakhane KKD Baret Kullanımı Eksikliği"
+                }
+                className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm font-semibold text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all"
               />
             </div>
+
+            {/* Description Textarea */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                {t("description") || "Açıklama / İhlal Detayı"}
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2">
+                {lang === "en" ? "Violation Details / Description" : "İhlal Detayı & Alınması Gereken Önlem"}{" "}
+                <span className="text-red-500">*</span>
               </label>
               <textarea
                 required
-                rows="4"
+                rows={3}
                 value={formState.desc}
                 onChange={(e) =>
                   setFormState({ ...formState, desc: e.target.value })
                 }
-                className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100"
-                placeholder={t("ph_desc") || "İhlal detayı..."}
-              ></textarea>
+                placeholder={
+                  lang === "en"
+                    ? "Describe the safety hazard observed on the field and the required action..."
+                    : "Sahada tespit edilen tehlikeli durumu, risk faktörünü ve birim şefinden beklenen aksiyonu yazın..."
+                }
+                className="w-full px-4 py-3.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-sm font-medium text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 transition-all resize-y"
+              />
             </div>
+
+            {/* Photo Attachment Section */}
             <div>
-              <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                {t("photo") || "Fotoğraf"}{" "}
-                <span className="text-gray-400 dark:text-gray-500">
-                  ({t("optional") || "İsteğe Bağlı"})
+              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2 flex items-center justify-between">
+                <span>
+                  {lang === "en" ? "Field Evidence Photo" : "Saha Kanıt Fotoğrafı"}{" "}
+                  <span className="text-gray-400 font-normal">({lang === "en" ? "Optional" : "İsteğe Bağlı"})</span>
                 </span>
+                {imgPreview && (
+                  <button
+                    type="button"
+                    onClick={() => setImgPreview(null)}
+                    className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{lang === "en" ? "Remove Photo" : "Fotoğrafı Kaldır"}</span>
+                  </button>
+                )}
               </label>
+
               <input
                 type="file"
                 id="modCamera"
                 accept="image/*"
                 className="hidden"
                 onChange={(e) => {
-                  handleImageUpload(e.target.files[0], setImgPreview);
-                  e.target.value = null;
+                  if (e.target.files && e.target.files[0]) {
+                    handleImageUpload(e.target.files[0]);
+                    e.target.value = "";
+                  }
                 }}
               />
-              <label
-                htmlFor="modCamera"
-                className="w-full h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden"
-              >
-                {imgPreview ? (
+
+              {imgPreview ? (
+                <div className="relative rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 max-h-72 flex items-center justify-center group">
                   <img
-                    loading="lazy"
-                    decoding="async"
                     src={imgPreview}
-                    className="w-full h-full object-cover"
+                    alt="Saha Önizleme"
+                    className="w-full h-64 object-cover cursor-zoom-in"
+                    onClick={() => {
+                      if (setPreviewModalImg) {
+                        setPreviewModalImg(imgPreview);
+                        if (setPreviewModalTitle) setPreviewModalTitle("Saha İhlal Fotoğrafı");
+                      }
+                    }}
                   />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                    <label
+                      htmlFor="modCamera"
+                      className="px-4 py-2 bg-white text-gray-900 rounded-xl text-xs font-bold shadow-md cursor-pointer hover:bg-gray-100 transition-colors"
+                    >
+                      {lang === "en" ? "Change Photo" : "Fotoğrafı Değiştir"}
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (setPreviewModalImg) {
+                          setPreviewModalImg(imgPreview);
+                          if (setPreviewModalTitle) setPreviewModalTitle("Saha İhlal Fotoğrafı");
+                        }
+                      }}
+                      className="px-4 py-2 bg-black/70 text-white rounded-xl text-xs font-bold shadow-md hover:bg-black transition-colors flex items-center gap-1"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" />
+                      <span>{lang === "en" ? "Zoom" : "Büyüt"}</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <label
+                  htmlFor="modCamera"
+                  className="w-full h-40 bg-gray-50 dark:bg-gray-900/60 border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                    <Camera className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
+                    {lang === "en" ? "Take Photo / Upload Evidence" : "Kamera ile Çek / Fotoğraf Yükle"}
+                  </span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                    {lang === "en" ? "PNG, JPG or JPEG up to 10MB" : "PNG, JPG veya JPEG formatında"}
+                  </span>
+                </label>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <div className="pt-2">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-700 hover:to-teal-800 text-white font-black text-sm sm:text-base shadow-lg shadow-emerald-600/25 flex items-center justify-center gap-2.5 transition-all active:scale-[0.99] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>{lang === "en" ? "Publishing Inspection Record..." : "İhlal Kaydı Yayınlanıyor..."}</span>
+                  </>
                 ) : (
                   <>
-                    <div className="bg-white dark:bg-gray-800 p-4 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                      <Camera className="w-8 h-8 text-gray-500 group-hover:text-blue-500" />
-                    </div>
-                    <span className="text-sm font-bold">
-                      {t("cam_open") || "Kamerayı Aç / Fotoğraf Yükle"}
-                    </span>
+                    <Send className="w-5 h-5" />
+                    <span>{lang === "en" ? "Publish Violation & Send Alert" : "İhlal Kaydını Yayınla ve Birime Bildir"}</span>
                   </>
                 )}
-              </label>
+              </button>
             </div>
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg flex items-center justify-center transition-colors"
-            >
-              <Send className="w-5 h-5 mr-2" /> {t("send") || "Kaydı Gönder"}
-            </button>
           </form>
         </div>
       )}
 
+      {/* 5. TAB 2: ONAY BEKLEYENLER (ŞEF YANITLARI & İTİRAZLAR) */}
       {activeTab === "review" && (
-        <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-lg border border-gray-100 dark:border-gray-700 animate-slide-up">
-          <h2 className="text-xl md:text-2xl font-extrabold mb-6 flex items-center text-gray-800 dark:text-gray-100">
-            <CheckCircle className="w-6 h-6 mr-3 text-green-500" />{" "}
-            {t("pending_reviews") || "İnceleme Bekleyen Kayıtlar"}
-          </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-200 dark:border-gray-700/80 animate-slide-up space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700/80 gap-3">
+            <div>
+              <h2 className="text-lg md:text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <CheckSquare className="w-5 h-5 text-amber-500" />
+                {lang === "en" ? "Responses Awaiting Review" : "İnceleme ve Onay Bekleyen Yanıtlar"}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {lang === "en"
+                  ? "Evaluate corrected tasks submitted by department chiefs or review objections."
+                  : "Birim şefleri tarafından çözülen ihlalleri kontrol edin ya da yapılan itirazları karara bağlayın."}
+              </p>
+            </div>
 
-          {reviewTasks.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="bg-green-100 dark:bg-green-900/30 p-6 rounded-full inline-block mb-4">
-                <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" />
+            {/* Type Filters */}
+            <div className="flex items-center gap-1.5 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl self-start md:self-auto">
+              <button
+                type="button"
+                onClick={() => setReviewTypeFilter("all")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  reviewTypeFilter === "all"
+                    ? "bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 shadow-xs"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                {lang === "en" ? "All" : "Tümü"} ({pendingReviewTasks.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewTypeFilter("onay_bekliyor")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  reviewTypeFilter === "onay_bekliyor"
+                    ? "bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 shadow-xs"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                {lang === "en" ? "Solutions" : "Çözüm Sunulan"} (
+                {pendingReviewTasks.filter((t) => t.status === "onay_bekliyor").length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setReviewTypeFilter("itiraz_edildi")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  reviewTypeFilter === "itiraz_edildi"
+                    ? "bg-white dark:bg-gray-800 text-red-600 dark:text-red-400 shadow-xs"
+                    : "text-gray-600 dark:text-gray-400"
+                }`}
+              >
+                {lang === "en" ? "Objections" : "İtirazlar"} (
+                {pendingReviewTasks.filter((t) => t.status === "itiraz_edildi").length})
+              </button>
+            </div>
+          </div>
+
+          {/* Search Toolbar */}
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={reviewSearch}
+              onChange={(e) => setReviewSearch(e.target.value)}
+              placeholder={lang === "en" ? "Filter reviews by subject, department or note..." : "Onay bekleyenlerde konu, birim veya şef notu ara..."}
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+            />
+          </div>
+
+          {/* Reviews List */}
+          {filteredReviewTasks.length === 0 ? (
+            <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-900/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700/80">
+              <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-3 shadow-xs">
+                <CheckCircle2 className="w-7 h-7" />
               </div>
-              <h3 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-                Harika! Bekleyen yanıt yok.
+              <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-gray-100">
+                {lang === "en" ? "No pending reviews right now!" : "Harika! Onay bekleyen hiçbir kayıt yok."}
               </h3>
-              <p className="text-gray-500 dark:text-gray-400 mt-2">
-                Şefler tarafından gönderilen çözümler veya itirazlar burada
-                görünecektir.
+              <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mx-auto mt-1">
+                {lang === "en"
+                  ? "When unit chiefs report completed corrective actions or submit objections, they will appear here instantly."
+                  : "Birim şefleri saha çözümlerini bildirdiğinde veya gerekçeli itiraz sunduğunda burada listelenecektir."}
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6">
-              {reviewTasks.slice(0, reviewLimit).map((task) => {
+            <div className="grid grid-cols-1 gap-5">
+              {filteredReviewTasks.slice(0, reviewLimit).map((task) => {
                 const isObjection = task.status === "itiraz_edildi";
-                const rail = isObjection ? "status-rail-red" : "status-rail-amber";
+                const railBorder = isObjection
+                  ? "border-l-4 border-l-red-500"
+                  : "border-l-4 border-l-amber-500";
+
                 return (
                   <div
                     key={task.id}
-                    className={`border border-gray-200 dark:border-gray-700 rounded-2xl p-5 flex flex-col md:flex-row gap-5 card-interactive status-rail ${rail} bg-white dark:bg-gray-800 shadow-sm`}
+                    className={`rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 shadow-xs transition-all ${railBorder}`}
                   >
-                    <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-3 mb-3">
-                        <span className="font-bold text-gray-800 dark:text-gray-100 text-lg">
-                          {task.subject || "İhlal Bildirimi"}
-                        </span>
-                        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">
-                          ({t(getDeptKey(task.dept))})
-                        </span>
-                        <span
-                          className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${task.priority === "yuksek" || task.priority === "kritik" ? "bg-red-100 text-red-700" : task.priority === "orta" ? "bg-orange-100 text-orange-700" : "bg-blue-100 text-blue-700"}`}
-                        >
-                          {t(task.priority)}
-                        </span>
-                        <span
-                          className={`text-xs font-bold px-2 py-1 rounded-md uppercase ${isObjection ? "bg-red-100 text-red-800" : "bg-yellow-100 text-yellow-800"}`}
-                        >
-                          {isObjection
-                            ? t("stat_itiraz") || "İtiraz Edildi"
-                            : t("stat_onay") || "Onay Bekliyor"}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-200 mb-4">
-                        <span className="font-bold">
-                          {t("initial_note") || "İlk İhlal Notu"}:
-                        </span>{" "}
-                        {task.desc}
-                      </p>
-
-                      <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-700">
-                        <p className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2">
-                          {isObjection
-                            ? (t("chief_obj_note") ||
-                                "Birim Şefi İtiraz Notu") + ":"
-                            : (t("chief_fix_note") || "Birim Şefi Çözüm Notu") +
-                              ":"}
-                        </p>
-                        <p className="text-sm text-gray-700 dark:text-gray-200">
-                          {task.chiefNote || t("no_note") || "Not girilmemiş."}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 mt-3 w-full md:w-auto shrink-0">
-                      {task.imgUrl && (
-                        <div className="w-full sm:w-40 flex flex-col">
-                          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 mb-1 inline-block self-start">
-                            {t("stat_oncesi") || "Öncesi (İhlal)"}
-                          </span>
-                          <div
-                            onClick={() => {
-                              ctx.setPreviewModalImg(task.imgUrl);
-                              ctx.setPreviewModalTitle("Öncesi - İhlal Kaydı");
-                            }}
-                            className="relative group h-28 w-full rounded-xl overflow-hidden border border-red-200 dark:border-red-900/40 cursor-zoom-in bg-gray-100 dark:bg-gray-800"
-                          >
-                            <img
-                              loading="lazy"
-                              decoding="async"
-                              src={task.imgUrl}
-                              alt="İhlal Öncesi"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <Maximize2 className="w-4 h-4" />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {task.afterImgUrl && (
-                        <div className="w-full sm:w-40 flex flex-col">
-                          <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded mb-1 inline-block self-start ${isObjection ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300" : "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300"}`}>
-                            {isObjection
-                              ? t("stat_itiraz_foto") || "İtiraz Fotoğrafı"
-                              : t("stat_sonrasi") || "Sonrası (Çözüm)"}
-                          </span>
-                          <div
-                            onClick={() => {
-                              ctx.setPreviewModalImg(task.afterImgUrl);
-                              ctx.setPreviewModalTitle(
+                    <div className="flex flex-col lg:flex-row gap-5 items-start justify-between">
+                      {/* Left: Info & Notes */}
+                      <div className="flex-1 space-y-3 w-full">
+                        {/* Title and Metadata */}
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span
+                              className={`text-[11px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
                                 isObjection
-                                  ? "İtiraz Fotoğrafı"
-                                  : "Sonrası - Çözüm Fotoğrafı",
-                              );
-                            }}
-                            className={`relative group h-28 w-full rounded-xl overflow-hidden border cursor-zoom-in bg-gray-100 dark:bg-gray-800 ${isObjection ? "border-amber-200 dark:border-amber-900/40" : "border-emerald-200 dark:border-emerald-900/40"}`}
+                                  ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300"
+                                  : "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                              }`}
+                            >
+                              {isObjection
+                                ? (lang === "en" ? "Objected" : "İtiraz Edildi")
+                                : (lang === "en" ? "Solution Submitted (Pending Review)" : "Çözüm Bildirildi (Onay Bekliyor)")}
+                            </span>
+                            <span className="text-xs font-black text-gray-800 dark:text-gray-200">
+                              {getDeptTranslation(task.dept)}
+                            </span>
+                            <span className="text-gray-300 dark:text-gray-600">·</span>
+                            <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 capitalize">
+                              {t(task.priority) || task.priority || "Normal"} {lang === "en" ? "Priority" : "Öncelik"}
+                            </span>
+                          </div>
+                          <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-gray-100">
+                            {task.subject || (lang === "en" ? "Violation Notice" : "İhlal Bildirimi")}
+                          </h3>
+                        </div>
+
+                        {/* Initial Violation Note */}
+                        <div className="bg-gray-50 dark:bg-gray-900/60 rounded-xl p-3.5 border border-gray-100 dark:border-gray-700/60 text-xs">
+                          <p className="font-bold text-gray-500 dark:text-gray-400 mb-1">
+                            {lang === "en" ? "Initial Inspector Note:" : "İlk Saha İhlal Notu:"}
+                          </p>
+                          <p className="text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+                            {task.desc || "-"}
+                          </p>
+                        </div>
+
+                        {/* Chief Response Note */}
+                        <div
+                          className={`rounded-xl p-3.5 border text-xs ${
+                            isObjection
+                              ? "bg-red-50/60 dark:bg-red-950/20 border-red-200/80 dark:border-red-900/40"
+                              : "bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-900/40"
+                          }`}
+                        >
+                          <p
+                            className={`font-bold mb-1 ${
+                              isObjection
+                                ? "text-red-800 dark:text-red-300"
+                                : "text-emerald-800 dark:text-emerald-300"
+                            }`}
                           >
-                            <img
-                              loading="lazy"
-                              decoding="async"
-                              src={task.afterImgUrl}
-                              alt="Çözüm Sonrası"
-                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                            />
-                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                              <Maximize2 className="w-4 h-4" />
+                            {isObjection
+                              ? (lang === "en" ? "Chief Objection Justification:" : "Birim Şefi İtiraz Gerekçesi:")
+                              : (lang === "en" ? "Chief Corrective Action Note:" : "Birim Şefi Çözüm Açıklaması:")}
+                          </p>
+                          <p className="text-gray-900 dark:text-gray-100 leading-relaxed font-semibold">
+                            {task.chiefNote || (lang === "en" ? "No note provided." : "Açıklama notu girilmemiş.")}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Middle: Photos (Before & After) */}
+                      <div className="flex items-center gap-3 shrink-0 self-stretch sm:self-auto overflow-x-auto pb-1">
+                        {task.imgUrl && (
+                          <div className="w-32 sm:w-36 flex flex-col shrink-0">
+                            <span className="text-[10px] font-extrabold uppercase text-red-600 dark:text-red-400 mb-1">
+                              {lang === "en" ? "Before (Violation)" : "Öncesi (İhlal)"}
+                            </span>
+                            <div
+                              onClick={() => {
+                                if (setPreviewModalImg) {
+                                  setPreviewModalImg(task.imgUrl);
+                                  if (setPreviewModalTitle)
+                                    setPreviewModalTitle(
+                                      lang === "en"
+                                        ? `Before - ${task.subject || "Violation"}`
+                                        : `Öncesi - ${task.subject || "İhlal"}`,
+                                    );
+                                }
+                              }}
+                              className="relative group h-24 w-full rounded-xl overflow-hidden border border-red-200 dark:border-red-900/40 cursor-zoom-in bg-gray-100 dark:bg-gray-800 shadow-xs"
+                            >
+                              <img
+                                src={task.imgUrl}
+                                alt="Öncesi"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                <Maximize2 className="w-4 h-4" />
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
+                        )}
 
-                    <div className="flex flex-col gap-3 justify-center md:min-w-[150px]">
-                      <button
-                        onClick={() =>
-                          setActionModal({
-                            isOpen: true,
-                            taskId: task.id,
-                            action: "approve",
-                          })
-                        }
-                        className="bg-green-100 hover:bg-green-200 text-green-700 font-bold py-2.5 px-4 rounded-xl text-sm transition-colors shadow-sm"
-                      >
-                        {isObjection
-                          ? t("accept_obj") || "İtirazı Kabul Et"
-                          : t("approve_close") || "Onayla (Kapat)"}
-                      </button>
-                      <button
-                        onClick={() =>
-                          setActionModal({
-                            isOpen: true,
-                            taskId: task.id,
-                            action: "reject",
-                          })
-                        }
-                        className="bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2.5 px-4 rounded-xl text-sm transition-colors shadow-sm"
-                      >
-                        {isObjection
-                          ? t("reject_obj") || "İtirazı Reddet"
-                          : t("reject_return") || "Reddet (Geri Gönder)"}
-                      </button>
+                        {task.afterImgUrl && (
+                          <div className="w-32 sm:w-36 flex flex-col shrink-0">
+                            <span
+                              className={`text-[10px] font-extrabold uppercase mb-1 ${
+                                isObjection
+                                  ? "text-red-600 dark:text-red-400"
+                                  : "text-emerald-600 dark:text-emerald-400"
+                              }`}
+                            >
+                              {isObjection
+                                ? (lang === "en" ? "Objection Photo" : "İtiraz Fotoğrafı")
+                                : (lang === "en" ? "After (Solution)" : "Sonrası (Çözüm)")}
+                            </span>
+                            <div
+                              onClick={() => {
+                                if (setPreviewModalImg) {
+                                  setPreviewModalImg(task.afterImgUrl);
+                                  if (setPreviewModalTitle)
+                                    setPreviewModalTitle(
+                                      isObjection
+                                        ? (lang === "en" ? "Objection Photo" : "İtiraz Fotoğrafı")
+                                        : (lang === "en" ? "After - Solution" : "Sonrası - Çözüm"),
+                                    );
+                                }
+                              }}
+                              className={`relative group h-24 w-full rounded-xl overflow-hidden border cursor-zoom-in bg-gray-100 dark:bg-gray-800 shadow-xs ${
+                                isObjection
+                                  ? "border-red-200 dark:border-red-900/40"
+                                  : "border-emerald-200 dark:border-emerald-900/40"
+                              }`}
+                            >
+                              <img
+                                src={task.afterImgUrl}
+                                alt="Sonrası"
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                              />
+                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                                <Maximize2 className="w-4 h-4" />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Right: Actions */}
+                      <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto lg:min-w-[140px] self-end lg:self-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic("selection");
+                            setActionModal({
+                              isOpen: true,
+                              taskId: task.id,
+                              action: "approve",
+                              task: task,
+                            });
+                          }}
+                          className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>
+                            {isObjection
+                              ? (lang === "en" ? "Approve Objection" : "İtirazı Onayla")
+                              : (lang === "en" ? "Approve (Close)" : "Onayla (Kapat)")}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            triggerHaptic("selection");
+                            setActionModal({
+                              isOpen: true,
+                              taskId: task.id,
+                              action: "reject",
+                              task: task,
+                            });
+                          }}
+                          className="w-full py-2.5 px-4 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-xs font-bold active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          <span>
+                            {isObjection
+                              ? (lang === "en" ? "Reject Objection" : "İtirazı Reddet")
+                              : (lang === "en" ? "Reject (Send Back)" : "Reddet (Geri Gönder)")}
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 );
               })}
-              {isReviewPaginating && <TaskCardSkeleton count={2} />}
-              <PaginationControl
-                currentCount={reviewLimit}
-                totalCount={reviewTasks.length}
-                pageSize={10}
-                isLoading={isReviewPaginating}
-                onLoadMore={handleLoadMoreReview}
-                label={t("load_more_reviews") || "Daha Fazla Kayıt Göster"}
-              />
+
+              {/* Load More Review Button */}
+              {filteredReviewTasks.length > reviewLimit && (
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={handleLoadMoreReview}
+                    disabled={isReviewPaginating}
+                    className="px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-xs font-bold text-gray-700 dark:text-gray-300 transition-all cursor-pointer inline-flex items-center gap-2"
+                  >
+                    {isReviewPaginating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-4 h-4" />
+                    )}
+                    <span>{lang === "en" ? "Show More Pending Reviews" : "Daha Fazla Onay Kaydı Göster"}</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
       )}
 
+      {/* 6. TAB 3: SAHA İHLAL TAKİBİ (TÜM SAHA GÖREVLERİ & CANLI LİSTE) */}
+      {activeTab === "tasks" && (
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-200 dark:border-gray-700/80 animate-slide-up space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700/80 gap-3">
+            <div>
+              <h2 className="text-lg md:text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <List className="w-5 h-5 text-blue-500" />
+                {lang === "en" ? "Field Violation Overview" : "Saha İhlalleri & Canlı Durum Takibi"}
+              </h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {lang === "en"
+                  ? "Track ongoing violation resolutions, overdue deadlines, and department compliance."
+                  : "Sahada devam eden çözümleri, geciken süreleri ve birimlerin açık aksiyonlarını takip edin."}
+              </p>
+            </div>
+            <span className="text-xs font-bold text-gray-500 dark:text-gray-400">
+              {filteredAllTasks.length} {lang === "en" ? "records found" : "kayıt listeleniyor"}
+            </span>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                value={taskSearch}
+                onChange={(e) => setTaskSearch(e.target.value)}
+                placeholder={lang === "en" ? "Search violations..." : "İhlal ara..."}
+                className="w-full pl-10 pr-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+
+            {/* Department Filter */}
+            <div>
+              <select
+                value={taskDeptFilter}
+                onChange={(e) => setTaskDeptFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-900 dark:text-gray-100 focus:outline-hidden cursor-pointer"
+              >
+                <option value="all">{lang === "en" ? "All Departments" : "Tüm Birimler"}</option>
+                {deptsList.map((d) => (
+                  <option key={d} value={d}>
+                    {getDeptTranslation(d)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Status Filter */}
+            <div>
+              <select
+                value={taskStatusFilter}
+                onChange={(e) => setTaskStatusFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-900 dark:text-gray-100 focus:outline-hidden cursor-pointer"
+              >
+                <option value="all">{lang === "en" ? "All Statuses" : "Tüm Durumlar"}</option>
+                <option value="acik">{lang === "en" ? "Open (Chiefs Working)" : "Açık (Çözüm Bekleniyor)"}</option>
+                <option value="onay_bekliyor">{lang === "en" ? "Awaiting Review" : "Onay Bekliyor"}</option>
+                <option value="itiraz_edildi">{lang === "en" ? "Objected" : "İtiraz Edildi"}</option>
+                <option value="cozuldu">{lang === "en" ? "Closed / Resolved" : "Kapatıldı / Çözüldü"}</option>
+              </select>
+            </div>
+
+            {/* Priority Filter */}
+            <div>
+              <select
+                value={taskPriorityFilter}
+                onChange={(e) => setTaskPriorityFilter(e.target.value)}
+                className="w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-900 dark:text-gray-100 focus:outline-hidden cursor-pointer"
+              >
+                <option value="all">{lang === "en" ? "All Priorities" : "Tüm Öncelikler"}</option>
+                <option value="kritik">{lang === "en" ? "Critical Risk" : "Kritik Risk"}</option>
+                <option value="yuksek">{lang === "en" ? "High Risk" : "Yüksek Risk"}</option>
+                <option value="orta">{lang === "en" ? "Medium Risk" : "Orta Risk"}</option>
+                <option value="dusuk">{lang === "en" ? "Low Risk" : "Düşük Risk"}</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Tasks Grid */}
+          {filteredAllTasks.length === 0 ? (
+            <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-900/30 rounded-3xl border border-dashed border-gray-200 dark:border-gray-700/80">
+              <AlertCircle className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                {lang === "en" ? "No matching field tasks found" : "Filtrelere uygun ihlal kaydı bulunamadı"}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredAllTasks.slice(0, taskLimit).map((task) => {
+                const isClosed = task.status === "kapatildi" || task.status === "cozuldu";
+                const isWaiting = task.status === "onay_bekliyor";
+                const isObj = task.status === "itiraz_edildi";
+
+                // Time math
+                const createdTime = task.timestamp || Date.now();
+                const deadlineMs = (task.deadlineHours || 24) * 60 * 60 * 1000;
+                const endTime = createdTime + deadlineMs;
+                const now = Date.now();
+                const isOverdue = now > endTime && !isClosed;
+                const diffHours = Math.abs(Math.round((endTime - now) / (1000 * 60 * 60)));
+
+                return (
+                  <div
+                    key={task.id}
+                    className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700/80 p-4.5 shadow-xs hover:border-gray-300 dark:hover:border-gray-600 transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div>
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-xs font-black text-gray-800 dark:text-gray-200">
+                          {getDeptTranslation(task.dept)}
+                        </span>
+                        <span
+                          className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md ${
+                            isClosed
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
+                              : isWaiting
+                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                                : isObj
+                                  ? "bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300"
+                                  : isOverdue
+                                    ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                                    : "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                          }`}
+                        >
+                          {isClosed
+                            ? (lang === "en" ? "Closed" : "Kapatıldı")
+                            : isWaiting
+                              ? (lang === "en" ? "Pending Review" : "Onay Bekliyor")
+                              : isObj
+                                ? (lang === "en" ? "Objected" : "İtiraz")
+                                : isOverdue
+                                  ? (lang === "en" ? "Overdue" : "Süre Aşıldı")
+                                  : (lang === "en" ? "Open" : "Açık")}
+                        </span>
+                      </div>
+
+                      {/* Subject */}
+                      <h4 className="text-sm font-bold text-gray-900 dark:text-gray-100 line-clamp-1 mb-1">
+                        {task.subject || (lang === "en" ? "Violation Notice" : "İhlal Bildirimi")}
+                      </h4>
+
+                      {/* Description */}
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                        {task.desc || "-"}
+                      </p>
+                    </div>
+
+                    {/* Photo Thumbnails Row */}
+                    {(task.imgUrl || task.afterImgUrl) && (
+                      <div className="flex items-center gap-2 pt-1">
+                        {task.imgUrl && (
+                          <div
+                            onClick={() => {
+                              if (setPreviewModalImg) {
+                                setPreviewModalImg(task.imgUrl);
+                                if (setPreviewModalTitle)
+                                  setPreviewModalTitle(
+                                    lang === "en"
+                                      ? `Before - ${task.subject || "Violation"}`
+                                      : `Öncesi - ${task.subject || "İhlal"}`,
+                                  );
+                              }
+                            }}
+                            className="relative h-14 w-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 cursor-zoom-in shrink-0"
+                          >
+                            <img
+                              src={task.imgUrl}
+                              alt="İhlal"
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[9px] text-center font-bold">
+                              {lang === "en" ? "Before" : "Öncesi"}
+                            </span>
+                          </div>
+                        )}
+                        {task.afterImgUrl && (
+                          <div
+                            onClick={() => {
+                              if (setPreviewModalImg) {
+                                setPreviewModalImg(task.afterImgUrl);
+                                if (setPreviewModalTitle)
+                                  setPreviewModalTitle(
+                                    lang === "en"
+                                      ? `After - ${task.subject || "Solution"}`
+                                      : `Sonrası - ${task.subject || "Çözüm"}`,
+                                  );
+                              }
+                            }}
+                            className="relative h-14 w-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 cursor-zoom-in shrink-0"
+                          >
+                            <img
+                              src={task.afterImgUrl}
+                              alt="Çözüm"
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-0 inset-x-0 bg-emerald-950/80 text-emerald-200 text-[9px] text-center font-bold">
+                              {lang === "en" ? "After" : "Sonrası"}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Bottom Metadata */}
+                    <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                      <span>
+                        {new Date(task.timestamp || Date.now()).toLocaleDateString(
+                          lang === "en" ? "en-US" : "tr-TR",
+                          { day: "numeric", month: "short" },
+                        )}
+                      </span>
+                      <span>
+                        {isClosed
+                          ? (lang === "en" ? "Resolved" : "Giderildi")
+                          : isOverdue
+                            ? (lang === "en" ? `⚠️ ${diffHours}h overdue` : `⚠️ ${diffHours}s aşıldı`)
+                            : (lang === "en" ? `⏱️ ${diffHours}h left` : `⏱️ ${diffHours}s kaldı`)}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Load More Tasks Button */}
+          {filteredAllTasks.length > taskLimit && (
+            <div className="pt-2 text-center">
+              <button
+                type="button"
+                onClick={handleLoadMoreTasks}
+                disabled={isTaskPaginating}
+                className="px-6 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-xs font-bold text-gray-700 dark:text-gray-300 transition-all cursor-pointer inline-flex items-center gap-2"
+              >
+                {isTaskPaginating ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
+                <span>{lang === "en" ? "Show More Field Violations" : "Daha Fazla Saha İhlali Göster"}</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 7. Action Approval / Rejection Modal */}
       {actionModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 max-sm:items-end bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:max-w-full p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
-                {actionModal.action === "approve"
-                  ? t("approve_action") || "Onaylama İşlemi"
-                  : t("reject_action") || "Reddetme İşlemi"}
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in space-y-5">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-700">
+              <h3 className="text-lg font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                {actionModal.action === "approve" ? (
+                  <>
+                    <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                    <span>{lang === "en" ? "Confirm & Close Task" : "Çözümü Onayla ve Kapat"}</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="w-5 h-5 text-red-500" />
+                    <span>{lang === "en" ? "Reject & Return to Chief" : "Yanıtı Reddet (Geri Gönder)"}</span>
+                  </>
+                )}
               </h3>
               <button
                 type="button"
-                onClick={() => {
-                  setActionModal({ isOpen: false, taskId: null, action: null });
-                  setModNote("");
-                }}
-                className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                onClick={() =>
+                  setActionModal({
+                    isOpen: false,
+                    taskId: null,
+                    action: null,
+                    task: null,
+                  })
+                }
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleActionSubmit} className="space-y-5">
+
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-normal">
+              {actionModal.action === "approve"
+                ? (lang === "en"
+                    ? "The violation will be marked as resolved and closed. Department score will be adjusted accordingly."
+                    : "İhlal kaydı başarıyla giderilmiş olarak kapatılacak ve puan telafisi tamamlanacaktır.")
+                : (lang === "en"
+                    ? "The task will be reopened and returned to the department chief for re-inspection and correction."
+                    : "İhlal kaydı tekrar açık duruma getirilecek ve şefe yeniden aksiyon alması için geri yönlendirilecektir.")}
+            </p>
+
+            <form onSubmit={handleActionSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                  {t("mod_note") || "İSG Uzmanı Notu / Geri Bildirim"}
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  {lang === "en" ? "Specialist Feedback Note (Optional)" : "İSG Uzmanı Geri Bildirim Notu (İsteğe Bağlı)"}
                 </label>
                 <textarea
-                  rows="3"
+                  rows={3}
                   value={modNote}
                   onChange={(e) => setModNote(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100"
-                  placeholder={t("ph_mod_note") || "İsteğe bağlı açıklama..."}
-                ></textarea>
+                  placeholder={
+                    actionModal.action === "approve"
+                      ? (lang === "en"
+                          ? "e.g., Verified on site, measures are adequate."
+                          : "Örn: Saha yerinde kontrol edildi, önlem yeterli görüldü.")
+                      : (lang === "en"
+                          ? "e.g., Still inadequate in photo, safety barrier required."
+                          : "Örn: Fotoğrafta görülen alan hala yetersiz, bariyer yerleştirilmeli.")
+                  }
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-medium text-gray-900 dark:text-gray-100 focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20"
+                />
               </div>
-              <button
-                type="submit"
-                className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all ${actionModal.action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}`}
-              >
-                {actionModal.action === "approve"
-                  ? t("approve_btn") || "İşlemi Onayla"
-                  : t("reject_btn") || "Reddet ve Geri Gönder"}
-              </button>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActionModal({
+                      isOpen: false,
+                      taskId: null,
+                      action: null,
+                      task: null,
+                    })
+                  }
+                  className="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                >
+                  {lang === "en" ? "Cancel" : "Vazgeç"}
+                </button>
+                <button
+                  type="submit"
+                  className={`flex-1 py-3 rounded-xl text-xs font-bold text-white shadow-md transition-all active:scale-95 cursor-pointer ${
+                    actionModal.action === "approve"
+                      ? "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20"
+                      : "bg-red-600 hover:bg-red-700 shadow-red-600/20"
+                  }`}
+                >
+                  {actionModal.action === "approve"
+                    ? (lang === "en" ? "Confirm & Close" : "Onayla ve Kapat")
+                    : (lang === "en" ? "Reject and Return" : "Reddet ve Geri Gönder")}
+                </button>
+              </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Mobile Bottom Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] pb-safe pt-2 px-4 flex justify-around pb-4">
+      {/* 8. Mobile Bottom Navigation */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 px-4 py-2 flex justify-around shadow-lg">
         <button
-          onClick={() => setActiveTab("create")}
-          className={`flex flex-col items-center justify-center py-2 px-4 rounded-xl transition-all ${activeTab === "create" ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("create");
+          }}
+          className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition-all cursor-pointer ${
+            activeTab === "create"
+              ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium"
+          }`}
         >
-          <Plus
-            className={`w-6 h-6 mb-1 ${activeTab === "create" ? "animate-pulse" : ""}`}
-          />
-          <span className="text-xs font-bold">Oluştur</span>
+          <Plus className="w-5 h-5 mb-0.5" />
+          <span className="text-[11px]">{lang === "en" ? "New Violation" : "Yeni İhlal"}</span>
         </button>
 
         <button
-          onClick={() => setActiveTab("review")}
-          className={`flex flex-col items-center justify-center py-2 px-4 rounded-xl transition-all relative ${activeTab === "review" ? "text-blue-600 bg-blue-50 dark:bg-blue-900/30" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("review");
+          }}
+          className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition-all cursor-pointer relative ${
+            activeTab === "review"
+              ? "text-amber-600 dark:text-amber-400 font-extrabold"
+              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium"
+          }`}
         >
           <div className="relative">
-            <CheckSquare
-              className={`w-6 h-6 mb-1 ${activeTab === "review" ? "animate-pulse" : ""}`}
-            />
-            {reviewTasks.length > 0 && (
-              <span className="absolute -top-1 -right-2 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white dark:border-gray-800">
-                {reviewTasks.length}
+            <CheckSquare className="w-5 h-5 mb-0.5" />
+            {pendingReviewTasks.length > 0 && (
+              <span className="absolute -top-1 -right-2 bg-amber-500 text-white text-[9px] font-bold px-1.5 rounded-full">
+                {pendingReviewTasks.length}
               </span>
             )}
           </div>
-          <span className="text-xs font-bold">Kontrol Et</span>
+          <span className="text-[11px]">{lang === "en" ? "Reviews" : "Onaylar"}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            triggerHaptic("selection");
+            setActiveTab("tasks");
+          }}
+          className={`flex flex-col items-center py-1.5 px-3 rounded-xl transition-all cursor-pointer ${
+            activeTab === "tasks"
+              ? "text-blue-600 dark:text-blue-400 font-extrabold"
+              : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 font-medium"
+          }`}
+        >
+          <List className="w-5 h-5 mb-0.5" />
+          <span className="text-[11px]">{lang === "en" ? "Field Tasks" : "Saha Takip"}</span>
         </button>
       </div>
-      {/* Pad the bottom of the container to prevent content from hiding under mobile nav */}
-      <div className="h-20 md:hidden"></div>
+
+      {/* Pad bottom for mobile */}
+      <div className="h-16 md:hidden"></div>
     </div>
   );
 };
@@ -4286,7 +5338,9 @@ const SefDashboard = () => {
       const h = Math.floor(Math.abs(diff) / (1000 * 60 * 60));
       return (
         <span className="text-red-600 dark:text-red-400 font-bold">
-          {h > 0 ? `${h} saat` : "Süresi"} gecikti
+          {h > 0
+            ? (lang === "en" ? `${h}h overdue` : `${h} saat gecikti`)
+            : (lang === "en" ? "Overdue" : "Süresi gecikti")}
         </span>
       );
     } else {
@@ -4294,7 +5348,7 @@ const SefDashboard = () => {
       const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       return (
         <span className="text-orange-600 dark:text-orange-400 font-bold">
-          {h}s {m}d kaldı
+          {lang === "en" ? `${h}h ${m}m left` : `${h}s ${m}d kaldı`}
         </span>
       );
     }
@@ -4304,7 +5358,7 @@ const SefDashboard = () => {
     if (!timestamp) return "";
     const date = new Date(timestamp);
     if (isNaN(date.getTime())) return "";
-    return date.toLocaleDateString("tr-TR", {
+    return date.toLocaleDateString(lang === "en" ? "en-US" : "tr-TR", {
       day: "numeric",
       month: "short",
       hour: "2-digit",
@@ -4323,11 +5377,19 @@ const SefDashboard = () => {
         "",
       );
       triggerHaptic("success");
-      toast.success("Çözüm kanıtı yüklendi, uzman onayı bekleniyor.");
+      toast.success(
+        lang === "en"
+          ? "Solution photo uploaded, awaiting specialist review."
+          : "Çözüm kanıtı yüklendi, uzman onayı bekleniyor.",
+      );
     } else if (actionModal.type === "object") {
       updateTaskStatus(actionModal.taskId, "itiraz_edildi", note, "", "");
       triggerHaptic("warning");
-      toast.success("İtirazınız uzman incelemesine gönderildi.");
+      toast.success(
+        lang === "en"
+          ? "Your objection was sent for specialist review."
+          : "İtirazınız uzman incelemesine gönderildi.",
+      );
     }
     setActionModal({ isOpen: false, taskId: null, type: null });
     setNote("");
@@ -4340,7 +5402,7 @@ const SefDashboard = () => {
         <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100">
           <ShieldAlert className="w-8 h-8 mr-3 text-blue-500" />{" "}
           {t(getDeptKey(currentUser?.dept || ""))}{" "}
-          {t("dept_tasks") || "Birimi Görevleri"}
+          {t("dept_tasks") || (lang === "en" ? "Department Tasks" : "Birimi Görevleri")}
         </h2>
         <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
           <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
@@ -4348,13 +5410,13 @@ const SefDashboard = () => {
               onClick={() => setActiveTab("open")}
               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "open" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
-              Açık İhlaller ({openCount})
+              {lang === "en" ? "Open Violations" : "Açık İhlaller"} ({openCount})
             </button>
             <button
               onClick={() => setActiveTab("completed")}
               className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "completed" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
             >
-              Düzeltilenler
+              {lang === "en" ? "Resolved" : "Düzeltilenler"}
             </button>
           </div>
         </div>
@@ -4369,12 +5431,14 @@ const SefDashboard = () => {
                   <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400" />
                 </div>
                 <h3 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">
-                  Harika! Biriminizde açık ihlal yok.
+                  {lang === "en"
+                    ? "Great! No open violations in your department."
+                    : "Harika! Biriminizde açık ihlal yok."}
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                  Şu an için her şey yolunda görünüyor. İş sağlığı ve güvenliği
-                  kurallarına gösterdiğiniz özen için teşekkür ederiz. Güvenli
-                  çalışmalar dileriz!
+                  {lang === "en"
+                    ? "Everything looks great right now. Thank you for your commitment to occupational safety guidelines. Have a safe shift!"
+                    : "Şu an için her şey yolunda görünüyor. İş sağlığı ve güvenliği kurallarına gösterdiğiniz özen için teşekkür ederiz. Güvenli çalışmalar dileriz!"}
                 </p>
               </>
             ) : (
@@ -4383,11 +5447,14 @@ const SefDashboard = () => {
                   <List className="w-16 h-16 text-gray-400 dark:text-gray-500" />
                 </div>
                 <h3 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">
-                  Henüz geçmiş bir ihlal kaydı yok.
+                  {lang === "en"
+                    ? "No previous violation history yet."
+                    : "Henüz geçmiş bir ihlal kaydı yok."}
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-                  Tamamlanan veya düzeltilen ihlalleriniz burada
-                  listelenecektir.
+                  {lang === "en"
+                    ? "Resolved or completed corrective actions will be listed here."
+                    : "Tamamlanan veya düzeltilen ihlalleriniz burada listelenecektir."}
                 </p>
               </>
             )}
@@ -4444,7 +5511,7 @@ const SefDashboard = () => {
               >
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {task.subject || "İhlal Bildirimi"}
+                    {task.subject || (lang === "en" ? "Violation Notice" : "İhlal Bildirimi")}
                   </h3>
                   <span className="text-gray-400 dark:text-gray-500">
                     {expandedTasks[task.id] ? (
@@ -4476,7 +5543,7 @@ const SefDashboard = () => {
                         onClick={() => {
                           setPreviewModalImg(task.imgUrl);
                           setPreviewModalTitle(
-                            task.subject || "İhlal Fotoğrafı",
+                            task.subject || (lang === "en" ? "Violation Photo" : "İhlal Fotoğrafı"),
                           );
                         }}
                         className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-200 dark:border-gray-700 cursor-zoom-in hover:opacity-90 transition-opacity"
@@ -4612,7 +5679,9 @@ const SefDashboard = () => {
                 disabled={actionModal.type === "fix" && !afterImgPreview}
                 className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all ${actionModal.type === "fix" ? (afterImgPreview ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed") : "bg-red-600 hover:bg-red-700"}`}
               >
-                {actionModal.type === "fix" ? "Onaya Gönder" : "İtirazı Gönder"}
+                {actionModal.type === "fix"
+                  ? (lang === "en" ? "Submit for Approval" : "Onaya Gönder")
+                  : (lang === "en" ? "Submit Objection" : "İtirazı Gönder")}
               </button>
             </form>
           </div>
