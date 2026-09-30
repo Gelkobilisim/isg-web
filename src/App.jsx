@@ -3907,7 +3907,8 @@ const ModDashboard = () => {
     if (!actionModal.taskId || !actionModal.action) return;
 
     const isApprove = actionModal.action === "approve";
-    const newStatus = isApprove ? "kapatildi" : "acik";
+    const isObjection = actionModal.task?.status === "itiraz_edildi";
+    const newStatus = isApprove ? (isObjection ? "kapatildi" : "cozuldu") : "acik";
 
     try {
       await updateTaskStatus(
@@ -3921,7 +3922,9 @@ const ModDashboard = () => {
       triggerHaptic(isApprove ? "success" : "warning");
       toast.success(
         isApprove
-          ? (lang === "en" ? "Violation closed and confirmed." : "İhlal çözümü onaylandı ve kayıt başarıyla kapatıldı.")
+          ? (isObjection
+              ? (lang === "en" ? "Objection accepted, violation cancelled." : "İtiraz kabul edildi, ihlal tutanağı iptal edildi.")
+              : (lang === "en" ? "Violation closed and confirmed." : "İhlal çözümü onaylandı ve kayıt başarıyla kapatıldı."))
           : (lang === "en" ? "Response rejected, sent back to chief." : "Yanıt reddedildi, ihlal tekrar çözülmesi için birim şefine geri gönderildi."),
       );
     } catch (err) {
@@ -13963,12 +13966,12 @@ export default function App() {
 
                   let title = "";
                   let body = "";
-                  if (newTask.status === "cozuldu" && isTargetAdmin) {
+                  if ((newTask.status === "cozuldu" || newTask.status === "onay_bekliyor") && isTargetAdmin) {
                     title =
                       localLang === "tr"
-                        ? "İhlal Çözüldü"
-                        : "Violation Resolved";
-                    body = `${newTask.dept} departmanı bir ihlali çözdü ve onay bekliyor.`;
+                        ? "İhlal Çözüldü (Onay Bekliyor)"
+                        : "Violation Resolved (Pending Review)";
+                    body = `${newTask.dept} departmanı bir ihlali giderdi ve onay bekliyor.`;
                   } else if (
                     newTask.status === "itiraz_edildi" &&
                     isTargetAdmin
@@ -13978,22 +13981,22 @@ export default function App() {
                         ? "İhlale İtiraz Edildi"
                         : "Violation Objected";
                     body = `${newTask.dept} departmanı bir ihlale itiraz etti.`;
-                  } else if (newTask.status === "kapatildi" && isTargetChief) {
+                  } else if ((newTask.status === "kapatildi" || newTask.status === "cozuldu") && isTargetChief) {
                     title =
                       localLang === "tr"
-                        ? "İhlal Kapatıldı"
+                        ? "İhlal Kaydı Kapatıldı"
                         : "Violation Closed";
-                    body = `${newTask.dept} departmanındaki bir ihlal kaydı onaylandı ve kapatıldı.`;
+                    body = `${newTask.dept} departmanındaki bir ihlal çözümü onaylandı ve kapatıldı.`;
                   } else if (
                     newTask.status === "acik" &&
-                    oldTask.status === "cozuldu" &&
+                    (oldTask.status === "cozuldu" || oldTask.status === "onay_bekliyor" || oldTask.status === "itiraz_edildi") &&
                     isTargetChief
                   ) {
                     title =
                       localLang === "tr"
-                        ? "Çözüm Reddedildi"
+                        ? "Aksiyon / Çözüm Reddedildi"
                         : "Solution Rejected";
-                    body = `İSG Uzmanı çözümünüzü reddetti, ihlal tekrar açıldı.`;
+                    body = `İSG Uzmanı aksiyonunuzu reddetti, ihlal tekrar açıldı.`;
                   }
 
                   if (title && body) {
@@ -14353,8 +14356,13 @@ export default function App() {
           oldStatus = taskData.status || "";
 
           // Puan sistemi mantığı:
-          // 1. "acik" veya "itiraz_edildi" durumundan "cozuldu" durumuna geçerken:
-          if (newStatus === "cozuldu" && oldStatus !== "cozuldu") {
+          // 1. İhlal giderildiğinde / çözüldüğünde (onay_bekliyor veya acik durumundan cozuldu/kapatildi durumuna):
+          const isResolution =
+            (newStatus === "cozuldu" || (newStatus === "kapatildi" && oldStatus !== "itiraz_edildi")) &&
+            oldStatus !== "cozuldu" &&
+            oldStatus !== "kapatildi";
+
+          if (isResolution) {
             const now = Date.now();
             const createdAt = taskData.timestamp || now;
             const deadlineHours = taskData.deadlineHours || 24;
@@ -14459,7 +14467,7 @@ export default function App() {
         if (chiefNote) updates.chiefNote = chiefNote;
         if (afterImgUrl) updates.afterImgUrl = afterImgUrl;
         if (modNote) updates.modNote = modNote;
-        if (newStatus === "cozuldu") updates.resolvedTimestamp = Date.now();
+        if (newStatus === "cozuldu" || newStatus === "kapatildi") updates.resolvedTimestamp = Date.now();
 
         await updateDoc(taskRef, updates);
         triggerHaptic("success");
@@ -14470,6 +14478,7 @@ export default function App() {
           (newStatus === "cozuldu" ||
             newStatus === "itiraz_edildi" ||
             newStatus === "kapatildi" ||
+            newStatus === "onay_bekliyor" ||
             newStatus === "acik")
         ) {
           const currentToken = localStorage.getItem("isg_auth_token") || "";

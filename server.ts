@@ -771,10 +771,10 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
     } else if (type === "STATUS_CHANGE") {
       const { dept, newStatus, oldStatus, lang } = payload;
 
-      if (newStatus === "cozuldu") {
+      if (newStatus === "cozuldu" || newStatus === "onay_bekliyor") {
         notificationTitle =
-          lang === "tr" ? "İhlal Çözüldü" : "Violation Resolved";
-        notificationBody = `${dept} departmanı bir ihlali çözdü ve onay bekliyor.`;
+          lang === "tr" ? "İhlal Çözüldü (Onay Bekliyor)" : "Violation Resolved (Pending Review)";
+        notificationBody = `${dept} departmanı bir ihlali giderdi ve İSG onayı bekliyor.`;
         users.forEach((u) => {
           if (u.role === "admin" || u.role === "mod" || u.role === "isg" || u.role === "isgci") {
             addTokensForUser(u);
@@ -789,19 +789,19 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
             addTokensForUser(u);
           }
         });
-      } else if (newStatus === "kapatildi") {
+      } else if (newStatus === "kapatildi" || (newStatus === "cozuldu" && oldStatus === "onay_bekliyor")) {
         notificationTitle =
-          lang === "tr" ? "İhlal Kapatıldı" : "Violation Closed";
-        notificationBody = `${dept} departmanındaki bir ihlal kaydı onaylandı ve kapatıldı.`;
+          lang === "tr" ? "İhlal Kaydı Kapatıldı / Onaylandı" : "Violation Closed";
+        notificationBody = `${dept} departmanındaki ihlal çözümü onaylandı ve kapatıldı.`;
         users.forEach((u) => {
           if (u.role === "sef" && u.dept === dept) {
             addTokensForUser(u);
           }
         });
-      } else if (newStatus === "acik" && oldStatus === "cozuldu") {
+      } else if (newStatus === "acik" && (oldStatus === "cozuldu" || oldStatus === "onay_bekliyor" || oldStatus === "itiraz_edildi")) {
         notificationTitle =
-          lang === "tr" ? "Çözüm Reddedildi" : "Solution Rejected";
-        notificationBody = `İSG Uzmanı çözümünüzü reddetti, ihlal tekrar açıldı.`;
+          lang === "tr" ? "Çözüm / Aksiyon Reddedildi" : "Solution Rejected";
+        notificationBody = `İSG Uzmanı aksiyonu reddetti, ihlal tekrar çözülmesi için biriminize geri gönderildi.`;
         users.forEach((u) => {
           if (u.role === "sef" && u.dept === dept) {
             addTokensForUser(u);
