@@ -4192,7 +4192,7 @@ const ModDashboard = () => {
               </p>
             </div>
             <div className="text-xs text-gray-400 dark:text-gray-500 font-medium">
-              {lang === "en" ? "Automated Penalty Scoring Active" : "Otomatik Puan ve Bildirim Sistemi Devrede"}
+              {lang === "en" ? "Field Safety Protocol Active" : "İSG Saha Güvenlik Protokolü Devrede"}
             </div>
           </div>
 
@@ -4264,10 +4264,10 @@ const ModDashboard = () => {
                 </label>
                 <div className="grid grid-cols-2 gap-2">
                   {[
-                    { key: "kritik", label: lang === "en" ? "Critical" : "Kritik", points: "-20 P", color: "red" },
-                    { key: "yuksek", label: lang === "en" ? "High" : "Yüksek", points: "-20 P", color: "orange" },
-                    { key: "orta", label: lang === "en" ? "Medium" : "Orta", points: "-15 P", color: "amber" },
-                    { key: "dusuk", label: lang === "en" ? "Low" : "Düşük", points: "-10 P", color: "blue" },
+                    { key: "kritik", label: lang === "en" ? "Critical Risk" : "Kritik Risk", desc: lang === "en" ? "Immediate danger" : "Acil müdahale", color: "red" },
+                    { key: "yuksek", label: lang === "en" ? "High Risk" : "Yüksek Risk", desc: lang === "en" ? "High hazard" : "Yüksek tehlike", color: "orange" },
+                    { key: "orta", label: lang === "en" ? "Medium Risk" : "Orta Risk", desc: lang === "en" ? "Standard" : "Standart risk", color: "amber" },
+                    { key: "dusuk", label: lang === "en" ? "Low Risk" : "Düşük Risk", desc: lang === "en" ? "Minor" : "Hafif ihlal", color: "blue" },
                   ].map((p) => {
                     const isSelected = formState.priority === p.key;
                     return (
@@ -4290,8 +4290,21 @@ const ModDashboard = () => {
                             : "bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                         }`}
                       >
-                        <span>{p.label}</span>
-                        <span className="text-[10px] opacity-75 font-mono">{p.points}</span>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-2 h-2 rounded-full shrink-0 ${
+                              p.color === "red"
+                                ? "bg-red-500 animate-pulse"
+                                : p.color === "orange"
+                                ? "bg-orange-500"
+                                : p.color === "amber"
+                                ? "bg-amber-500"
+                                : "bg-blue-500"
+                            }`}
+                          />
+                          <span>{p.label}</span>
+                        </div>
+                        <span className="text-[10px] opacity-70 font-medium">{p.desc}</span>
                       </button>
                     );
                   })}
@@ -8568,8 +8581,14 @@ const AdminDashboard = () => {
         allScores.length > 0
           ? (allScores.reduce((a, b) => a + b, 0) / allScores.length).toFixed(1)
           : "100.0";
-      const criticalCount = sortedDepts.filter((d) => (points[d] ?? 100) < 75).length;
-      const perfectCount = sortedDepts.filter((d) => (points[d] ?? 100) >= 100).length;
+      const cleanDepts = sortedDepts.filter((d) =>
+        !tasks.some((t) => t.dept === d && (t.status === "acik" || t.status === "itiraz_edildi"))
+      );
+      const openIssueDepts = sortedDepts.filter((d) =>
+        tasks.some((t) => t.dept === d && (t.status === "acik" || t.status === "itiraz_edildi"))
+      );
+      const cleanDeptCount = cleanDepts.length;
+      const openIssueDeptCount = openIssueDepts.length;
 
       const executeResetAndSave = async () => {
         const now = new Date();
@@ -8601,10 +8620,11 @@ const AdminDashboard = () => {
 
       // Filtered Departments for Tab 1
       const filteredDepts = sortedDepts.filter((dept) => {
-        const score = points[dept] ?? 100;
-        if (leaderboardScoreFilter === "high" && score < 90) return false;
-        if (leaderboardScoreFilter === "mid" && (score < 75 || score >= 90)) return false;
-        if (leaderboardScoreFilter === "low" && score >= 75) return false;
+        const hasOpenTasks = tasks.some(
+          (t) => t.dept === dept && (t.status === "acik" || t.status === "itiraz_edildi")
+        );
+        if (leaderboardScoreFilter === "zero_open" && hasOpenTasks) return false;
+        if (leaderboardScoreFilter === "has_open" && !hasOpenTasks) return false;
 
         if (leaderboardSearch.trim()) {
           const q = leaderboardSearch.toLowerCase().trim();
@@ -8809,47 +8829,47 @@ const AdminDashboard = () => {
               </div>
             </div>
 
-            {/* Card 3: Tam Puanlı Birimler */}
+            {/* Card 3: Açık İhlalsiz Birimler */}
             <div
               onClick={() => {
                 setLeaderboardTab("ranking");
-                setLeaderboardScoreFilter("high");
+                setLeaderboardScoreFilter("zero_open");
               }}
-              className="p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-blue-300 dark:hover:border-blue-700/80 shadow-sm"
+              className="p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-slate-300 dark:hover:border-slate-600 shadow-sm"
             >
               <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
-                <span className="truncate">Kusursuz Birimler</span>
-                <ShieldCheck className="w-4 h-4 text-blue-500 shrink-0" />
+                <span className="truncate">Açık İhlalsiz</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
               </div>
               <div className="my-2">
-                <p className="text-2xl sm:text-3xl font-black text-blue-600 dark:text-blue-400 leading-none tabular-nums">
-                  {perfectCount} <span className="text-xs font-bold text-gray-400">Birim</span>
+                <p className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-slate-100 leading-none tabular-nums">
+                  {cleanDeptCount} <span className="text-xs font-bold text-gray-400">Birim</span>
                 </p>
               </div>
               <div className="text-[11px] text-gray-400 font-medium truncate">
-                <span>100 Puan ve Üzeri</span>
+                <span>Bekleyen Açık İhlali Yok</span>
               </div>
             </div>
 
-            {/* Card 4: Risk Seviyesinde */}
+            {/* Card 4: Açık İhlalli Birimler */}
             <div
               onClick={() => {
                 setLeaderboardTab("ranking");
-                setLeaderboardScoreFilter("low");
+                setLeaderboardScoreFilter("has_open");
               }}
               className="p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between min-h-[110px] bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-700/80 hover:border-rose-300 dark:hover:border-rose-700/80 shadow-sm"
             >
               <div className="flex items-center justify-between text-xs font-bold text-gray-400 uppercase tracking-wider h-5 gap-1.5">
-                <span className="truncate">Risk Seviyesinde</span>
+                <span className="truncate">Açık İhlali Olan</span>
                 <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
               </div>
               <div className="my-2">
                 <p className="text-2xl sm:text-3xl font-black text-rose-600 dark:text-rose-400 leading-none tabular-nums">
-                  {criticalCount} <span className="text-xs font-bold text-gray-400">Birim</span>
+                  {openIssueDeptCount} <span className="text-xs font-bold text-gray-400">Birim</span>
                 </p>
               </div>
               <div className="text-[11px] text-gray-400 font-medium truncate">
-                <span>&lt;75 Puan Altı Birimler</span>
+                <span>Müdahale Bekleyen İhlaller</span>
               </div>
             </div>
           </div>
@@ -8973,10 +8993,9 @@ const AdminDashboard = () => {
                     onChange={(e) => setLeaderboardScoreFilter(e.target.value)}
                     className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 outline-none cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shrink-0"
                   >
-                    <option value="all">Tüm Puan Seviyeleri</option>
-                    <option value="high">Mükemmel (90+ Puan)</option>
-                    <option value="mid">Orta Seviye (75-89 Puan)</option>
-                    <option value="low">Risk Altında (&lt;75 Puan)</option>
+                    <option value="all">Tüm Birimler ({sortedDepts.length})</option>
+                    <option value="zero_open">Aktif İhlali Olmayanlar ({cleanDeptCount})</option>
+                    <option value="has_open">Açık İhlali Bulunanlar ({openIssueDeptCount})</option>
                   </select>
 
                   {(leaderboardSearch || leaderboardScoreFilter !== "all") && (
@@ -9018,40 +9037,13 @@ const AdminDashboard = () => {
                     const isTop2 = originalRank === 2;
                     const isTop3 = originalRank === 3;
 
-                    const statusColor =
-                      deptScore >= 95
-                        ? "text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800"
-                        : deptScore >= 85
-                          ? "text-teal-700 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 border-teal-200 dark:border-teal-800"
-                          : deptScore >= 75
-                            ? "text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-800"
-                            : "text-rose-700 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800";
-
-                    const statusLabel =
-                      deptScore >= 95
-                        ? "Kusursuz / Lider"
-                        : deptScore >= 85
-                          ? "Mükemmel Uyum"
-                          : deptScore >= 75
-                            ? "Standart Seviye"
-                            : "Riskli Seviye";
-
-                    const railClass =
-                      originalRank === 1
-                        ? "status-rail-amber"
-                        : originalRank === 2
-                          ? "status-rail-blue"
-                          : originalRank === 3
-                            ? "status-rail-emerald"
-                            : "";
-
                     return (
                       <div
                         key={dept}
-                        className={`bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-md status-rail ${railClass} ${
+                        className={`bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-md ${
                           isTop1
                             ? "border-amber-300 dark:border-amber-700/80 bg-gradient-to-r from-amber-50/40 via-white to-white dark:from-amber-950/10 dark:via-gray-800 dark:to-gray-800"
-                            : "border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-300 dark:hover:border-emerald-700/60"
+                            : "border-gray-200/90 dark:border-gray-700/80 hover:border-slate-300 dark:hover:border-slate-600"
                         }`}
                       >
                         {/* Left Info: Rank & Dept */}
@@ -9075,18 +9067,25 @@ const AdminDashboard = () => {
                               <h4 className="font-black text-gray-900 dark:text-gray-100 text-base truncate">
                                 {t(getDeptKey(dept))}
                               </h4>
-                              <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border ${statusColor} shrink-0`}>
-                                {statusLabel}
-                              </span>
+                              {openTaskCount > 0 ? (
+                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-lg border bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800 shrink-0 flex items-center gap-1">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                                  {openTaskCount} Açık İhlal
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-lg border bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 shrink-0">
+                                  Açık İhlal Yok
+                                </span>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400 mt-1">
                               <span className="flex items-center gap-1">
                                 <ShieldAlert className="w-3.5 h-3.5 text-gray-400" />
                                 {openTaskCount > 0 ? (
-                                  <b className="text-rose-600 dark:text-rose-400">{openTaskCount} Açık İhlal</b>
+                                  <b className="text-rose-600 dark:text-rose-400">{openTaskCount} Müdahale Bekleyen Tutanak</b>
                                 ) : (
-                                  <span className="text-emerald-600 dark:text-emerald-400 font-bold">Sorunsuz</span>
+                                  <span className="text-slate-600 dark:text-slate-400 font-medium">Birim Sahası Temiz</span>
                                 )}
                               </span>
                             </div>
@@ -9104,15 +9103,7 @@ const AdminDashboard = () => {
                           </button>
 
                           <div className="text-right shrink-0">
-                            <span
-                              className={`text-2xl sm:text-3xl font-black tabular-nums ${
-                                deptScore >= 90
-                                  ? "text-emerald-600 dark:text-emerald-400"
-                                  : deptScore >= 75
-                                    ? "text-amber-500 dark:text-amber-400"
-                                    : "text-rose-600 dark:text-rose-400"
-                              }`}
-                            >
+                            <span className="text-2xl sm:text-3xl font-black tabular-nums text-slate-800 dark:text-slate-100">
                               <CountUp end={deptScore} duration={600} />
                             </span>
                             <span className="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">
@@ -12296,9 +12287,6 @@ const AdminDashboard = () => {
                         (t) => t.dept === dept && (t.status === "cozuldu" || t.status === "onaylandi")
                       ).length;
 
-                      const isScoreHigh = deptScore >= 90;
-                      const isScoreMid = deptScore >= 75 && deptScore < 90;
-
                       return (
                         <div
                           key={dept}
@@ -12311,16 +12299,10 @@ const AdminDashboard = () => {
                                 #{index + 1} Sıralama
                               </span>
                               <div className="flex items-center gap-1.5">
-                                <span className={`text-xl font-black tabular-nums ${
-                                  isScoreHigh
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : isScoreMid
-                                      ? "text-amber-600 dark:text-amber-400"
-                                      : "text-red-600 dark:text-red-400"
-                                }`}>
+                                <span className="text-xl font-black tabular-nums text-slate-800 dark:text-slate-100">
                                   {deptScore}
                                 </span>
-                                <span className="text-xs font-bold text-gray-400">/ 100</span>
+                                <span className="text-xs font-bold text-gray-400">Puan</span>
                               </div>
                             </div>
 
@@ -12337,13 +12319,7 @@ const AdminDashboard = () => {
                             {/* Score Progress Bar */}
                             <div className="w-full bg-gray-100 dark:bg-gray-700 h-2 rounded-full overflow-hidden">
                               <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  isScoreHigh
-                                    ? "bg-emerald-500"
-                                    : isScoreMid
-                                      ? "bg-amber-500"
-                                      : "bg-red-500"
-                                }`}
+                                className="h-full rounded-full transition-all duration-500 bg-slate-500 dark:bg-slate-400"
                                 style={{ width: `${Math.min(100, Math.max(0, deptScore))}%` }}
                               />
                             </div>
@@ -14409,67 +14385,36 @@ export default function App() {
             const initialPenalty = taskData.initialPenalty || baseRecovery;
 
             if (diffHours <= deadlineHours) {
-              // ZAMANINDA ÇÖZÜM
-              if (diffHours <= deadlineHours / 2) {
-                // HIZLI ÇÖZÜM: Verilen sürenin ilk yarısında tamamlandı (Örn: 24 saatin ilk 12 saatinde)
-                // Kesilen ceza iade edilir + Hızlı müdahale ödülü (+10 puan) eklenir
-                const bonusReward = 10;
-                const totalPoints = initialPenalty + bonusReward;
-
-                const pointsRef = doc(db, "system", "points");
-                await updateDoc(pointsRef, {
-                  [dept]: increment(totalPoints),
-                });
-
-                await addDoc(collection(db, "point_logs"), {
-                  id: Date.now().toString() + Math.random().toString(36).substring(7),
-                  dept: dept,
-                  points: totalPoints,
-                  reason: `Hızlı İhlal Çözümü: ${Math.round(diffHours)} saatte giderildi (+${initialPenalty} ceza telafisi, +${bonusReward} hızlı müdahale ödülü)`,
-                  adminName: "Sistem (Hızlı Çözüm)",
-                  dateStr: new Date().toLocaleString("tr-TR"),
-                  timestamp: Date.now(),
-                  taskId: id,
-                });
-              } else {
-                // NORMAL ZAMANINDA ÇÖZÜM: Süre dolmadan tamamlandı
-                // Kesilen ceza puanı telafi edilir
-                const pointsRef = doc(db, "system", "points");
-                await updateDoc(pointsRef, {
-                  [dept]: increment(initialPenalty),
-                });
-
-                await addDoc(collection(db, "point_logs"), {
-                  id: Date.now().toString() + Math.random().toString(36).substring(7),
-                  dept: dept,
-                  points: initialPenalty,
-                  reason: `Zamanında İhlal Çözümü: ${Math.round(diffHours)} saatte tamamlandı (+${initialPenalty} ceza telafisi)`,
-                  adminName: "Sistem (Zamanında Çözüm)",
-                  dateStr: new Date().toLocaleString("tr-TR"),
-                  timestamp: Date.now(),
-                  taskId: id,
-                });
-              }
+              // ZAMANINDA ÇÖZÜM:
+              // Hızlı çözülse dahi +10 bonus kaldırıldı. Departman ihlal cezasını her halükarda çeker.
+              // Süre aşılmadığı için ek çarpanlı gecikme cezası uygulanmaz.
+              await addDoc(collection(db, "point_logs"), {
+                id: Date.now().toString() + Math.random().toString(36).substring(7),
+                dept: dept,
+                points: 0,
+                reason: `Zamanında İhlal Çözümü: Verilen ${deadlineHours} saatlik termin süresi içinde (${Math.round(diffHours)} sa) giderildi. Ek gecikme cezası uygulanmadı.`,
+                adminName: "Sistem (Zamanında Çözüm)",
+                dateStr: new Date().toLocaleString("tr-TR"),
+                timestamp: Date.now(),
+                taskId: id,
+              });
             } else {
-              // GEÇ ÇÖZÜLDÜ (SÜRE AŞIMI - X ÇARPANLI EKSİ PUAN KESİNTİSİ)
-              // Verilen süre aşılmış! Sürenin kaç katı aşıldığına göre katlanan ek ceza puanı kesilir:
+              // GEÇ ÇÖZÜLDÜ (SÜRE AŞIMI - ÇARPANLI EKSİ PUAN KESİNTİSİ)
+              // Verilen süre aşılmış! Sürenin aşılma oranına göre katlanan çarpanlı ek ceza puanı kesilir:
               const lateRatio = diffHours / deadlineHours;
               let lateMultiplier = 1.5;
-              let latePenalty = 15;
 
-              if (lateRatio >= 2) {
-                // Sürenin 2 katından fazla gecikmiş (Örn: 24 saatlik süre 48 saatten sonra çözülmüş)
-                lateMultiplier = 3;
-                latePenalty = 30; // 3x ağır gecikme cezası
+              if (lateRatio >= 3) {
+                lateMultiplier = 3.0;
+              } else if (lateRatio >= 2) {
+                lateMultiplier = 2.5;
               } else if (lateRatio >= 1.5) {
-                // 1.5 kat gecikme (Örn: 36 saat ve üzeri)
-                lateMultiplier = 2;
-                latePenalty = 20; // 2x gecikme cezası
+                lateMultiplier = 2.0;
               } else {
-                // 1x - 1.5x gecikme (Örn: 25 - 35 saat)
                 lateMultiplier = 1.5;
-                latePenalty = 15;
               }
+
+              const latePenalty = Math.round(initialPenalty * lateMultiplier);
 
               const pointsRef = doc(db, "system", "points");
               await updateDoc(pointsRef, {
@@ -14480,7 +14425,7 @@ export default function App() {
                 id: Date.now().toString() + Math.random().toString(36).substring(7),
                 dept: dept,
                 points: -latePenalty,
-                reason: `Gecikmeli İhlal Çözümü: Verilen ${deadlineHours} saatlik süre ${Math.round(diffHours)} saatte aşılarak çözüldü (${lateMultiplier}x Gecikme Cezası: -${latePenalty} Puan)`,
+                reason: `Gecikmeli İhlal Çözümü: Verilen ${deadlineHours} saatlik termin süresi aşılarak ${Math.round(diffHours)} saatte tamamlandı (${lateMultiplier}x Çarpanlı Süre Aşımı Cezası: -${latePenalty} Puan)`,
                 adminName: "Sistem (Süre Aşımı Cezası)",
                 dateStr: new Date().toLocaleString("tr-TR"),
                 timestamp: Date.now(),
