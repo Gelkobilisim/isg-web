@@ -5280,54 +5280,96 @@ const SefDashboard = () => {
     setPreviewModalTitle,
     lang = "tr",
   } = ctx || {};
+
+  // Active view tab: "open" (Açık) | "pending" (Onay Bekleyenler) | "completed" (Düzeltilenler)
+  const [activeTab, setActiveTab] = React.useState("open");
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [filterPriority, setFilterPriority] = React.useState("all"); // "all" | "urgent"
+  const [expandedTasks, setExpandedTasks] = React.useState({});
+
+  // Action modal (Düzelttim or İtiraz)
   const [actionModal, setActionModal] = React.useState({
     isOpen: false,
     taskId: null,
-    type: null,
+    type: null, // "fix" | "object"
   });
-  const [expandedTasks, setExpandedTasks] = React.useState({});
-  const [activeTab, setActiveTab] = React.useState("open");
-
-  const toggleTask = (id) => {
-    setExpandedTasks((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
   const [note, setNote] = React.useState("");
   const [afterImgPreview, setAfterImgPreview] = React.useState(null);
 
-  const { openTasks, completedTasks, openCount } = React.useMemo(() => {
+  // Pagination for tasks list
+  const [sefiTasksLimit, setSefiTasksLimit] = React.useState(12);
+  const [isSefiPaginating, setIsSefiPaginating] = React.useState(false);
+
+  // Toggle expanded description
+  const toggleTask = (id) => {
+    setExpandedTasks((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  // Switch tab with haptic feedback
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    setSefiTasksLimit(12);
+    if (typeof triggerHaptic === "function") triggerHaptic("selection");
+  };
+
+  // Group and sort department tasks
+  const { openTasks, pendingTasks, completedTasks, allDeptTasks } = React.useMemo(() => {
     const userDept = currentUser?.dept;
     const my = (tasks || [])
       .filter((task) => task && (!userDept || task.dept === userDept))
       .sort((a, b) => (Number(b?.timestamp) || 0) - (Number(a?.timestamp) || 0));
+
     const opens = my.filter(
       (t) => t && (t.status === "acik" || t.status === "itiraz_edildi"),
     );
+    const pendings = my.filter((t) => t && t.status === "onay_bekliyor");
+    const completeds = my.filter(
+      (t) => t && t.status !== "acik" && t.status !== "itiraz_edildi" && t.status !== "onay_bekliyor",
+    );
+
     return {
       openTasks: opens,
-      completedTasks: my.filter(
-        (t) => t && t.status !== "acik" && t.status !== "itiraz_edildi",
-      ),
-      openCount: opens.length,
+      pendingTasks: pendings,
+      completedTasks: completeds,
+      allDeptTasks: my,
     };
   }, [tasks, currentUser]);
 
-  const displayTasks = activeTab === "open" ? openTasks : completedTasks;
+  // Filter based on active tab, search query, and priority filter
+  const displayTasks = React.useMemo(() => {
+    let list = [];
+    if (activeTab === "open") list = openTasks;
+    else if (activeTab === "pending") list = pendingTasks;
+    else list = completedTasks;
 
-  const [sefiTasksLimit, setSefiTasksLimit] = React.useState(12);
-  const [isSefiPaginating, setIsSefiPaginating] = React.useState(false);
+    if (filterPriority === "urgent") {
+      list = list.filter((t) => t?.priority === "kritik" || t?.priority === "yuksek");
+    }
 
-  React.useEffect(() => {
-    setSefiTasksLimit(12);
-  }, [activeTab]);
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (t) =>
+          (t.subject && t.subject.toLowerCase().includes(q)) ||
+          (t.desc && t.desc.toLowerCase().includes(q)) ||
+          (t.location && t.location.toLowerCase().includes(q)) ||
+          (t.locationDetail && t.locationDetail.toLowerCase().includes(q))
+      );
+    }
 
+    return list;
+  }, [activeTab, openTasks, pendingTasks, completedTasks, filterPriority, searchQuery]);
+
+  // Load more tasks handler
   const handleLoadMoreSefiTasks = () => {
     setIsSefiPaginating(true);
     setTimeout(() => {
       setSefiTasksLimit((prev) => prev + 12);
       setIsSefiPaginating(false);
-    }, 400);
+    }, 350);
   };
 
+  // Format remaining deadline or overdue tag
   const formatTimeRemaining = (timestamp, deadlineHours) => {
     if (!timestamp || !deadlineHours) return null;
     const ts = Number(timestamp);
@@ -5336,27 +5378,29 @@ const SefDashboard = () => {
     const deadline = ts + dh * 60 * 60 * 1000;
     const now = Date.now();
     const diff = deadline - now;
-
     if (diff < 0) {
       const h = Math.floor(Math.abs(diff) / (1000 * 60 * 60));
       return (
-        <span className="text-red-600 dark:text-red-400 font-bold">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50">
+          <Clock className="w-3.5 h-3.5 text-rose-500" />
           {h > 0
-            ? (lang === "en" ? `${h}h overdue` : `${h} saat gecikti`)
-            : (lang === "en" ? "Overdue" : "Süresi gecikti")}
+            ? (lang === "en" ? `${h}h overdue` : `${h} sa gecikti`)
+            : (lang === "en" ? "Overdue" : "Gecikti")}
         </span>
       );
     } else {
       const h = Math.floor(diff / (1000 * 60 * 60));
       const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
       return (
-        <span className="text-orange-600 dark:text-orange-400 font-bold">
+        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50">
+          <Clock className="w-3.5 h-3.5 text-amber-500" />
           {lang === "en" ? `${h}h ${m}m left` : `${h}s ${m}d kaldı`}
         </span>
       );
     }
   };
 
+  // Format date display
   const formatDateStr = (timestamp) => {
     if (!timestamp) return "";
     const date = new Date(timestamp);
@@ -5369,6 +5413,21 @@ const SefDashboard = () => {
     });
   };
 
+  // Quick notes options to tap for speed
+  const quickFixNotes = [
+    lang === "en" ? "Protective guard / cover installed" : "Koruyucu donanım / kapak takıldı",
+    lang === "en" ? "Area cleaned and organized" : "Saha temizlendi ve düzenlendi",
+    lang === "en" ? "Staff warned on safety rules" : "Personele kural hatırlatması yapıldı",
+    lang === "en" ? "Defect fixed and tested" : "Arıza giderildi ve kontrol edildi",
+  ];
+
+  const quickObjectNotes = [
+    lang === "en" ? "This area is outside our unit scope" : "Bu alan birimimizin sorumluluğunda değildir",
+    lang === "en" ? "Requires maintenance team action" : "Bakım/Onarım müdahalesi gerektirmektedir",
+    lang === "en" ? "Equipment replacement ordered" : "Yeni ekipman sipariş edildi bekleniyor",
+  ];
+
+  // Submit action (Düzelttim or İtiraz)
   const handleActionSubmit = (e) => {
     e.preventDefault();
     if (actionModal.type === "fix") {
@@ -5379,19 +5438,19 @@ const SefDashboard = () => {
         afterImgPreview,
         "",
       );
-      triggerHaptic("success");
+      if (typeof triggerHaptic === "function") triggerHaptic("success");
       toast.success(
         lang === "en"
-          ? "Solution photo uploaded, awaiting specialist review."
-          : "Çözüm kanıtı yüklendi, uzman onayı bekleniyor.",
+          ? "Solution photo submitted! Awaiting safety specialist approval."
+          : "Çözüm fotoğrafı iletildi! İSG Uzmanı onayı bekleniyor.",
       );
     } else if (actionModal.type === "object") {
       updateTaskStatus(actionModal.taskId, "itiraz_edildi", note, "", "");
-      triggerHaptic("warning");
+      if (typeof triggerHaptic === "function") triggerHaptic("warning");
       toast.success(
         lang === "en"
-          ? "Your objection was sent for specialist review."
-          : "İtirazınız uzman incelemesine gönderildi.",
+          ? "Objection sent for specialist re-evaluation."
+          : "İtirazınız İSG Uzmanı incelemesine gönderildi.",
       );
     }
     setActionModal({ isOpen: false, taskId: null, type: null });
@@ -5399,168 +5458,512 @@ const SefDashboard = () => {
     setAfterImgPreview(null);
   };
 
+  const deptKey = getDeptKey(currentUser?.dept || "");
+  const deptTitle = (t && t(deptKey)) || currentUser?.dept || (lang === "en" ? "Unit" : "Birim");
+
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto overflow-x-hidden p-4 md:p-6 lg:p-8 animate-slide-up">
-      <div className="bg-white dark:bg-gray-800 p-6 md:p-8 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
-        <h2 className="text-2xl md:text-3xl font-extrabold flex items-center text-gray-800 dark:text-gray-100">
-          <ShieldAlert className="w-8 h-8 mr-3 text-blue-500" />{" "}
-          {t(getDeptKey(currentUser?.dept || ""))}{" "}
-          {t("dept_tasks") || (lang === "en" ? "Department Tasks" : "Birimi Görevleri")}
-        </h2>
-        <div className="mt-4 md:mt-0 flex flex-col sm:flex-row gap-3">
-          <div className="flex bg-gray-100 dark:bg-gray-700 p-1 rounded-xl">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-6 py-4 md:py-6 overflow-x-hidden animate-slide-up">
+      {/* Modern, Clean Header Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white rounded-3xl p-5 sm:p-7 md:p-8 shadow-xl border border-slate-700/50 mb-6">
+        {/* Subtle decorative background circles */}
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 left-1/3 -mb-8 w-48 h-48 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/30 backdrop-blur-md">
+              <HardHat className="w-3.5 h-3.5 text-blue-300" />
+              <span>{deptTitle} {lang === "en" ? "Chief Dashboard" : "Birim Şefliği"}</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white flex items-center gap-2.5">
+              <span>{deptTitle}</span>
+              <span className="text-blue-400 text-lg sm:text-xl font-bold">
+                {lang === "en" ? "Safety & Operations" : "İSG & Görev Takibi"}
+              </span>
+            </h1>
+            <p className="text-slate-300 text-sm max-w-2xl">
+              {lang === "en"
+                ? `Welcome, Chief ${currentUser?.name || currentUser?.username || ""}. You can easily monitor violations in your area, submit fixes with photos, and keep your department safe.`
+                : `İyi çalışmalar, Sayın ${currentUser?.name || currentUser?.username || "Şefim"}. Biriminize ait saha ihlallerini buradan inceleyebilir, düzelttiğiniz durumları fotoğraflayarak onaya gönderebilirsiniz.`}
+            </p>
+          </div>
+
+          {/* Quick Stat Pill Cards (Clicking them switches active tab!) */}
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 w-full lg:w-auto">
+            {/* Open / Action Required */}
             <button
-              onClick={() => setActiveTab("open")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "open" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              onClick={() => handleTabChange("open")}
+              type="button"
+              className={`p-3 sm:p-4 rounded-2xl transition-all text-left border cursor-pointer ${
+                activeTab === "open"
+                  ? "bg-rose-500/20 border-rose-400/60 shadow-lg shadow-rose-950/40 ring-2 ring-rose-500/30"
+                  : "bg-white/5 border-white/10 hover:bg-white/10"
+              }`}
             >
-              {lang === "en" ? "Open Violations" : "Açık İhlaller"} ({openCount})
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="text-[11px] sm:text-xs font-semibold text-rose-300 uppercase tracking-wider">
+                  {lang === "en" ? "Action Req." : "Bekleyen"}
+                </span>
+                {openTasks.length > 0 ? (
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+                  </span>
+                ) : (
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                )}
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-white">
+                {openTasks.length}
+              </div>
+              <div className="text-[11px] text-slate-300 mt-0.5 font-medium">
+                {openTasks.length === 0
+                  ? (lang === "en" ? "All clear!" : "Hepsi temiz")
+                  : (lang === "en" ? "Violations" : "Açık İhlal")}
+              </div>
             </button>
+
+            {/* Pending Approval */}
             <button
-              onClick={() => setActiveTab("completed")}
-              className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === "completed" ? "bg-white dark:bg-gray-800 text-blue-600 dark:text-blue-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              onClick={() => handleTabChange("pending")}
+              type="button"
+              className={`p-3 sm:p-4 rounded-2xl transition-all text-left border cursor-pointer ${
+                activeTab === "pending"
+                  ? "bg-amber-500/20 border-amber-400/60 shadow-lg shadow-amber-950/40 ring-2 ring-amber-500/30"
+                  : "bg-white/5 border-white/10 hover:bg-white/10"
+              }`}
             >
-              {lang === "en" ? "Resolved" : "Düzeltilenler"}
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="text-[11px] sm:text-xs font-semibold text-amber-300 uppercase tracking-wider">
+                  {lang === "en" ? "In Review" : "Onayda"}
+                </span>
+                <Clock className="w-3.5 h-3.5 text-amber-400" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-white">
+                {pendingTasks.length}
+              </div>
+              <div className="text-[11px] text-slate-300 mt-0.5 font-medium">
+                {lang === "en" ? "Under review" : "Uzman Bekliyor"}
+              </div>
+            </button>
+
+            {/* Completed */}
+            <button
+              onClick={() => handleTabChange("completed")}
+              type="button"
+              className={`p-3 sm:p-4 rounded-2xl transition-all text-left border cursor-pointer ${
+                activeTab === "completed"
+                  ? "bg-emerald-500/20 border-emerald-400/60 shadow-lg shadow-emerald-950/40 ring-2 ring-emerald-500/30"
+                  : "bg-white/5 border-white/10 hover:bg-white/10"
+              }`}
+            >
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <span className="text-[11px] sm:text-xs font-semibold text-emerald-300 uppercase tracking-wider">
+                  {lang === "en" ? "Resolved" : "Çözülen"}
+                </span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+              </div>
+              <div className="text-2xl sm:text-3xl font-extrabold text-white">
+                {completedTasks.length}
+              </div>
+              <div className="text-[11px] text-slate-300 mt-0.5 font-medium">
+                {lang === "en" ? "Completed" : "Kapatıldı"}
+              </div>
             </button>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* Control Bar: Smooth Tab Switcher + Quick Filter + Search */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 shadow-sm border border-slate-200 dark:border-slate-800 mb-6 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Segmented Tabs */}
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl overflow-x-auto hide-scrollbar w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() => handleTabChange("open")}
+            className={`flex-1 md:flex-initial shrink-0 flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap min-w-fit ${
+              activeTab === "open"
+                ? "bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400 shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+            <span className="shrink-0">
+              <span className="sm:hidden">{lang === "en" ? "Open" : "Bekleyen"}</span>
+              <span className="hidden sm:inline">{lang === "en" ? "Open Violations" : "Bekleyen İhlaller"}</span>
+            </span>
+            <span
+              className={`shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center text-xs rounded-full font-black ${
+                activeTab === "open"
+                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
+                  : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+              }`}
+            >
+              {openTasks.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange("pending")}
+            className={`flex-1 md:flex-initial shrink-0 flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap min-w-fit ${
+              activeTab === "pending"
+                ? "bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            <Clock className="w-4 h-4 text-amber-500 shrink-0" />
+            <span className="shrink-0">
+              <span className="sm:hidden">{lang === "en" ? "In Review" : "Onayda"}</span>
+              <span className="hidden sm:inline">{lang === "en" ? "Pending Approval" : "Onay Bekleyenler"}</span>
+            </span>
+            <span
+              className={`shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center text-xs rounded-full font-black ${
+                activeTab === "pending"
+                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
+                  : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+              }`}
+            >
+              {pendingTasks.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleTabChange("completed")}
+            className={`flex-1 md:flex-initial shrink-0 flex items-center justify-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-bold transition-all cursor-pointer whitespace-nowrap min-w-fit ${
+              activeTab === "completed"
+                ? "bg-white dark:bg-slate-900 text-emerald-600 dark:text-emerald-400 shadow-sm"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+            }`}
+          >
+            <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span className="shrink-0">
+              <span className="sm:hidden">{lang === "en" ? "Resolved" : "Düzeltilen"}</span>
+              <span className="hidden sm:inline">{lang === "en" ? "Resolved / History" : "Düzeltilenler / Geçmiş"}</span>
+            </span>
+            <span
+              className={`shrink-0 min-w-5 h-5 px-1.5 flex items-center justify-center text-xs rounded-full font-black ${
+                activeTab === "completed"
+                  ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                  : "bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300"
+              }`}
+            >
+              {completedTasks.length}
+            </span>
+          </button>
+        </div>
+
+        {/* Search & Quick Filter */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          {/* Search Box */}
+          <div className="relative flex-1 md:w-64">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={lang === "en" ? "Search violations..." : "İhlal ara..."}
+              className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-800 dark:text-slate-100 placeholder-slate-400"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Urgent Filter Toggle */}
+          <button
+            type="button"
+            onClick={() =>
+              setFilterPriority((prev) => (prev === "urgent" ? "all" : "urgent"))
+            }
+            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all border flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+              filterPriority === "urgent"
+                ? "bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800"
+                : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700"
+            }`}
+          >
+            <AlertCircle className="w-3.5 h-3.5" />
+            <span>{lang === "en" ? "Urgent" : "Acil Olanlar"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Task Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {/* Empty State */}
         {displayTasks.length === 0 && (
-          <div className="col-span-full bg-white dark:bg-gray-800 p-10 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center text-center mt-2">
+          <div className="col-span-full bg-white dark:bg-slate-900 rounded-3xl p-8 sm:p-12 text-center border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center">
             {activeTab === "open" ? (
               <>
-                <div className="bg-green-100 dark:bg-green-900/30 p-6 rounded-full mb-6">
-                  <CheckCircle className="w-16 h-16 text-green-600 dark:text-green-400" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center mb-4 text-emerald-600 dark:text-emerald-400 shadow-sm">
+                  <ShieldCheck className="w-9 h-9 sm:w-11 sm:h-11" />
                 </div>
-                <h3 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">
                   {lang === "en"
-                    ? "Great! No open violations in your department."
-                    : "Harika! Biriminizde açık ihlal yok."}
+                    ? "Great Job! No Open Violations"
+                    : "Harika! Biriminizde Açık İhlal Yok"}
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
                   {lang === "en"
-                    ? "Everything looks great right now. Thank you for your commitment to occupational safety guidelines. Have a safe shift!"
-                    : "Şu an için her şey yolunda görünüyor. İş sağlığı ve güvenliği kurallarına gösterdiğiniz özen için teşekkür ederiz. Güvenli çalışmalar dileriz!"}
+                    ? `There are currently no active safety violations for ${deptTitle}. Thank you for your commitment to safety standards!`
+                    : `${deptTitle} bünyesinde şu an için bekleyen açık bir iş güvenliği ihlali bulunmamaktadır. Sıfır iş kazası hedefiyle özverili çalışmalarınız için teşekkür ederiz.`}
+                </p>
+              </>
+            ) : activeTab === "pending" ? (
+              <>
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center mb-4 text-amber-600 dark:text-amber-400 shadow-sm">
+                  <Clock className="w-9 h-9 sm:w-11 sm:h-11" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">
+                  {lang === "en"
+                    ? "No Tasks Awaiting Approval"
+                    : "Onay Bekleyen Kayıt Yok"}
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
+                  {lang === "en"
+                    ? "When you submit a solution photo for an open violation, it will be listed here until reviewed by the safety specialist."
+                    : "Açık bir ihlali düzeltip fotoğrafını yüklediğinizde, İSG Uzmanı inceleyene kadar burada listelenecektir."}
                 </p>
               </>
             ) : (
               <>
-                <div className="bg-gray-100 dark:bg-gray-700 p-6 rounded-full mb-6">
-                  <List className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-3xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center mb-4 text-slate-500 dark:text-slate-400 shadow-sm">
+                  <List className="w-9 h-9 sm:w-11 sm:h-11" />
                 </div>
-                <h3 className="text-2xl font-extrabold text-gray-800 dark:text-gray-100 mb-2">
+                <h3 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-slate-100 mb-2">
                   {lang === "en"
-                    ? "No previous violation history yet."
-                    : "Henüz geçmiş bir ihlal kaydı yok."}
+                    ? "No Completed Records Yet"
+                    : "Henüz Tamamlanan Kayıt Yok"}
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
                   {lang === "en"
-                    ? "Resolved or completed corrective actions will be listed here."
-                    : "Tamamlanan veya düzeltilen ihlalleriniz burada listelenecektir."}
+                    ? "Corrected and approved violation history will appear here."
+                    : "Düzeltilip uzman tarafından onaylanan geçmiş ihlaller burada arşivlenir."}
                 </p>
               </>
             )}
           </div>
         )}
+
+        {/* Display Tasks Cards */}
         {displayTasks.slice(0, sefiTasksLimit).map((task) => {
-          const statusObj = STATUS_INFO[task.status] || STATUS_INFO["acik"];
-          const StatusIcon = statusObj.icon;
-          const railClass =
-            task.priority === "yuksek" || task.priority === "kritik"
-              ? "status-rail-red"
-              : task.status === "onaylandi" || task.status === "cozuldu"
-                ? "status-rail-emerald"
-                : "status-rail-amber";
+          const isExpanded = !!expandedTasks[task.id];
+          const isUrgent = task.priority === "kritik" || task.priority === "yuksek";
+          const priorityInfo = PRIORITIES[task.priority] || PRIORITIES["orta"];
+
           return (
             <div
               key={task.id}
-              className={`bg-white dark:bg-gray-800 rounded-2xl p-5 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col card-interactive status-rail ${railClass}`}
+              className={`group bg-white dark:bg-slate-900 rounded-2xl p-5 border shadow-sm transition-all duration-200 flex flex-col justify-between ${
+                isUrgent
+                  ? "border-rose-200 dark:border-rose-900/60 hover:shadow-rose-500/5 hover:border-rose-400"
+                  : "border-slate-200 dark:border-slate-800 hover:border-blue-400/60 hover:shadow-md"
+              }`}
             >
-              <div className="flex justify-between items-start mb-3 pb-3 border-b border-gray-100 dark:border-gray-700">
-                <div className="flex flex-col gap-1.5">
-                  <span
-                    className={`text-xs font-bold px-2 py-1 rounded-md uppercase self-start ${task.priority === "yuksek" ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-300" : task.priority === "orta" ? "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300" : "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300"}`}
-                  >
-                    {task.priority}
-                  </span>
-                  <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center font-medium">
-                    <Calendar className="w-3.5 h-3.5 mr-1" />{" "}
-                    {formatDateStr(task.timestamp)}
-                  </span>
-                </div>
-                <div className="flex flex-col items-end gap-1.5">
-                  <div
-                    className={`flex items-center px-2 py-1 rounded-md border ${statusObj.color}`}
-                  >
-                    <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="text-[10px] font-bold uppercase">
-                      {t(statusObj.label_key)}
+              <div>
+                {/* Card Header: Badges & Remaining Time */}
+                <div className="flex items-center justify-between gap-2 mb-3 pb-3 border-b border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Priority Badge */}
+                    <span
+                      className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                        task.priority === "kritik"
+                          ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
+                          : task.priority === "orta"
+                          ? "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300"
+                          : "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300"
+                      }`}
+                    >
+                      <span
+                        className={`w-1.5 h-1.5 rounded-full ${
+                          task.priority === "kritik"
+                            ? "bg-rose-500 animate-pulse"
+                            : task.priority === "orta"
+                            ? "bg-amber-500"
+                            : "bg-blue-500"
+                        }`}
+                      />
+                      <span>
+                        {task.priority === "kritik"
+                          ? (lang === "en" ? "Critical" : "Kritik")
+                          : task.priority === "orta"
+                          ? (lang === "en" ? "Medium" : "Orta")
+                          : (lang === "en" ? "Low" : "Basit")}
+                      </span>
                     </span>
+
+                    {/* Status Badge */}
+                    {task.status === "onay_bekliyor" ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/50">
+                        <Clock className="w-3 h-3 text-amber-500" />
+                        {lang === "en" ? "In Review" : "Onay Bekliyor"}
+                      </span>
+                    ) : task.status === "itiraz_edildi" ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-950/40 dark:text-orange-300 dark:border-orange-800/50">
+                        <AlertCircle className="w-3 h-3 text-orange-500" />
+                        {lang === "en" ? "Disputed" : "İtiraz Edildi"}
+                      </span>
+                    ) : task.status === "cozuldu" || task.status === "onaylandi" ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/50">
+                        <CheckCircle className="w-3 h-3 text-emerald-500" />
+                        {lang === "en" ? "Resolved" : "Düzeltildi"}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800/50">
+                        <AlertTriangle className="w-3 h-3 text-rose-500" />
+                        {lang === "en" ? "Action Needed" : "Açık İhlal"}
+                      </span>
+                    )}
                   </div>
-                  {(task.status === "acik" ||
-                    task.status === "itiraz_edildi") && (
-                    <div className="text-xs flex items-center bg-gray-50 dark:bg-gray-700 px-2 py-1 rounded-md">
-                      <Clock className="w-3.5 h-3.5 mr-1 text-gray-400" />
-                      {formatTimeRemaining(task.timestamp, task.deadlineHours)}
-                    </div>
+
+                  {/* Deadline countdown if open */}
+                  {(task.status === "acik" || task.status === "itiraz_edildi") ? (
+                    formatTimeRemaining(task.timestamp, task.deadlineHours)
+                  ) : (
+                    <span className="text-xs text-slate-400 font-medium">
+                      {formatDateStr(task.timestamp)}
+                    </span>
                   )}
                 </div>
-              </div>
 
-              <div
-                className="cursor-pointer group mb-2"
-                onClick={() => toggleTask(task.id)}
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                    {task.subject || (lang === "en" ? "Violation Notice" : "İhlal Bildirimi")}
-                  </h3>
-                  <span className="text-gray-400 dark:text-gray-500">
-                    {expandedTasks[task.id] ? (
-                      <ChevronUp className="w-5 h-5" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5" />
-                    )}
+                {/* Subject & Location */}
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 leading-snug mb-1.5">
+                  {task.subject || (lang === "en" ? "Safety Violation" : "İSG Saha İhlali")}
+                </h3>
+
+                <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 mb-3">
+                  <span className="flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    {formatDateStr(task.timestamp)}
                   </span>
+                  {(task.location || task.locationDetail) && (
+                    <span className="flex items-center gap-1 truncate max-w-[150px]">
+                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                      {task.location || task.locationDetail}
+                    </span>
+                  )}
                 </div>
-              </div>
 
-              <AnimatePresence>
-                {expandedTasks[task.id] && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <p className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-4 mt-2 whitespace-pre-wrap">
+                {/* Images Preview Section */}
+                {task.imgUrl && (
+                  <div className="relative mb-3.5 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800">
+                    <img
+                      src={task.imgUrl}
+                      alt={task.subject || "İhlal Görseli"}
+                      loading="lazy"
+                      className="w-full h-44 object-cover cursor-zoom-in group-hover:scale-[1.01] transition-transform duration-300"
+                      onClick={() => {
+                        setPreviewModalImg(task.imgUrl);
+                        setPreviewModalTitle(
+                          task.subject || (lang === "en" ? "Violation Photo" : "İhlal Fotoğrafı")
+                        );
+                      }}
+                    />
+                    <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[11px] font-semibold px-2 py-1 rounded-lg flex items-center gap-1 pointer-events-none">
+                      <Eye className="w-3 h-3" />
+                      <span>{lang === "en" ? "Inspect" : "Büyüt"}</span>
+                    </div>
+
+                    {/* Before / After indicator if fix photo exists */}
+                    {task.afterImgUrl && (
+                      <div className="absolute top-2 left-2 bg-slate-900/80 backdrop-blur-sm text-white text-[11px] font-bold px-2 py-0.5 rounded-md border border-white/20">
+                        {lang === "en" ? "1. Violation Photo" : "1. İhlal Durumu"}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Solution Photo (afterImgUrl) if present */}
+                {task.afterImgUrl && (
+                  <div className="mb-3.5 p-2.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50">
+                    <div className="flex items-center justify-between text-xs font-bold text-emerald-800 dark:text-emerald-300 mb-1.5">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        {lang === "en" ? "Submitted Solution Photo:" : "Yüklenen Çözüm Fotoğrafı:"}
+                      </span>
+                    </div>
+                    <img
+                      src={task.afterImgUrl}
+                      alt="Çözüm Fotoğrafı"
+                      loading="lazy"
+                      className="w-full h-36 object-cover rounded-lg border border-emerald-300/60 dark:border-emerald-700/60 cursor-zoom-in"
+                      onClick={() => {
+                        setPreviewModalImg(task.afterImgUrl);
+                        setPreviewModalTitle(
+                          lang === "en" ? "Fix Solution Proof" : "Düzeltme Çözüm Kanıtı"
+                        );
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Description */}
+                {task.desc && (
+                  <div className="mb-3">
+                    <p
+                      className={`text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-normal leading-relaxed ${
+                        isExpanded ? "whitespace-pre-wrap" : "line-clamp-2"
+                      }`}
+                    >
                       {task.desc}
                     </p>
-                    {task.imgUrl && (
-                      <img
-                        loading="lazy"
-                        decoding="async"
-                        src={task.imgUrl}
-                        alt={task.subject}
-                        onClick={() => {
-                          setPreviewModalImg(task.imgUrl);
-                          setPreviewModalTitle(
-                            task.subject || (lang === "en" ? "Violation Photo" : "İhlal Fotoğrafı"),
-                          );
-                        }}
-                        className="w-full h-40 object-cover rounded-xl mb-4 border border-gray-200 dark:border-gray-700 cursor-zoom-in hover:opacity-90 transition-opacity"
-                      />
+                    {task.desc.length > 90 && (
+                      <button
+                        type="button"
+                        onClick={() => toggleTask(task.id)}
+                        className="text-blue-600 dark:text-blue-400 text-xs font-bold mt-1 inline-flex items-center gap-0.5 hover:underline cursor-pointer"
+                      >
+                        <span>
+                          {isExpanded
+                            ? (lang === "en" ? "Show less" : "Kısalt")
+                            : (lang === "en" ? "Read full description" : "Devamını oku")}
+                        </span>
+                        {isExpanded ? (
+                          <ChevronUp className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        )}
+                      </button>
                     )}
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
 
-              <div className="mt-auto pt-4 flex gap-3">
-                {(task.status === "acik" ||
-                  task.status === "itiraz_edildi") && (
-                  <>
+                {/* Specialist / Inspector Note callout */}
+                {(task.modNote || task.inspectorNote) && (
+                  <div className="mb-3 p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 text-xs text-blue-900 dark:text-blue-200">
+                    <div className="font-bold flex items-center gap-1 mb-0.5">
+                      <MessageSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                      <span>{lang === "en" ? "Safety Specialist Note:" : "İSG Uzmanı Notu:"}</span>
+                    </div>
+                    <p className="font-medium">{task.modNote || task.inspectorNote}</p>
+                  </div>
+                )}
+
+                {/* Chief Note */}
+                {task.chiefNote && (
+                  <div className="mb-3 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300">
+                    <div className="font-bold text-slate-900 dark:text-slate-100 mb-0.5">
+                      {lang === "en" ? "Your Solution Note:" : "Şef Çözüm Notunuz:"}
+                    </div>
+                    <p className="font-medium">{task.chiefNote}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Card Footer: Action Buttons */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800">
+                {(task.status === "acik" || task.status === "itiraz_edildi") ? (
+                  <div className="flex gap-2">
+                    {/* Primary Button: "Düzelttim" */}
                     <button
+                      type="button"
                       onClick={() =>
                         setActionModal({
                           isOpen: true,
@@ -5568,11 +5971,15 @@ const SefDashboard = () => {
                           type: "fix",
                         })
                       }
-                      className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 dark:bg-green-950/40 dark:hover:bg-green-900/40 dark:text-green-300 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm cursor-pointer"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] text-white font-bold py-2.5 px-3 rounded-xl text-xs sm:text-sm transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer"
                     >
-                      {t("i_fixed_it") || "Düzelttim"}
+                      <Camera className="w-4 h-4" />
+                      <span>{t("i_fixed_it") || (lang === "en" ? "I Fixed It" : "Düzelttim")}</span>
                     </button>
+
+                    {/* Secondary Button: "İtiraz Et" */}
                     <button
+                      type="button"
                       onClick={() =>
                         setActionModal({
                           isOpen: true,
@@ -5580,37 +5987,88 @@ const SefDashboard = () => {
                           type: "object",
                         })
                       }
-                      className="flex-1 bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/40 dark:hover:bg-red-900/40 dark:text-red-300 font-bold py-2.5 rounded-xl text-sm transition-colors shadow-sm cursor-pointer"
+                      className="px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 dark:hover:bg-rose-950/30 dark:hover:text-rose-300 dark:hover:border-rose-900/60 text-slate-600 dark:text-slate-400 font-bold text-xs sm:text-sm transition-all cursor-pointer flex items-center gap-1"
                     >
-                      {t("object_btn") || "İtiraz Et"}
+                      <span>{t("object_btn") || (lang === "en" ? "Object" : "İtiraz Et")}</span>
                     </button>
-                  </>
+                  </div>
+                ) : task.status === "onay_bekliyor" ? (
+                  <div className="w-full py-2.5 px-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/50 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center justify-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-500 animate-spin-slow" />
+                    <span>
+                      {lang === "en"
+                        ? "Submitted for safety specialist approval"
+                        : "İSG Uzmanının onayı bekleniyor"}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="w-full py-2.5 px-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300 text-xs font-bold flex items-center justify-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>
+                      {lang === "en"
+                        ? "Successfully resolved & closed"
+                        : "Başarıyla giderildi ve kapatıldı"}
+                    </span>
+                  </div>
                 )}
               </div>
             </div>
           );
         })}
+
         {isSefiPaginating && <TaskCardSkeleton count={2} />}
       </div>
 
-      <PaginationControl
-        currentCount={sefiTasksLimit}
-        totalCount={displayTasks.length}
-        pageSize={12}
-        isLoading={isSefiPaginating}
-        onLoadMore={handleLoadMoreSefiTasks}
-        label={t("load_more_tasks") || "Daha Fazla İhlal Göster"}
-      />
+      {/* Pagination Load More */}
+      <div className="mt-8">
+        <PaginationControl
+          currentCount={sefiTasksLimit}
+          totalCount={displayTasks.length}
+          pageSize={12}
+          isLoading={isSefiPaginating}
+          onLoadMore={handleLoadMoreSefiTasks}
+          label={t("load_more_tasks") || (lang === "en" ? "Load More Violations" : "Daha Fazla İhlal Göster")}
+        />
+      </div>
 
+      {/* Action Modal (Düzelttim / İtiraz Et) */}
       {actionModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 max-sm:p-0 max-sm:items-end bg-black/60 backdrop-blur-md animate-fade-in">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl max-sm:rounded-b-none max-sm:rounded-t-3xl max-sm:max-w-full p-6 md:p-8 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-scale-in">
-            <div className="flex justify-between items-center mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
-              <h3 className="text-xl font-extrabold text-gray-800 dark:text-gray-100">
-                {actionModal.type === "fix"
-                  ? t("send_to_approval") || "Onaya Gönder"
-                  : t("object_to_violation") || "İhlale İtiraz Et"}
-              </h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-md animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-slate-200 dark:border-slate-800 animate-scale-in">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div
+                  className={`w-10 h-10 rounded-2xl flex items-center justify-center ${
+                    actionModal.type === "fix"
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                      : "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300"
+                  }`}
+                >
+                  {actionModal.type === "fix" ? (
+                    <Camera className="w-5 h-5" />
+                  ) : (
+                    <AlertCircle className="w-5 h-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-slate-100">
+                    {actionModal.type === "fix"
+                      ? (lang === "en" ? "Report Solution" : "Düzeltmeyi Bildir")
+                      : (lang === "en" ? "Object to Violation" : "İhlale İtiraz Et")}
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    {actionModal.type === "fix"
+                      ? (lang === "en"
+                          ? "Take a photo of the resolved area to submit for approval."
+                          : "Giderilen alanın fotoğrafını çekerek onaya iletin.")
+                      : (lang === "en"
+                          ? "Explain why this violation does not belong to your unit."
+                          : "İtiraz gerekçenizi ve detayları belirtiniz.")}
+                  </p>
+                </div>
+              </div>
+
               <button
                 type="button"
                 onClick={() => {
@@ -5618,16 +6076,19 @@ const SefDashboard = () => {
                   setNote("");
                   setAfterImgPreview(null);
                 }}
-                className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
-                <X className="w-6 h-6" />
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <form onSubmit={handleActionSubmit} className="space-y-5">
+
+            {/* Modal Form */}
+            <form onSubmit={handleActionSubmit} className="space-y-4">
+              {/* Photo Input (Required for Fix) */}
               {actionModal.type === "fix" && (
                 <div>
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                    {t("fix_photo") || "Çözüm Fotoğrafı (Zorunlu)"}
+                  <label className="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                    {t("fix_photo") || (lang === "en" ? "Fix Proof Photo (Required)" : "Çözüm Fotoğrafı (Zorunlu)")} *
                   </label>
                   <input
                     type="file"
@@ -5636,56 +6097,114 @@ const SefDashboard = () => {
                     capture="environment"
                     className="hidden"
                     onChange={(e) => {
-                      handleImageUpload(e.target.files[0], setAfterImgPreview);
+                      if (e.target.files && e.target.files[0]) {
+                        handleImageUpload(e.target.files[0], setAfterImgPreview);
+                      }
                       e.target.value = null;
                     }}
                   />
-                  <label
-                    htmlFor="sefCamera"
-                    className="w-full h-40 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-green-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 cursor-pointer transition-colors group overflow-hidden"
-                  >
-                    {afterImgPreview ? (
+
+                  {afterImgPreview ? (
+                    <div className="relative rounded-2xl overflow-hidden border-2 border-emerald-500 group">
                       <img
-                        loading="lazy"
-                        decoding="async"
                         src={afterImgPreview}
-                        className="w-full h-full object-cover"
+                        alt="Çözüm Fotoğrafı"
+                        className="w-full h-48 object-cover"
                       />
-                    ) : (
-                      <>
-                        <div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                          <Camera className="w-6 h-6 text-gray-500 group-hover:text-green-500" />
-                        </div>
-                        <span className="text-sm font-bold">
-                          {t("open_camera") || "Kamerayı Aç"}
-                        </span>
-                      </>
-                    )}
-                  </label>
+                      <label
+                        htmlFor="sefCamera"
+                        className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white font-bold text-xs cursor-pointer gap-2"
+                      >
+                        <RefreshCw className="w-6 h-6" />
+                        <span>{lang === "en" ? "Retake Photo" : "Fotoğrafı Değiştir"}</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setAfterImgPreview(null)}
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-white hover:bg-rose-600 transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label
+                      htmlFor="sefCamera"
+                      className="w-full h-44 bg-slate-50 dark:bg-slate-800/60 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl flex flex-col justify-center items-center text-slate-500 dark:text-slate-400 cursor-pointer transition-colors group p-4 text-center"
+                    >
+                      <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                        <Camera className="w-6 h-6" />
+                      </div>
+                      <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                        {t("open_camera") || (lang === "en" ? "Open Camera & Take Photo" : "Kamerayı Aç / Fotoğraf Çek")}
+                      </span>
+                      <span className="text-xs text-slate-400 mt-1">
+                        {lang === "en" ? "Click to capture fix proof" : "Düzeltilen alanın net fotoğrafını yükleyin"}
+                      </span>
+                    </label>
+                  )}
                 </div>
               )}
+
+              {/* Quick Suggestion Chips */}
               <div>
-                <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-                  {t("note") || "Açıklama / Not"}
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                  {lang === "en" ? "Quick Note Suggestions:" : "Hızlı Not Seçenekleri:"}
+                </label>
+                <div className="flex flex-wrap gap-1.5 mb-2.5">
+                  {(actionModal.type === "fix" ? quickFixNotes : quickObjectNotes).map((qNote, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setNote((prev) => (prev ? `${prev}. ${qNote}` : qNote))}
+                      className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950/40 dark:hover:text-blue-300 transition-colors border border-slate-200 dark:border-slate-700 text-left"
+                    >
+                      + {qNote}
+                    </button>
+                  ))}
+                </div>
+
+                <label className="block text-xs sm:text-sm font-bold text-slate-700 dark:text-slate-200 mb-1.5">
+                  {t("note") || (lang === "en" ? "Explanation / Note" : "Açıklama / Not")} *
                 </label>
                 <textarea
                   required
                   rows="3"
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-gray-50 dark:bg-gray-900 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-gray-800 dark:text-gray-100"
-                  placeholder={t("ph_chief_note") || "Açıklama giriniz..."}
+                  className="w-full border border-slate-300 dark:border-slate-700 rounded-xl p-3 bg-slate-50 dark:bg-slate-800/80 outline-none focus:ring-2 focus:ring-blue-500 font-medium text-xs sm:text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 resize-none"
+                  placeholder={
+                    actionModal.type === "fix"
+                      ? (lang === "en"
+                          ? "Briefly describe the corrective action taken..."
+                          : "Yapılan düzeltmeyi kısaca açıklayınız (örn: Koruyucu kapak monte edildi)...")
+                      : (lang === "en"
+                          ? "Enter your reason for objection..."
+                          : "İtiraz nedeninizi belirtiniz...")
+                  }
                 ></textarea>
               </div>
-              <button
-                type="submit"
-                disabled={actionModal.type === "fix" && !afterImgPreview}
-                className={`w-full text-white font-bold py-4 rounded-xl shadow-lg transition-all ${actionModal.type === "fix" ? (afterImgPreview ? "bg-green-600 hover:bg-green-700" : "bg-gray-400 cursor-not-allowed") : "bg-red-600 hover:bg-red-700"}`}
-              >
-                {actionModal.type === "fix"
-                  ? (lang === "en" ? "Submit for Approval" : "Onaya Gönder")
-                  : (lang === "en" ? "Submit Objection" : "İtirazı Gönder")}
-              </button>
+
+              {/* Submit Button */}
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={actionModal.type === "fix" && !afterImgPreview}
+                  className={`w-full font-bold py-3.5 px-4 rounded-xl text-sm transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 ${
+                    actionModal.type === "fix"
+                      ? afterImgPreview
+                        ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30"
+                        : "bg-slate-300 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none"
+                      : "bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/30"
+                  }`}
+                >
+                  <Send className="w-4 h-4" />
+                  <span>
+                    {actionModal.type === "fix"
+                      ? (lang === "en" ? "Submit Solution for Approval" : "Çözümü Onaya Gönder")
+                      : (lang === "en" ? "Send Objection to Specialist" : "İtirazı Uzmana İlet")}
+                  </span>
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -5693,6 +6212,7 @@ const SefDashboard = () => {
     </div>
   );
 };
+
 
 const FeedbacksAdmin = () => {
   const ctx = useAppContext();
