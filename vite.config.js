@@ -5,13 +5,14 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   server: {
-    hmr: false
+    hmr: false,
+    ws: false
   },
   plugins: [
     tailwindcss(),
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['adsmetal_logo.jpg', 'icon.svg'],
       manifest: {
         id: '/',

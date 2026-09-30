@@ -941,7 +941,10 @@ const LoginScreen = () => {
               try {
                 const msgInstance = await getAppMessaging();
                 if (!msgInstance) return;
-                const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+                let registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+                if (!registration) {
+                  registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+                }
                 await navigator.serviceWorker.ready;
                 const currentToken = await getToken(msgInstance, {
                   vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
@@ -12928,7 +12931,10 @@ export default function App() {
 
           (async () => {
             try {
-              const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+              let registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+              if (!registration) {
+                registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+              }
               await navigator.serviceWorker.ready;
               const currentToken = await getToken(msgInstance, {
                 vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
@@ -12991,7 +12997,7 @@ export default function App() {
     }
   }, [isRegisteringDevice, currentUser]);
 
-  const verifyAndSyncToken = useCallback(async (userObj) => {
+  const verifyAndSyncToken = useCallback(async (userObj, force = false) => {
     if (
       !("Notification" in window) ||
       !("serviceWorker" in navigator) ||
@@ -13001,6 +13007,14 @@ export default function App() {
       return;
 
     try {
+      const syncKey = `isg_token_synced_${userObj.id}`;
+      const lastSync = sessionStorage.getItem(syncKey);
+      const now = Date.now();
+      // Throttle background syncs to at most once every 4 hours unless forced
+      if (!force && lastSync && now - Number(lastSync) < 4 * 60 * 60 * 1000) {
+        return;
+      }
+
       const msgInstance = await getAppMessaging();
       if (!msgInstance) return;
 
@@ -13011,7 +13025,10 @@ export default function App() {
         );
         (async () => {
           try {
-            const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+            let registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+            if (!registration) {
+              registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+            }
             await navigator.serviceWorker.ready;
             const currentToken = await getToken(msgInstance, {
               vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
@@ -13029,6 +13046,7 @@ export default function App() {
       const currentToken = await getTokenWithTimeout;
 
       if (currentToken) {
+        sessionStorage.setItem(syncKey, String(Date.now()));
         localStorage.setItem("isg_device_fcm_token", currentToken);
         localStorage.setItem("isg_notification_device_owner", userObj.id);
         localStorage.setItem("isg_notification_role", userObj.role);
@@ -13053,20 +13071,26 @@ export default function App() {
   useEffect(() => {
     if (!currentUser || notificationStatus !== "granted") return;
 
-    // Initial sync
+    // Initial sync (non-forced, respects 4h throttle)
     verifyAndSyncToken(currentUser);
 
-    // Sync on tab focus (visibilitychange)
+    // Sync on tab focus (visibilitychange) throttled
+    let lastTabFocusCheck = Date.now();
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        verifyAndSyncToken(currentUser);
+        const now = Date.now();
+        // Ignore rapid tab switching under 10 minutes
+        if (now - lastTabFocusCheck > 10 * 60 * 1000) {
+          lastTabFocusCheck = now;
+          verifyAndSyncToken(currentUser);
+        }
       }
     };
 
     // Periodic sync (every 6 hours) to catch expired tokens in long-lived sessions
     const syncInterval = setInterval(
       () => {
-        verifyAndSyncToken(currentUser);
+        verifyAndSyncToken(currentUser, true);
       },
       6 * 60 * 60 * 1000,
     );
@@ -13079,7 +13103,7 @@ export default function App() {
         console.log(
           "Service Worker requested token refresh, running background sync...",
         );
-        verifyAndSyncToken(currentUser);
+        verifyAndSyncToken(currentUser, true);
       }
     };
     if (navigator.serviceWorker) {

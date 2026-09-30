@@ -16,6 +16,77 @@
         } catch(e) {}
       })();
     </script>
+    <script>
+      // Prevent Vite HMR WebSocket disconnect reload loop & auto-reload spam in proxy/cloud environments
+      (function() {
+        try {
+          var OriginalWebSocket = window.WebSocket;
+          if (OriginalWebSocket) {
+            window.WebSocket = function(url, protocols) {
+              var isViteHmr = false;
+              if (protocols === "vite-hmr" || protocols === "vite-ping" || (typeof protocols === "string" && protocols.indexOf("vite") !== -1)) {
+                isViteHmr = true;
+              } else if (typeof url === "string" && (url.indexOf("token=") !== -1 || url.indexOf("vite") !== -1)) {
+                isViteHmr = true;
+              }
+              if (isViteHmr) {
+                var dummy = {
+                  readyState: 1,
+                  url: url,
+                  protocol: protocols || "vite-hmr",
+                  send: function() {},
+                  close: function() {},
+                  addEventListener: function(event, handler) {
+                    if (event === "open") setTimeout(function() { handler({ type: "open" }); }, 0);
+                  },
+                  removeEventListener: function() {},
+                  dispatchEvent: function() { return true; },
+                  onopen: null,
+                  onclose: null,
+                  onerror: null,
+                  onmessage: null
+                };
+                setTimeout(function() {
+                  if (typeof dummy.onopen === "function") dummy.onopen({ type: "open" });
+                }, 0);
+                return dummy;
+              }
+              return new OriginalWebSocket(url, protocols);
+            };
+            window.WebSocket.prototype = OriginalWebSocket.prototype;
+            window.WebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
+            window.WebSocket.OPEN = OriginalWebSocket.OPEN;
+            window.WebSocket.CLOSING = OriginalWebSocket.CLOSING;
+            window.WebSocket.CLOSED = OriginalWebSocket.CLOSED;
+          }
+        } catch (e) {
+          console.warn("[Guard] WS patch warning:", e);
+        }
+
+        // Prevent automated unprovoked reload loops
+        try {
+          var pageLoadTime = Date.now();
+          var lastUserInteraction = 0;
+          ['click', 'keydown', 'touchstart'].forEach(function(evt) {
+            window.addEventListener(evt, function() {
+              lastUserInteraction = Date.now();
+            }, { passive: true, capture: true });
+          });
+
+          var origReload = window.location.reload.bind(window.location);
+          window.location.reload = function(forcedReload) {
+            var now = Date.now();
+            var timeSinceLoad = now - pageLoadTime;
+            var timeSinceInteraction = now - lastUserInteraction;
+            if (timeSinceLoad < 10000 && timeSinceInteraction > 3000) {
+              console.warn("[Guard] Automated reload loop suppressed (loaded " + Math.round(timeSinceLoad/1000) + "s ago without interaction)");
+              return;
+            }
+            origReload(forcedReload);
+          };
+        } catch (e) {}
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#0f172a" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

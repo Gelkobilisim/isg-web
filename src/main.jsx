@@ -6,16 +6,14 @@ import './index.css'
 import App from './App.jsx'
 import { ErrorBoundary } from './components/ErrorBoundary.jsx'
 
-// Automatically check and activate updates without requiring user re-installation
+// Safe PWA registration without disruptive auto-reloads
 registerSW({
   immediate: true,
-  onRegisteredSW(swUrl, registration) {
-    if (registration) {
-      // Periodically check for new updates every 30 minutes
-      setInterval(() => {
-        registration.update().catch(() => {});
-      }, 30 * 60 * 1000);
-    }
+  onNeedRefresh() {
+    console.log('[PWA] New version detected; will apply quietly on next startup.');
+  },
+  onOfflineReady() {
+    console.log('[PWA] Application ready for offline use.');
   },
 });
 
