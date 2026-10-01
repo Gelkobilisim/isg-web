@@ -696,6 +696,26 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
     let notificationTitle = "";
     let notificationBody = "";
 
+    function normalizeDept(d?: string | null): string {
+      if (!d) return "";
+      return String(d)
+        .trim()
+        .replace(/İ/g, "i")
+        .replace(/I/g, "ı")
+        .toLowerCase()
+        .replace(/\s+/g, "");
+    }
+
+    function isSameDept(d1?: string | null, d2?: string | null): boolean {
+      if (!d1 || !d2) return false;
+      return normalizeDept(d1) === normalizeDept(d2);
+    }
+
+    function isChief(role?: string | null): boolean {
+      const r = (role || "").toLowerCase().trim();
+      return r === "sef" || r === "şef" || r === "chief" || r === "birim_sefi" || r === "birim_şefi";
+    }
+
     const getUserFcmTokens = (u: any): string[] => {
       const list: string[] = [];
       if (Array.isArray(u.fcmTokens)) {
@@ -715,7 +735,6 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
       const userTokens = getUserFcmTokens(u);
       if (userTokens.length > 0) {
         tokensToNotify.push(...userTokens);
-        targetUsers.push(u.id);
       }
     };
 
@@ -723,29 +742,28 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
       const { dept, desc, lang } = payload;
       notificationTitle =
         lang === "tr" ? "Yeni İSG İhlali" : "New OHS Violation";
-      notificationBody = desc;
+      notificationBody = desc || "Biriminiz için yeni bir ihlal kaydı açıldı.";
 
-      // Notify Şef of that department, and Admin / Mod / ISG
+      // Kural: Yeni ihlal bildirimleri KESİNLİKLE sadece sorumlu birimin şefine ve birim hesaplarına gider.
+      // Yönetici, mod ve İSG Uzmanına ihlal oluşturulurken ASLA bildirim gönderilmez.
       users.forEach((u) => {
-        if (
-          u.role === "admin" ||
-          u.role === "mod" ||
-          u.role === "isg" ||
-          u.role === "isgci" ||
-          (u.role === "sef" && u.dept === dept)
-        ) {
+        const uRole = (u.role || "").toLowerCase().trim();
+        const isAdminOrMod = uRole === "admin" || uRole === "mod" || uRole === "isg" || uRole === "isgci" || uRole === "yuklemeci";
+        if (!isAdminOrMod && isSameDept(u.dept, dept)) {
+          targetUsers.push(u.id);
           addTokensForUser(u);
         }
       });
     } else if (type === "STATUS_CHANGE") {
       const { dept, newStatus, oldStatus, lang } = payload;
 
-      if (newStatus === "cozuldu") {
+      if (newStatus === "cozuldu" || newStatus === "onay_bekliyor") {
         notificationTitle =
-          lang === "tr" ? "İhlal Çözüldü" : "Violation Resolved";
-        notificationBody = `${dept} departmanı bir ihlali çözdü ve onay bekliyor.`;
+          lang === "tr" ? "İhlal Çözüldü (Onay Bekliyor)" : "Violation Resolved (Pending Review)";
+        notificationBody = `${dept} departmanı bir ihlali giderdi ve İSG onayı bekliyor.`;
         users.forEach((u) => {
           if (u.role === "admin" || u.role === "mod" || u.role === "isg" || u.role === "isgci") {
+            targetUsers.push(u.id);
             addTokensForUser(u);
           }
         });
@@ -755,24 +773,27 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         notificationBody = `${dept} departmanı bir ihlale itiraz etti.`;
         users.forEach((u) => {
           if (u.role === "admin" || u.role === "mod" || u.role === "isg" || u.role === "isgci") {
+            targetUsers.push(u.id);
             addTokensForUser(u);
           }
         });
-      } else if (newStatus === "kapatildi") {
+      } else if (newStatus === "kapatildi" || (newStatus === "cozuldu" && oldStatus === "onay_bekliyor")) {
         notificationTitle =
-          lang === "tr" ? "İhlal Kapatıldı" : "Violation Closed";
-        notificationBody = `${dept} departmanındaki bir ihlal kaydı onaylandı ve kapatıldı.`;
+          lang === "tr" ? "İhlal Kaydı Kapatıldı / Onaylandı" : "Violation Closed";
+        notificationBody = `${dept} departmanındaki ihlal çözümü onaylandı ve kapatıldı.`;
         users.forEach((u) => {
-          if (u.role === "sef" && u.dept === dept) {
+          if (isChief(u.role) && isSameDept(u.dept, dept)) {
+            targetUsers.push(u.id);
             addTokensForUser(u);
           }
         });
-      } else if (newStatus === "acik" && oldStatus === "cozuldu") {
+      } else if (newStatus === "acik" && (oldStatus === "cozuldu" || oldStatus === "onay_bekliyor" || oldStatus === "itiraz_edildi")) {
         notificationTitle =
-          lang === "tr" ? "Çözüm Reddedildi" : "Solution Rejected";
-        notificationBody = `İSG Uzmanı çözümünüzü reddetti, ihlal tekrar açıldı.`;
+          lang === "tr" ? "Çözüm / Aksiyon Reddedildi" : "Solution Rejected";
+        notificationBody = `İSG Uzmanı aksiyonu reddetti, ihlal tekrar çözülmesi için biriminize geri gönderildi.`;
         users.forEach((u) => {
-          if (u.role === "sef" && u.dept === dept) {
+          if (isChief(u.role) && isSameDept(u.dept, dept)) {
+            targetUsers.push(u.id);
             addTokensForUser(u);
           }
         });
@@ -786,10 +807,36 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           : `${dept} birimi için test bildirimi başarıyla alındı.`;
 
       users.forEach((u) => {
-        if (dept === "all" || (u.role === "sef" && u.dept === dept)) {
+        if (dept === "all" || (isChief(u.role) && isSameDept(u.dept, dept))) {
+          targetUsers.push(u.id);
           addTokensForUser(u);
         }
       });
+    }
+
+    // Bildirimleri hedef kullanıcıların tümü için (token olsun ya da olmasın) geçmişe kaydet
+    const uniqueUsers = Array.from(new Set(targetUsers));
+    if (uniqueUsers.length > 0 && notificationTitle) {
+      try {
+        const histBatch = getFirestore().batch();
+        uniqueUsers.forEach((uid) => {
+          const notifRef = getFirestore()
+            .collection("user_notifications")
+            .doc();
+          histBatch.set(notifRef, {
+            userId: uid,
+            title: notificationTitle,
+            body: notificationBody,
+            type: type,
+            dept: payload.dept || null,
+            timestamp: new Date(),
+            read: false,
+          });
+        });
+        await histBatch.commit();
+      } catch (histErr) {
+        console.error("Failed to save user notifications history:", histErr);
+      }
     }
 
     if (tokensToNotify.length > 0 && notificationTitle) {
@@ -890,30 +937,7 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         }
       }
 
-      // Bildirimleri kullanici bazinda history'e kaydet (user_notifications)
-      const uniqueUsers = Array.from(new Set(targetUsers));
-      if (uniqueUsers.length > 0) {
-        try {
-          const histBatch = getFirestore().batch();
-          uniqueUsers.forEach((uid) => {
-            const notifRef = getFirestore()
-              .collection("user_notifications")
-              .doc();
-            histBatch.set(notifRef, {
-              userId: uid,
-              title: notificationTitle,
-              body: notificationBody,
-              type: type,
-              dept: payload.dept || null,
-              timestamp: new Date(),
-              read: false,
-            });
-          });
-          await histBatch.commit();
-        } catch (histErr) {
-          console.error("Failed to save user notifications history:", histErr);
-        }
-      }
+      // FCM iletimi tamamlandı
 
       try {
         await getFirestore()
@@ -947,6 +971,64 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
   } catch (error) {
     console.error("FCM Send Error:", error);
     return res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Cihaz bildirimlerini kapatma ve bu cihazın FCM tokenını tüm Firestore kullanıcılarından temizleme
+app.post(["/api/token/disable-device", "/token/disable-device"], async (req, res) => {
+  if (!isFirebaseAdminInitialized) {
+    return res.status(500).json({ error: "Firebase Admin is not configured." });
+  }
+
+  const { token, userId } = req.body || {};
+  if (!token && !userId) {
+    return res.status(400).json({ error: "Token veya userId belirtilmelidir." });
+  }
+
+  try {
+    const firestore = getFirestore();
+    const usersSnapshot = await firestore.collection("users").get();
+    let cleanedCount = 0;
+
+    for (const docSnap of usersSnapshot.docs) {
+      const u = docSnap.data();
+      let needsUpdate = false;
+      const updates: any = {};
+
+      if (token && typeof token === "string" && token.trim()) {
+        const cleanTok = token.trim();
+        if (Array.isArray(u.fcmTokens) && u.fcmTokens.includes(cleanTok)) {
+          updates.fcmTokens = FieldValue.arrayRemove(cleanTok);
+          needsUpdate = true;
+        }
+        if (u.fcmToken === cleanTok) {
+          updates.fcmToken = FieldValue.delete();
+          needsUpdate = true;
+        }
+      }
+
+      if (userId && docSnap.id === userId && !token) {
+        if (Array.isArray(u.fcmTokens) && u.fcmTokens.length > 0) {
+          updates.fcmTokens = [];
+          needsUpdate = true;
+        }
+        if (u.fcmToken) {
+          updates.fcmToken = FieldValue.delete();
+          needsUpdate = true;
+        }
+      }
+
+      if (needsUpdate) {
+        await docSnap.ref.update(updates);
+        cleanedCount++;
+      }
+    }
+
+    console.log(`🔕 [Disable Device] Cihaz bildirimleri kapatıldı. ${cleanedCount} kullanıcı kaydından token silindi.`);
+    return res.json({ success: true, cleanedCount });
+  } catch (err: any) {
+    console.error("disable-device token error:", err);
+    return res.status(500).json({ error: err.message || "Cihaz tokenı kaldırılamadı." });
   }
 });
 

@@ -18,6 +18,8 @@ import {
 } from "react-router-dom";
 import {
   Bell,
+  BellOff,
+  RotateCcw,
   Moon,
   Sun,
   Send,
@@ -148,6 +150,7 @@ import {
   PaginationControl,
 } from "./components/SkeletonLoader";
 import PdfReportModal from "./components/PdfReportModal";
+import { NotificationStatusBanner } from "./components/NotificationStatusBanner";
 
 import { validateEnvVariables } from "./utils/envValidator";
 
@@ -224,6 +227,26 @@ const DEPARTMENTS = [
   "Dış alan",
   "Bakım & Onarım",
 ];
+
+const normalizeDept = (d) => {
+  if (!d) return "";
+  return String(d)
+    .trim()
+    .replace(/İ/g, "i")
+    .replace(/I/g, "ı")
+    .toLowerCase()
+    .replace(/\s+/g, "");
+};
+
+const isSameDept = (d1, d2) => {
+  if (!d1 || !d2) return false;
+  return normalizeDept(d1) === normalizeDept(d2);
+};
+
+const isChief = (role) => {
+  const r = (role || "").toLowerCase().trim();
+  return r === "sef" || r === "şef" || r === "chief" || r === "birim_sefi" || r === "birim_şefi";
+};
 
 const COUNTRIES = [
   "Türkiye",
@@ -372,10 +395,11 @@ if (typeof window !== "undefined") {
 
 const playNotificationSound = (type = "chime") => {
   try {
-    // Respect optional sound alert preference
+    // Respect notification disabled preference
     if (
       typeof localStorage !== "undefined" &&
-      localStorage.getItem("isg_sound_alerts") === "false"
+      (localStorage.getItem("isg_notifications_disabled") === "true" ||
+        localStorage.getItem("isg_sound_alerts") === "false")
     ) {
       return;
     }
@@ -503,6 +527,12 @@ const playNotificationSound = (type = "chime") => {
 
 const triggerClientNotification = (title, options = {}) => {
   try {
+    if (
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem("isg_notifications_disabled") === "true"
+    ) {
+      return;
+    }
     // Play crystal clear notification sound immediately
     playNotificationSound(options.soundType || "chime");
 
@@ -823,7 +853,7 @@ const LoginScreen = () => {
   const [loginErr, setLoginErr] = useState("");
   const [lockoutSeconds, setLockoutSeconds] = useState(0);
   const [rememberMe, setRememberMe] = useState(false);
-  const [registerDevice, setRegisterDevice] = useState(false);
+  const [registerDevice, setRegisterDevice] = useState(true);
   const [loginTheme, setLoginTheme] = useState("isg");
   const [welcomeState, setWelcomeState] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -927,10 +957,13 @@ const LoginScreen = () => {
         setAdminSystemMode(loginTheme);
       }
       
-      if (registerDevice) {
-        localStorage.setItem("isg_notification_device_owner", account.id);
-        localStorage.setItem("isg_notification_role", account.role);
-        localStorage.setItem("isg_notification_dept", account.dept || "");
+      // Giriş yapan hesabın bildirim kimliğini her zaman senkronize et (aynı birimden yeni hesap veya cihaz değişimi)
+      localStorage.removeItem("isg_notifications_disabled");
+      localStorage.setItem("isg_notification_device_owner", account.id);
+      localStorage.setItem("isg_notification_role", account.role);
+      localStorage.setItem("isg_notification_dept", account.dept || "");
+
+      if (registerDevice || (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted")) {
         if ("Notification" in window && "serviceWorker" in navigator) {
           Notification.requestPermission().then(async (permission) => {
             console.log("Notification permission:", permission);
@@ -1722,6 +1755,8 @@ const MainLayout = ({ theme = "blue", children }) => {
     db,
     notificationStatus,
     requestNotificationPermission,
+    recheckNotificationPermission,
+    verifyAndSyncToken,
     showPdfReportModal,
     setShowPdfReportModal,
     soundAlerts,
@@ -1746,31 +1781,76 @@ const MainLayout = ({ theme = "blue", children }) => {
   const [showNotifHistoryModal, setShowNotifHistoryModal] = useState(false);
   const [notifHistoryData, setNotifHistoryData] = useState([]);
   const [isLoadingNotifs, setIsLoadingNotifs] = useState(true);
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
 
+  // Veritabanı sorgularının filtrelenmesi: Her kullanıcı YALNIZCA kendi birimine ait bildirimleri alır
   useEffect(() => {
-    if (showNotifHistoryModal && currentUser) {
-      setIsLoadingNotifs(true);
-      const unsub = onSnapshot(
-        query(
-          collection(db, "user_notifications"),
-          where("userId", "==", currentUser.id),
-          orderBy("timestamp", "desc"),
-          limit(50),
-        ),
-        (snapshot) => {
-          setNotifHistoryData(
-            snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })),
-          );
-          setIsLoadingNotifs(false);
-        },
-        (err) => {
-          console.error("Notif history error", err);
-          setIsLoadingNotifs(false);
-        },
-      );
-      return () => unsub();
+    if (!currentUser) {
+      setNotifHistoryData([]);
+      setUnreadNotifCount(0);
+      return;
     }
-  }, [showNotifHistoryModal, currentUser, db]);
+
+    setIsLoadingNotifs(true);
+    let notifQuery;
+
+    const isSpecialAdminOrMod =
+      currentUser.role === "admin" ||
+      currentUser.role === "mod" ||
+      currentUser.role === "isg" ||
+      currentUser.role === "isgci";
+
+    if (!isSpecialAdminOrMod && currentUser.dept) {
+      // Birim hesapları ve şefleri veritabanından yalnızca kendi birimine ait kayıtları çeker
+      notifQuery = query(
+        collection(db, "user_notifications"),
+        where("dept", "==", currentUser.dept),
+        limit(50),
+      );
+    } else {
+      // Yönetici ve diğer roller için kullanıcı bazlı bildirim sorgusu
+      notifQuery = query(
+        collection(db, "user_notifications"),
+        where("userId", "==", currentUser.id),
+        limit(50),
+      );
+    }
+
+    const unsub = onSnapshot(
+      notifQuery,
+      (snapshot) => {
+        const rawDocs = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+        // Kesin birim izolasyon filtresi
+        const unitFiltered = rawDocs.filter((notif) => {
+          if (!isSpecialAdminOrMod && currentUser.dept) {
+            return isSameDept(notif.dept, currentUser.dept);
+          }
+          if (isSpecialAdminOrMod) {
+            // Yöneticiler ve İSG uzmanları ASLA yeni ihlal (NEW_TASK) bildirimi görmez
+            return notif.userId === currentUser.id && notif.type !== "NEW_TASK";
+          }
+          return notif.userId === currentUser.id;
+        });
+
+        unitFiltered.sort((a, b) => {
+          const tA = a.timestamp?.toMillis ? a.timestamp.toMillis() : (Number(a.timestamp) || 0);
+          const tB = b.timestamp?.toMillis ? b.timestamp.toMillis() : (Number(b.timestamp) || 0);
+          return tB - tA;
+        });
+
+        setNotifHistoryData(unitFiltered);
+        setUnreadNotifCount(unitFiltered.filter((n) => !n.read).length);
+        setIsLoadingNotifs(false);
+      },
+      (err) => {
+        console.error("Unit notif history query error:", err);
+        setIsLoadingNotifs(false);
+      },
+    );
+
+    return () => unsub();
+  }, [currentUser?.id, currentUser?.role, currentUser?.dept, db]);
 
   const toggleNotifReadStatus = async (id, currentReadStatus, e) => {
     if (e) e.stopPropagation();
@@ -2167,15 +2247,71 @@ const MainLayout = ({ theme = "blue", children }) => {
           </button>
           {notificationStatus !== "unsupported" && (
             <button
-              onClick={requestNotificationPermission}
-              className={`w-full flex items-center px-3 py-2.5 font-medium rounded-xl transition-colors text-sm ${notificationStatus === "granted" && localStorage.getItem("isg_notification_device_owner") === currentUser?.id ? "text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20" : "text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20"}`}
+              onClick={() => {
+                triggerHaptic("medium");
+                if (notificationStatus === "denied") {
+                  recheckNotificationPermission();
+                  return;
+                }
+                const isCurrentlyActive =
+                  notificationStatus === "granted" &&
+                  localStorage.getItem("isg_notifications_disabled") !== "true" &&
+                  localStorage.getItem("isg_notification_device_owner") === currentUser?.id;
+                if (isCurrentlyActive) {
+                  localStorage.setItem("isg_notifications_disabled", "true");
+                  const token = localStorage.getItem("isg_device_fcm_token");
+                  if (currentUser?.id && token) {
+                    updateDoc(doc(db, "users", currentUser.id), {
+                      fcmTokens: arrayRemove(token),
+                    }).catch(() => {});
+                  }
+                  toast.success(
+                    lang === "en"
+                      ? "Notifications silenced for this device."
+                      : "Bu cihaz için bildirimler kapatıldı / sessize alındı."
+                  );
+                } else {
+                  localStorage.removeItem("isg_notifications_disabled");
+                  requestNotificationPermission();
+                }
+              }}
+              className={`w-full flex items-center px-3 py-2.5 font-medium rounded-xl transition-colors text-sm ${
+                notificationStatus === "denied"
+                  ? "text-red-600 bg-red-50/80 dark:bg-red-950/40 border border-red-300 dark:border-red-800/60 dark:text-red-400"
+                  : notificationStatus === "granted" &&
+                    localStorage.getItem("isg_notifications_disabled") !== "true" &&
+                    localStorage.getItem("isg_notification_device_owner") === currentUser?.id
+                  ? "text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-900/20"
+                  : "text-orange-600 hover:bg-orange-50 dark:text-orange-400 dark:hover:bg-orange-900/20"
+              }`}
             >
-              <Bell className="w-5 h-5 mr-3 shrink-0" />{" "}
-              {notificationStatus === "granted" &&
-              localStorage.getItem("isg_notification_device_owner") ===
-                currentUser?.id
-                ? (t("notifications_on") || "Bildirimler Açık")
-                : (t("notifications_enable") || "Bildirimleri Aç")}
+              {notificationStatus === "denied" ? (
+                <>
+                  <BellOff className="w-5 h-5 mr-3 shrink-0 text-red-600 dark:text-red-400 animate-pulse" />
+                  <span className="truncate">{t("notifications_blocked") || "Bildirimler Engelli"}</span>
+                  <span className="ml-auto text-[10px] bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-2 py-0.5 rounded-full font-bold">
+                    Pasif
+                  </span>
+                </>
+              ) : notificationStatus === "granted" &&
+              localStorage.getItem("isg_notifications_disabled") !== "true" &&
+              localStorage.getItem("isg_notification_device_owner") === currentUser?.id ? (
+                <>
+                  <Bell className="w-5 h-5 mr-3 shrink-0 text-green-600 dark:text-green-400" />
+                  <span>{t("notifications_on") || "Bildirimler Açık"}</span>
+                  <span className="ml-auto text-[10px] bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-0.5 rounded-full font-bold">
+                    Açık
+                  </span>
+                </>
+              ) : (
+                <>
+                  <BellOff className="w-5 h-5 mr-3 shrink-0 text-orange-500" />
+                  <span>{t("notifications_enable") || "Bildirimleri Aç"}</span>
+                  <span className="ml-auto text-[10px] bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 px-2 py-0.5 rounded-full font-bold">
+                    Kapalı
+                  </span>
+                </>
+              )}
             </button>
           )}
           <div className="mt-2 w-full">
@@ -2339,6 +2475,32 @@ const MainLayout = ({ theme = "blue", children }) => {
         {/* Main Scrollable Content */}
         <main className="flex-1 overflow-y-auto w-full relative min-w-0 overflow-x-hidden flex flex-col justify-between">
           <div className="flex-1 w-full flex flex-col">
+            <div className="px-4 sm:px-6 lg:px-8 pt-4">
+              <NotificationStatusBanner
+                notificationStatus={notificationStatus}
+                isNotificationsDisabled={localStorage.getItem("isg_notifications_disabled") === "true"}
+                currentUser={currentUser}
+                onRecheckPermission={recheckNotificationPermission}
+                onEnableNotifications={() => {
+                  triggerHaptic("medium");
+                  localStorage.removeItem("isg_notifications_disabled");
+                  if (notificationStatus === "granted") {
+                    if (currentUser && verifyAndSyncToken) {
+                      verifyAndSyncToken(currentUser, true);
+                    }
+                    toast.success(
+                      lang === "en"
+                        ? "✅ Notifications activated for this device."
+                        : "✅ Bildirimler bu cihaz için aktifleştirildi."
+                    );
+                  } else {
+                    requestNotificationPermission();
+                  }
+                }}
+                lang={lang}
+                t={t}
+              />
+            </div>
             {children}
           </div>
           <footer className="w-full py-4 text-center shrink-0">
@@ -13870,21 +14032,40 @@ export default function App() {
         const prevTasks = previousTasksRef.current;
         if (prevTasks && prevTasks.length > 0) {
           try {
-            const ownerId = localStorage.getItem("isg_notification_device_owner");
-            const notifRole = localStorage.getItem("isg_notification_role");
-            const notifDept = localStorage.getItem("isg_notification_dept");
+            // Aktif kullanıcı yoksa veya bildirimler kapatıldıysa ses ve toast kesinlikle tetiklenmez
+            if (
+              !currentUser ||
+              localStorage.getItem("isg_notifications_disabled") === "true"
+            ) {
+              previousTasksRef.current = tasksData;
+              setTasks(tasksData);
+              return;
+            }
+
+            const activeRole =
+              currentUser.role || localStorage.getItem("isg_notification_role");
+            const activeDept =
+              currentUser.dept || localStorage.getItem("isg_notification_dept");
             const localLang = localStorage.getItem("isg_lang") || "tr";
 
-            if (ownerId && notifRole) {
-              tasksData.forEach((newTask) => {
-                const oldTask = prevTasks.find((t) => t.id === newTask.id);
-                if (!oldTask) {
-                  const isTargetUser =
-                    (notifRole === "sef" && notifDept === newTask.dept) ||
-                    notifRole === "admin" ||
-                    notifRole === "mod" ||
-                    notifRole === "isg" ||
-                    notifRole === "isgci";
+            tasksData.forEach((newTask) => {
+              const oldTask = prevTasks.find((t) => t.id === newTask.id);
+              if (!oldTask) {
+                // Kural: Yeni ihlal bildirimleri YALNIZCA o birimin şefine/hesaplarına gider.
+                // Yönetici ve İSG Uzmanına ihlal oluşturulurken bildirim KESİNLİKLE gitmez.
+                const isAdminOrMod =
+                  currentUser.role === "admin" ||
+                  currentUser.role === "mod" ||
+                  currentUser.role === "isg" ||
+                  currentUser.role === "isgci" ||
+                  currentUser.role === "yuklemeci";
+
+                if (isAdminOrMod) {
+                  return;
+                }
+
+                const isTargetUser =
+                  isSameDept(currentUser.dept || activeDept, newTask.dept);
                   if (isTargetUser) {
                     const isCritical =
                       newTask.priority === "kritik" ||
@@ -13957,12 +14138,12 @@ export default function App() {
                   }
                 } else if (oldTask.status !== newTask.status) {
                   const isTargetAdmin =
-                    notifRole === "admin" ||
-                    notifRole === "mod" ||
-                    notifRole === "isg" ||
-                    notifRole === "isgci";
+                    activeRole === "admin" ||
+                    activeRole === "mod" ||
+                    activeRole === "isg" ||
+                    activeRole === "isgci";
                   const isTargetChief =
-                    notifRole === "sef" && notifDept === newTask.dept;
+                    isChief(activeRole) && isSameDept(activeDept, newTask.dept);
 
                   let title = "";
                   let body = "";
@@ -14007,7 +14188,6 @@ export default function App() {
                   }
                 }
               });
-            }
           } catch (notifErr) {
             console.warn("Background notification check error:", notifErr);
           }
@@ -14046,7 +14226,7 @@ export default function App() {
       unsubPointsHistory();
       unsubPointLogs();
     };
-  }, [currentUser?.id]);
+  }, [currentUser?.id, currentUser?.role, currentUser?.dept]);
 
   useEffect(() => {
     if (
@@ -14165,69 +14345,92 @@ export default function App() {
   const logout = useCallback(() => {
     triggerHaptic("medium");
     setShowLogoutModal(true);
-    setLogoutCountdown(5);
+    setLogoutCountdown(0);
   }, []);
 
   const executeLogout = useCallback(async (disableNotifications) => {
     triggerHaptic("heavy");
-    if (disableNotifications) {
-      const loggedInUserId = localStorage.getItem("isg_logged_in_user");
-      const isNotificationActive =
-        "Notification" in window &&
-        Notification.permission === "granted" &&
-        localStorage.getItem("isg_notification_device_owner") ===
-          loggedInUserId;
+    const activeUserId = currentUser?.id || localStorage.getItem("isg_logged_in_user");
+    const deviceFcmToken = localStorage.getItem("isg_device_fcm_token");
 
-      if (!isNotificationActive) {
-        alert(
-          "Bu cihazda zaten bildirimleriniz açık değil. Sadece çıkış yapılıyor.",
-        );
-      } else {
-        localStorage.removeItem("isg_notification_device_owner");
-        localStorage.removeItem("isg_notification_role");
-        localStorage.removeItem("isg_notification_dept");
-
-        // Multi-device safe logout: Remove ONLY this device's token from Firestore
-        const loggedInUserId = localStorage.getItem("isg_logged_in_user");
-        const deviceFcmToken = localStorage.getItem("isg_device_fcm_token");
-        if (loggedInUserId) {
-          try {
-            const updates = {};
-            if (deviceFcmToken) {
-              updates.fcmTokens = arrayRemove(deviceFcmToken);
-            }
-            // Check remaining tokens to maintain fallback compatibility
-            const remainingTokens = (currentUser?.fcmTokens || []).filter(
-              (t) => t !== deviceFcmToken,
-            );
-            if (currentUser?.fcmToken === deviceFcmToken) {
-              if (remainingTokens.length > 0) {
-                updates.fcmToken = remainingTokens[0];
-              } else {
-                updates.fcmToken = deleteField();
-              }
-            }
-            if (Object.keys(updates).length > 0) {
-              await updateDoc(doc(db, "users", loggedInUserId), updates);
-            }
-          } catch (e) {
-            console.error("FCM Token silinemedi:", e);
+    // FCM token aboneliğini kullanıcı çıkış yaptığında Firestore üzerinden KESİNLİKLE sil
+    if (activeUserId) {
+      try {
+        const userDocRef = doc(db, "users", activeUserId);
+        const updates = {};
+        if (deviceFcmToken) {
+          updates.fcmTokens = arrayRemove(deviceFcmToken);
+        }
+        if (currentUser?.fcmToken === deviceFcmToken || !deviceFcmToken) {
+          const remainingTokens = (currentUser?.fcmTokens || []).filter(
+            (t) => t !== deviceFcmToken,
+          );
+          if (remainingTokens.length > 0) {
+            updates.fcmToken = remainingTokens[0];
+          } else {
+            updates.fcmToken = deleteField();
           }
         }
-        localStorage.removeItem("isg_device_fcm_token");
-
-        // Tarayıcıdaki tokenı da sil (tekrar girince otomatik eklenmesin)
-        if (messaging) {
-          try {
-            await deleteToken(messaging);
-          } catch (e) {
-            console.error("Browser token silinemedi:", e);
-          }
+        if (Object.keys(updates).length > 0) {
+          await updateDoc(userDocRef, updates).catch(() => {});
         }
+      } catch (e) {
+        console.warn("FCM Token Firestore silme hatası:", e);
       }
     }
+
+    // Backend endpoint'ini de çağırarak Firebase Admin ile tüm kullanıcı kayıtlarından bu cihazın tokenını temizle
+    if (deviceFcmToken || activeUserId) {
+      try {
+        await fetch("/api/token/disable-device", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: deviceFcmToken, userId: activeUserId }),
+        }).catch(() => {});
+      } catch (e) {}
+    }
+
+    if (disableNotifications) {
+      // 1. Bu cihaz için bildirimleri kesin olarak kapat ve yerel kayıtları temizle
+      localStorage.setItem("isg_notifications_disabled", "true");
+      localStorage.removeItem("isg_notification_device_owner");
+      localStorage.removeItem("isg_notification_role");
+      localStorage.removeItem("isg_notification_dept");
+      localStorage.removeItem("isg_device_fcm_token");
+
+      // 2. Tarayıcı push bildirim aboneliğini sonlandır
+      try {
+        const msgInstance = await getAppMessaging();
+        if (msgInstance) {
+          await deleteToken(msgInstance).catch(() => {});
+        }
+      } catch (e) {
+        console.warn("Tarayıcı FCM token iptal hatası:", e);
+      }
+
+      // 3. Varsa açık bildirimleri temizle
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.getNotifications().then((notifs) => {
+            notifs.forEach((n) => n.close());
+          });
+        }).catch(() => {});
+      }
+
+      toast.success(
+        lang === "en"
+          ? "Notifications disabled and logged out."
+          : "Bildirimler kapatıldı ve çıkış yapıldı."
+      );
+    } else {
+      localStorage.removeItem("isg_device_fcm_token");
+      toast.success(
+        lang === "en" ? "Logged out successfully." : "Çıkış yapıldı."
+      );
+    }
+
     try {
-      await signOut(auth);
+      await signOut(auth).catch(() => {});
     } catch (e) {
       console.error("Firebase Auth signOut error:", e);
     }
@@ -14239,7 +14442,7 @@ export default function App() {
     localStorage.removeItem("isg_logged_in_user");
     localStorage.removeItem("isg_auth_token");
     setShowLogoutModal(false);
-  }, [currentUser]);
+  }, [currentUser, lang]);
 
   const createTask = useCallback(
     async (dept, priority, subject, desc, deadlineHours, imgUrl) => {
@@ -14622,6 +14825,37 @@ export default function App() {
     setShowNotifPrompt(false);
   };
 
+  const recheckNotificationPermission = useCallback(async () => {
+    triggerHaptic("medium");
+    if (!("Notification" in window)) {
+      setNotificationStatus("unsupported");
+      toast.error(lang === "en" ? "Notifications not supported" : "Tarayıcınız bildirimleri desteklemiyor.");
+      return;
+    }
+    const currentPerm = Notification.permission;
+    setNotificationStatus(currentPerm);
+    if (currentPerm === "granted") {
+      localStorage.removeItem("isg_notifications_disabled");
+      if (currentUser) {
+        await verifyAndSyncToken(currentUser, true);
+      }
+      playNotificationSound("task_assigned");
+      toast.success(
+        lang === "en"
+          ? "✅ Notifications are now ACTIVE! Connected to device."
+          : "✅ Bildirimler AKTİF! Cihaz başarıyla bağlandı."
+      );
+    } else if (currentPerm === "denied") {
+      toast.error(
+        lang === "en"
+          ? "❌ Permission still blocked in browser settings. Please click lock icon (🔒) in address bar to allow notifications."
+          : "❌ Bildirim izni halen tarayıcı ayarlarından engelli. Lütfen adres çubuğundaki kilit (🔒) simgesinden izin verip tekrar deneyin."
+      );
+    } else {
+      requestNotificationPermission();
+    }
+  }, [currentUser, lang, requestNotificationPermission, verifyAndSyncToken]);
+
   const contextValue = useMemo(
     () => ({
       currentUser,
@@ -14669,6 +14903,8 @@ export default function App() {
       db,
       notificationStatus,
       requestNotificationPermission,
+      recheckNotificationPermission,
+      verifyAndSyncToken,
       showPdfReportModal,
       setShowPdfReportModal,
       soundAlerts,
@@ -14705,6 +14941,8 @@ export default function App() {
       get24HourTonnage,
       notificationStatus,
       requestNotificationPermission,
+      recheckNotificationPermission,
+      verifyAndSyncToken,
       showPdfReportModal,
       soundAlerts,
       toggleSoundAlerts,
@@ -14905,27 +15143,20 @@ export default function App() {
                             <div className="flex flex-col space-y-3">
                               <button
                                 onClick={() => executeLogout(false)}
-                                disabled={logoutCountdown > 0}
-                                className={`w-full py-3 rounded-xl font-bold flex justify-center items-center transition-colors ${logoutCountdown > 0 ? "bg-gray-200 text-gray-400 cursor-not-allowed dark:bg-gray-700" : "bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600"}`}
+                                className="w-full py-3 rounded-xl font-bold flex justify-center items-center transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 cursor-pointer"
                               >
-                                {t("logout_only") || "Sadece Çıkış Yap"}{" "}
-                                {logoutCountdown > 0
-                                  ? `(${logoutCountdown})`
-                                  : ""}
+                                {t("logout_only") || "Sadece Çıkış Yap"}
                               </button>
                               <button
                                 onClick={() => executeLogout(true)}
-                                disabled={logoutCountdown > 0}
-                                className={`w-full py-3 rounded-xl font-bold shadow-md flex justify-center items-center transition-colors ${logoutCountdown > 0 ? "bg-red-300 text-white cursor-not-allowed dark:bg-red-900/50 dark:text-red-300" : "bg-red-600 text-white hover:bg-red-700"}`}
+                                className="w-full py-3 rounded-xl font-bold shadow-md flex justify-center items-center transition-colors bg-red-600 text-white hover:bg-red-700 cursor-pointer gap-2"
                               >
-                                {t("logout_and_disable_notif") || "Bildirimleri Kapatıp Çıkış Yap"}{" "}
-                                {logoutCountdown > 0
-                                  ? `(${logoutCountdown})`
-                                  : ""}
+                                <BellOff className="w-5 h-5 shrink-0" />
+                                {t("logout_and_disable_notif") || "Bildirimleri Kapatıp Çıkış Yap"}
                               </button>
                               <button
                                 onClick={() => setShowLogoutModal(false)}
-                                className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium"
+                                className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 font-medium cursor-pointer"
                               >
                                 {t("cancel")}
                               </button>

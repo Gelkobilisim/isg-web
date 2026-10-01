@@ -352,6 +352,11 @@ export const DICT = {
     logout_and_disable_notif: "Bildirimleri Kapatıp Çıkış Yap",
 
     // Notification Prompts & History
+    notif_status_denied_title: "Bildirim Ayarları Pasif (Tarayıcıda Engellendi)",
+    notif_status_denied_desc: "Tarayıcınız üzerinden bildirim izinleri reddedildiği için saha ihlalleri, acil uyarılar ve onay bildirimleri bu cihazda pasif durumdadır.",
+    notif_status_denied_how: "Adres çubuğundaki kilit (🔒) simgesine tıklayıp bildirimlere 'İzin Ver' seçeneğini işaretleyiniz.",
+    notif_recheck_btn: "İzni Yeniden Kontrol Et",
+    notif_status_passive_badge: "Pasif (Engelli)",
     device_not_registered_title: "Cihazınız bildirim sistemine kayıtlı değil!",
     device_not_registered_desc: "Bildirimleri (yeni görevler, ihlaller vb.) anında alabilmek için bu cihazı sisteme kaydedin.",
     register_device_now: "Cihazı Şimdi Kaydet",
@@ -956,6 +961,11 @@ export const DICT = {
     logout_and_disable_notif: "Disable Notifications & Log Out",
 
     // Notification Prompts & History
+    notif_status_denied_title: "Notification Settings Passive (Permission Blocked)",
+    notif_status_denied_desc: "Browser notification permission has been denied. Field alerts, urgent hazards, and approvals are passive on this device.",
+    notif_status_denied_how: "Click the lock (🔒) icon in your browser address bar and set Notifications to 'Allow'.",
+    notif_recheck_btn: "Re-check Permission",
+    notif_status_passive_badge: "Passive (Blocked)",
     device_not_registered_title: "Your device is not registered for notifications!",
     device_not_registered_desc: "Register this device to receive instant notifications (new tasks, infractions, etc.).",
     register_device_now: "Register Device Now",
