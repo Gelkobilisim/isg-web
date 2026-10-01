@@ -871,7 +871,21 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
     }
 
     if (tokensToNotify.length > 0 && notificationTitle) {
-      const uniqueTokens = Array.from(new Set(tokensToNotify));
+      const rawTokens = Array.from(new Set(tokensToNotify));
+      // Sadece geçerli FCM push tokenlarını hedefle (in-app fallback veya geçersiz tokenları filtrele)
+      const uniqueTokens = rawTokens.filter(
+        (t) => typeof t === "string" && t.trim().length > 30 && !t.startsWith("inapp_")
+      );
+
+      if (uniqueTokens.length === 0) {
+        return res.json({
+          success: true,
+          sentCount: 0,
+          failureCount: 0,
+          message: "Hedef kullanıcılar sadece uygulama içi bildirim modunda (Push tokenı yok).",
+        });
+      }
+
       const message = {
         notification: {
           title: notificationTitle,
@@ -931,16 +945,24 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
       response.responses.forEach((resp, idx) => {
         const currentToken = uniqueTokens[idx];
         if (!resp.success) {
-          const errCode = resp.error ? resp.error.code : null;
+          const errCode = resp.error ? resp.error.code : "";
+          const errMsg = resp.error ? resp.error.message || "" : "";
           failedTokens.push({
             token: currentToken,
-            error: resp.error ? resp.error.message : "Unknown error",
+            error: errMsg || "Unknown error",
           });
           
-          if (
+          const isDead =
             errCode === "messaging/invalid-registration-token" ||
-            errCode === "messaging/registration-token-not-registered"
-          ) {
+            errCode === "messaging/registration-token-not-registered" ||
+            errCode === "messaging/invalid-argument" ||
+            errCode === "messaging/mismatched-credential" ||
+            errMsg.includes("NotRegistered") ||
+            errMsg.includes("not registered") ||
+            errMsg.includes("Requested entity was not found") ||
+            errMsg.includes("invalid-registration-token");
+
+          if (isDead) {
             tokensToRemove.push(currentToken);
           }
         } else {
@@ -957,10 +979,15 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
             if (deadForUser.length > 0) {
               const userRef = getFirestore().collection("users").doc(u.id);
               const remaining = userTokens.filter((t) => !tokensToRemove.includes(t));
-              batch.update(userRef, {
+              const updates: any = {
                 fcmTokens: FieldValue.arrayRemove(...deadForUser),
-                fcmToken: remaining.length > 0 ? remaining[0] : null
-              });
+              };
+              if (remaining.length > 0) {
+                updates.fcmToken = remaining[0];
+              } else {
+                updates.fcmToken = FieldValue.delete();
+              }
+              batch.update(userRef, updates);
             }
           });
           await batch.commit();
@@ -1097,7 +1124,7 @@ app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
     const usersSnapshot = await getFirestore().collection("users").get();
     const users = usersSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
 
-    const tokenToUserMap = new Map<string, any>();
+    const tokenToUsersMap = new Map<string, any[]>();
     users.forEach((u: any) => {
       const uTokens: string[] = [];
       if (Array.isArray(u.fcmTokens)) {
@@ -1109,51 +1136,87 @@ app.post(["/api/cleanup-tokens", "/cleanup-tokens"], async (req, res) => {
         uTokens.push(u.fcmToken.trim());
       }
       uTokens.forEach((t) => {
-        tokenToUserMap.set(t, u);
+        const arr = tokenToUsersMap.get(t) || [];
+        arr.push(u);
+        tokenToUsersMap.set(t, arr);
       });
     });
 
-    const uniqueTokens = Array.from(tokenToUserMap.keys());
-    if (uniqueTokens.length === 0) {
-      return res.json({ success: true, removedCount: 0, totalTested: 0 });
-    }
-
-    const message = {
-      tokens: uniqueTokens,
-      data: { test: "true" },
-    };
-
-    // dryRun = true
-    const response = await getMessaging().sendEachForMulticast(message, true);
+    const allTokens = Array.from(tokenToUsersMap.keys());
+    // In-app fallback veya geçersiz biçimdeki tokenları doğrudan temizlik listesine al
+    const malformedTokens = allTokens.filter(
+      (t) => !t || typeof t !== "string" || t.trim().length <= 30 || t.startsWith("inapp_")
+    );
+    const validFCMTokens = allTokens.filter(
+      (t) => typeof t === "string" && t.trim().length > 30 && !t.startsWith("inapp_")
+    );
 
     let removedCount = 0;
     const batch = getFirestore().batch();
     const deadTokensByUser = new Map<string, string[]>();
 
-    response.responses.forEach((resp, idx) => {
-      if (!resp.success) {
-        const errCode = resp.error ? resp.error.code : null;
-        if (
-          errCode === "messaging/invalid-registration-token" ||
-          errCode === "messaging/registration-token-not-registered"
-        ) {
-          const badToken = uniqueTokens[idx];
-          const ownerUser = tokenToUserMap.get(badToken);
-          if (ownerUser) {
-            const list = deadTokensByUser.get(ownerUser.id) || [];
-            list.push(badToken);
-            deadTokensByUser.set(ownerUser.id, list);
+    // Geçersiz/in-app tokenları doğrudan temizlenecekler arasına ekle
+    malformedTokens.forEach((badToken) => {
+      const owners = tokenToUsersMap.get(badToken) || [];
+      owners.forEach((u) => {
+        const list = deadTokensByUser.get(u.id) || [];
+        if (!list.includes(badToken)) list.push(badToken);
+        deadTokensByUser.set(u.id, list);
+      });
+      removedCount++;
+    });
+
+    if (validFCMTokens.length > 0) {
+      const message = {
+        tokens: validFCMTokens,
+        data: { test: "true" },
+      };
+
+      // dryRun = true
+      const response = await getMessaging().sendEachForMulticast(message, true);
+
+      response.responses.forEach((resp, idx) => {
+        if (!resp.success) {
+          const errCode = resp.error ? resp.error.code : "";
+          const errMsg = resp.error ? resp.error.message || "" : "";
+          const isDead =
+            errCode === "messaging/invalid-registration-token" ||
+            errCode === "messaging/registration-token-not-registered" ||
+            errCode === "messaging/invalid-argument" ||
+            errCode === "messaging/mismatched-credential" ||
+            errMsg.includes("NotRegistered") ||
+            errMsg.includes("not registered") ||
+            errMsg.includes("Requested entity was not found") ||
+            errMsg.includes("invalid-registration-token");
+
+          if (isDead) {
+            const badToken = validFCMTokens[idx];
+            const owners = tokenToUsersMap.get(badToken) || [];
+            owners.forEach((ownerUser) => {
+              const list = deadTokensByUser.get(ownerUser.id) || [];
+              if (!list.includes(badToken)) list.push(badToken);
+              deadTokensByUser.set(ownerUser.id, list);
+            });
             removedCount++;
           }
         }
-      }
-    });
+      });
+    }
 
     deadTokensByUser.forEach((deadTokens, userId) => {
       const userRef = getFirestore().collection("users").doc(userId);
-      batch.update(userRef, {
+      const userObj = users.find((u) => u.id === userId);
+      const userTokens = getUserFcmTokens(userObj);
+      const remaining = userTokens.filter((t) => !deadTokens.includes(t));
+      const updateData: any = {
         fcmTokens: FieldValue.arrayRemove(...deadTokens),
-      });
+      };
+      if (remaining.length > 0) {
+        updateData.fcmToken = remaining[0];
+      } else {
+        updateData.fcmToken = FieldValue.delete();
+      }
+      batch.update(userRef, updateData);
     });
 
     if (removedCount > 0) {
