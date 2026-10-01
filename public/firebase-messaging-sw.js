@@ -36,6 +36,14 @@ try {
   console.error("SW Init error", e);
 }
 
+self.addEventListener('install', function(event) {
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', function(event) {
+  event.waitUntil(self.clients.claim());
+});
+
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   const targetUrl = event.notification.data?.url || '/';

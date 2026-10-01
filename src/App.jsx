@@ -204,6 +204,91 @@ if (typeof window !== "undefined" && import.meta.env.VITE_FIREBASE_VAPID_KEY) {
   }).catch(() => {});
 }
 
+const ensureServiceWorkerAndGetToken = async (msgInstance) => {
+  if (typeof window === "undefined" || !("serviceWorker" in navigator)) {
+    throw new Error("Tarayıcınız Service Worker protokolünü desteklemiyor.");
+  }
+
+  // 1. Service Worker'ı kök kapsamda ('/') kontrol et ve başlat
+  let registration = await navigator.serviceWorker.getRegistration("/");
+  if (!registration) {
+    registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+  }
+
+  // 2. Eğer servis çalışanı kurulum aşamasındaysa aktifleşene kadar bekle
+  if (registration.installing || registration.waiting) {
+    await new Promise((resolve) => {
+      const sw = registration.installing || registration.waiting;
+      if (!sw || sw.state === "activated") return resolve();
+      const stateHandler = () => {
+        if (sw.state === "activated") {
+          sw.removeEventListener("statechange", stateHandler);
+          resolve();
+        }
+      };
+      sw.addEventListener("statechange", stateHandler);
+      setTimeout(resolve, 2500);
+    });
+  }
+
+  await navigator.serviceWorker.ready;
+
+  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY;
+  if (!vapidKey) {
+    throw new Error("VAPID Key yapılandırması eksik.");
+  }
+
+  try {
+    const currentToken = await getToken(msgInstance, {
+      vapidKey,
+      serviceWorkerRegistration: registration,
+    });
+    if (currentToken) {
+      return { token: currentToken, isPushToken: true };
+    }
+  } catch (pushErr) {
+    console.warn("FCM getToken ilk deneme uyarısı:", pushErr?.message || pushErr);
+
+    const errStr = (pushErr?.message || "").toLowerCase();
+    const isPushServiceErr =
+      errStr.includes("push service error") ||
+      errStr.includes("registration failed") ||
+      errStr.includes("abort") ||
+      pushErr?.name === "AbortError";
+
+    if (isPushServiceErr) {
+      // 1. Yeniden deneme: Servis çalışanını güncelle ve tekrar dene
+      try {
+        await registration.update().catch(() => {});
+        const retryToken = await getToken(msgInstance, {
+          vapidKey,
+          serviceWorkerRegistration: registration,
+        });
+        if (retryToken) {
+          return { token: retryToken, isPushToken: true };
+        }
+      } catch (retryErr) {
+        console.warn("FCM getToken yeniden deneme hatası:", retryErr?.message || retryErr);
+      }
+
+      // 2. Mobil tarayıcı push servisine bağlanamıyorsa (PWA standalone dışı Safari,
+      // Google Play bağlantısı olmayan Android veya pil tasarrufu kısıtlaması):
+      // Cihaz kaydını kesinlikle iptal etmeyip uygulama içi canlı alarm ve sirenler için cihazı bağla!
+      const fallbackToken = `inapp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      return {
+        token: fallbackToken,
+        isPushToken: false,
+        pushServiceUnavailable: true,
+        originalError: pushErr?.message,
+      };
+    }
+
+    throw pushErr;
+  }
+
+  return { token: null, isPushToken: false };
+};
+
 const getDeptKey = (deptStr) => {
   const map = {
     Boyahane: "dept_boyahane",
@@ -974,22 +1059,14 @@ const LoginScreen = () => {
               try {
                 const msgInstance = await getAppMessaging();
                 if (!msgInstance) return;
-                let registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
-                if (!registration) {
-                  registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-                }
-                await navigator.serviceWorker.ready;
-                const currentToken = await getToken(msgInstance, {
-                  vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-                  serviceWorkerRegistration: registration,
-                });
-                if (currentToken) {
-                  localStorage.setItem("isg_device_fcm_token", currentToken);
-                  await updateDoc(doc(db, "users", account.id), {
-                    fcmToken: currentToken,
-                    fcmTokens: arrayUnion(currentToken),
+                const { token } = await ensureServiceWorkerAndGetToken(msgInstance);
+                if (token) {
+                  localStorage.setItem("isg_device_fcm_token", token);
+                  await setDoc(doc(db, "users", account.id), {
+                    fcmToken: token,
+                    fcmTokens: arrayUnion(token),
                     lastActive: new Date(),
-                  });
+                  }, { merge: true });
                 }
               } catch (err) {
                 console.warn("Otomatik FCM Token alımı ertelendi:", err?.message || err);
@@ -13579,54 +13656,45 @@ export default function App() {
           throw new Error("Tarayıcınızın bildirim altyapısı bu oturumda başlatılamadı. Gizli sekme veya engelli ayarları kontrol edin.");
         }
 
-        const getTokenWithTimeout = new Promise((resolve, reject) => {
-          const timer = setTimeout(
-            () =>
-              reject(
-                new Error(
-                  "Cihaz kayıt işlemi zaman aşımına uğradı. İnternet bağlantınızı kontrol edip tekrar deneyin.",
-                ),
-              ),
-            25000,
-          );
+        const { token, isPushToken, pushServiceUnavailable } = await ensureServiceWorkerAndGetToken(msgInstance);
 
-          (async () => {
-            try {
-              let registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
-              if (!registration) {
-                registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-              }
-              await navigator.serviceWorker.ready;
-              const currentToken = await getToken(msgInstance, {
-                vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-                serviceWorkerRegistration: registration,
-              });
-              clearTimeout(timer);
-              resolve(currentToken);
-            } catch (e) {
-              clearTimeout(timer);
-              reject(e);
-            }
-          })();
-        });
-
-        const currentToken = await getTokenWithTimeout;
-
-        if (currentToken) {
-          localStorage.setItem("isg_device_fcm_token", currentToken);
-          await updateDoc(doc(db, "users", currentUser.id), {
-            fcmToken: currentToken,
-            fcmTokens: arrayUnion(currentToken),
-            lastActive: new Date(),
-          });
+        if (token) {
+          localStorage.setItem("isg_device_fcm_token", token);
           localStorage.setItem("isg_notification_device_owner", currentUser.id);
           localStorage.setItem("isg_notification_role", currentUser.role);
           localStorage.setItem("isg_notification_dept", currentUser.dept || "");
-          setToastMessage({
-            type: "success",
-            message:
-              "Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek.",
+          localStorage.removeItem("isg_notifications_disabled");
+
+          await updateDoc(doc(db, "users", currentUser.id), {
+            fcmToken: token,
+            fcmTokens: arrayUnion(token),
+            lastActive: new Date(),
+          }).catch(async () => {
+            await setDoc(doc(db, "users", currentUser.id), {
+              fcmToken: token,
+              fcmTokens: arrayUnion(token),
+              lastActive: new Date(),
+            }, { merge: true }).catch(() => {});
           });
+
+          if (isPushToken) {
+            setToastMessage({
+              type: "success",
+              message:
+                "Bildirimler başarıyla açıldı! Artık bu cihaza bildirim gelecek.",
+            });
+            toast.success("Bildirimler başarıyla açıldı! Cihaz sisteme kaydedildi.");
+          } else {
+            setToastMessage({
+              type: "success",
+              message:
+                "Cihazınız başarıyla kaydedildi! Canlı sesli sirenler ve uygulama içi bildirimler aktif edildi.",
+            });
+            toast.success(
+              "Cihaz kaydedildi! Canlı sesli sirenler ve uygulama bildirimleri aktif.",
+              { duration: 6000 }
+            );
+          }
           setShowNotifPrompt(false);
         } else {
           setToastMessage({
@@ -13644,7 +13712,25 @@ export default function App() {
     } catch (err) {
       console.error("Bildirim izni/token alınamadı:", err);
       let errMsg = err?.message || "Tarayıcı izinlerini kontrol edin.";
-      if (err?.code === "messaging/permission-blocked" || err?.message?.includes("permission")) {
+      const errStr = (err?.message || "").toLowerCase();
+      if (errStr.includes("push service error") || errStr.includes("registration failed")) {
+        errMsg = "Mobil tarayıcı arka plan push servisi yanıt vermedi. Uygulama içi sesli sirenler aktif edildi; arka plan için 'Ana Ekrana Ekle' yapabilirsiniz.";
+        if (currentUser) {
+          const fallbackToken = `inapp_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+          localStorage.setItem("isg_device_fcm_token", fallbackToken);
+          localStorage.setItem("isg_notification_device_owner", currentUser.id);
+          localStorage.setItem("isg_notification_role", currentUser.role);
+          localStorage.setItem("isg_notification_dept", currentUser.dept || "");
+          localStorage.removeItem("isg_notifications_disabled");
+          setDoc(doc(db, "users", currentUser.id), {
+            fcmToken: fallbackToken,
+            fcmTokens: arrayUnion(fallbackToken),
+            lastActive: new Date(),
+          }, { merge: true }).catch(() => {});
+          setShowNotifPrompt(false);
+          toast.success("Cihaz kaydedildi! Canlı sesli sirenler ve bildirimler aktif.");
+        }
+      } else if (err?.code === "messaging/permission-blocked" || errStr.includes("permission")) {
         errMsg = "Bildirim izni tarayıcı tarafından engellendi. Adres çubuğundaki kilit simgesinden izin verin.";
       } else if (err?.code === "messaging/unsupported-browser") {
         errMsg = "Kullandığınız tarayıcı Push bildirim protokolünü desteklemiyor.";
@@ -13679,48 +13765,23 @@ export default function App() {
       const msgInstance = await getAppMessaging();
       if (!msgInstance) return;
 
-      const getTokenWithTimeout = new Promise((resolve, reject) => {
-        const timer = setTimeout(
-          () => reject(new Error("Background token sync timed out")),
-          20000,
-        );
-        (async () => {
-          try {
-            let registration = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
-            if (!registration) {
-              registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
-            }
-            await navigator.serviceWorker.ready;
-            const currentToken = await getToken(msgInstance, {
-              vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
-              serviceWorkerRegistration: registration,
-            });
-            clearTimeout(timer);
-            resolve(currentToken);
-          } catch (e) {
-            clearTimeout(timer);
-            reject(e);
-          }
-        })();
-      });
+      const { token } = await ensureServiceWorkerAndGetToken(msgInstance);
 
-      const currentToken = await getTokenWithTimeout;
-
-      if (currentToken) {
+      if (token) {
         sessionStorage.setItem(syncKey, String(Date.now()));
-        localStorage.setItem("isg_device_fcm_token", currentToken);
+        localStorage.setItem("isg_device_fcm_token", token);
         localStorage.setItem("isg_notification_device_owner", userObj.id);
         localStorage.setItem("isg_notification_role", userObj.role);
         localStorage.setItem("isg_notification_dept", userObj.dept || "");
 
         const existingTokens = Array.isArray(userObj.fcmTokens) ? userObj.fcmTokens : [];
-        if (!existingTokens.includes(currentToken) || userObj.fcmToken !== currentToken) {
+        if (!existingTokens.includes(token) || userObj.fcmToken !== token) {
           console.log("Token sync/registration detected, updating Firestore with multi-device array...");
-          await updateDoc(doc(db, "users", userObj.id), {
-            fcmToken: currentToken,
-            fcmTokens: arrayUnion(currentToken),
+          await setDoc(doc(db, "users", userObj.id), {
+            fcmToken: token,
+            fcmTokens: arrayUnion(token),
             lastActive: new Date(),
-          });
+          }, { merge: true });
           console.log("Token updated successfully for user:", userObj.username);
         }
       }

@@ -1,0 +1,26 @@
+{
+  "name": "ADS Takip - İSG ve Sevkiyat Yönetim Portalı",
+  "short_name": "ADS Takip",
+  "description": "ADS Metal A.Ş. İSG Saha Denetim ve Sevkiyat Takip Portalı",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/adsmetal_logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/adsmetal_logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "gcm_sender_id": "103953800507"
+}
