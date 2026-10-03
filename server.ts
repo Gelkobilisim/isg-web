@@ -733,13 +733,39 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         .trim()
         .replace(/İ/g, "i")
         .replace(/I/g, "ı")
+        .replace(/ı/g, "i")
+        .replace(/ğ/g, "g")
+        .replace(/Ğ/g, "g")
+        .replace(/ü/g, "u")
+        .replace(/Ü/g, "u")
+        .replace(/ş/g, "s")
+        .replace(/Ş/g, "s")
+        .replace(/ö/g, "o")
+        .replace(/Ö/g, "o")
+        .replace(/ç/g, "c")
+        .replace(/Ç/g, "c")
         .toLowerCase()
-        .replace(/\s+/g, "");
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]/g, "");
     }
 
     function isSameDept(d1?: string | null, d2?: string | null): boolean {
       if (!d1 || !d2) return false;
-      return normalizeDept(d1) === normalizeDept(d2);
+      const n1 = normalizeDept(d1);
+      const n2 = normalizeDept(d2);
+      if (n1 === n2) return true;
+      if (n1.startsWith("kaynak") && n2.startsWith("kaynak")) return true;
+      if (n1.startsWith("boya") && n2.startsWith("boya")) return true;
+      if (n1.startsWith("bakim") && n2.startsWith("bakim")) return true;
+      if (n1.startsWith("altyapi") && n2.startsWith("altyapi")) return true;
+      if (n1.startsWith("lazer") && n2.startsWith("lazer")) return true;
+      if (n1.startsWith("guc") && n2.startsWith("guc")) return true;
+      if (n1.length >= 4 && n2.length >= 4) {
+        if (n1.startsWith(n2) || n2.startsWith(n1)) return true;
+        if (n1.includes(n2) || n2.includes(n1)) return true;
+      }
+      return false;
     }
 
     function isChief(role?: string | null): boolean {
@@ -838,7 +864,7 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           : `${dept} birimi için test bildirimi başarıyla alındı.`;
 
       users.forEach((u) => {
-        if (dept === "all" || (isChief(u.role) && isSameDept(u.dept, dept))) {
+        if (dept === "all" || isSameDept(u.dept, dept)) {
           targetUsers.push(u.id);
           addTokensForUser(u);
         }
@@ -1037,11 +1063,15 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         success: true,
         sentCount: response.successCount,
         failureCount: response.failureCount,
+        targetCount: uniqueTokens.length,
         errors: failedTokens,
       });
     } else {
       return res.json({
         success: true,
+        sentCount: 0,
+        failureCount: 0,
+        targetCount: 0,
         message: "No targets or conditions met.",
       });
     }
@@ -1051,13 +1081,118 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
   }
 });
 
-// Cihaz bildirimlerini kapatma ve bu cihazın FCM tokenını tüm Firestore kullanıcılarından temizleme
+// Cihaz bildirimlerini kaydetme, FCM token geçerliliğini doğrulama ve önceki kullanıcılardan temizleyip mevcut hesaba bağlama
+app.post(["/api/token/register-device", "/token/register-device"], async (req, res) => {
+  if (!isFirebaseAdminInitialized) {
+    return res.status(500).json({ error: "Firebase Admin is not configured." });
+  }
+
+  const { token, userId, username, dept, role } = req.body || {};
+  if (!token || typeof token !== "string" || !token.trim()) {
+    return res.status(400).json({ error: "Geçerli bir token belirtilmelidir." });
+  }
+  if (!userId) {
+    return res.status(400).json({ error: "userId belirtilmelidir." });
+  }
+
+  const cleanToken = token.trim();
+
+  // In-app fallback token kontrolü
+  if (cleanToken.startsWith("inapp_") || cleanToken.length < 30) {
+    try {
+      const userRef = getFirestore().collection("users").doc(userId);
+      await userRef.set(
+        { inAppDeviceToken: cleanToken, lastActive: new Date() },
+        { merge: true }
+      );
+      return res.json({ success: true, isPush: false, message: "Uygulama içi token kaydedildi." });
+    } catch (e: any) {
+      return res.status(500).json({ error: e?.message || "In-app token kaydedilemedi." });
+    }
+  }
+
+  // FCM Dry-run testi ile token'ın Google FCM sunucularında geçerli olup olmadığını test et
+  try {
+    await getMessaging().send({ token: cleanToken, data: { dryRun: "true" } }, true);
+  } catch (dryErr: any) {
+    console.warn(`[Register Device] FCM dry-run doğrulaması başarısız (${cleanToken.slice(0, 15)}...):`, dryErr?.code, dryErr?.message);
+    const errCode = dryErr?.code || "";
+    const errMsg = dryErr?.message || "";
+    const isDead =
+      errCode === "messaging/invalid-registration-token" ||
+      errCode === "messaging/registration-token-not-registered" ||
+      errCode === "messaging/invalid-argument" ||
+      errCode === "messaging/mismatched-credential" ||
+      errMsg.includes("NotRegistered") ||
+      errMsg.includes("not registered") ||
+      errMsg.includes("invalid-registration-token") ||
+      errMsg.includes("Requested entity was not found");
+
+    if (isDead) {
+      return res.json({
+        success: false,
+        deadToken: true,
+        error: "Bu cihazın kayıtlı token'ı Google FCM sunucularında geçersiz (NotRegistered). Tarayıcı yeni bir token üretmeli.",
+      });
+    }
+  }
+
+  // Token geçerli: Şimdi bu tokenı diğer tüm kullanıcı kayıtlarından sil ve sadece hedef kullanıcıya bağla
+  try {
+    const firestore = getFirestore();
+    const usersSnapshot = await firestore.collection("users").get();
+    const batch = firestore.batch();
+
+    usersSnapshot.docs.forEach((docSnap) => {
+      const u = docSnap.data();
+      if (docSnap.id !== userId) {
+        let needsClean = false;
+        const updates: any = {};
+        if (Array.isArray(u.fcmTokens) && u.fcmTokens.includes(cleanToken)) {
+          updates.fcmTokens = FieldValue.arrayRemove(cleanToken);
+          needsClean = true;
+        }
+        if (u.fcmToken === cleanToken) {
+          const remaining = (u.fcmTokens || []).filter((t: string) => t !== cleanToken);
+          if (remaining.length > 0) {
+            updates.fcmToken = remaining[0];
+          } else {
+            updates.fcmToken = FieldValue.delete();
+          }
+          needsClean = true;
+        }
+        if (needsClean) {
+          batch.update(docSnap.ref, updates);
+        }
+      } else {
+        batch.set(
+          docSnap.ref,
+          {
+            fcmToken: cleanToken,
+            fcmTokens: FieldValue.arrayUnion(cleanToken),
+            lastActive: new Date(),
+          },
+          { merge: true }
+        );
+      }
+    });
+
+    await batch.commit();
+    console.log(`📱 [Register Device] Cihaz tokenı ${username || userId} (${dept || "Birim"}) hesabına bağlandı ve diğer kullanıcılardan temizlendi.`);
+    return res.json({ success: true, isPush: true, token: cleanToken });
+  } catch (err: any) {
+    console.error("register-device error:", err);
+    return res.status(500).json({ error: err?.message || "Cihaz kaydedilemedi." });
+  }
+});
+
+// Cihaz bildirimlerini kapatma ve bu cihazın FCM tokenını kullanıcı kayıtlarından temizleme
 app.post(["/api/token/disable-device", "/token/disable-device"], async (req, res) => {
   if (!isFirebaseAdminInitialized) {
     return res.status(500).json({ error: "Firebase Admin is not configured." });
   }
 
-  const { token, userId } = req.body || {};
+  const { token, userId, userOnly } = req.body || {};
   if (!token && !userId) {
     return res.status(400).json({ error: "Token veya userId belirtilmelidir." });
   }
@@ -1068,6 +1203,9 @@ app.post(["/api/token/disable-device", "/token/disable-device"], async (req, res
     let cleanedCount = 0;
 
     for (const docSnap of usersSnapshot.docs) {
+      if (userOnly && userId && docSnap.id !== userId) {
+        continue;
+      }
       const u = docSnap.data();
       let needsUpdate = false;
       const updates: any = {};

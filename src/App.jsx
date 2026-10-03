@@ -209,13 +209,17 @@ const ensureServiceWorkerAndGetToken = async (msgInstance, forceRefresh = false)
     throw new Error("Tarayıcınız Service Worker protokolünü desteklemiyor.");
   }
 
-  // 1. Service Worker'ı kök kapsamda ('/') kontrol et ve başlat
+  // 1. Service Worker'ı kök kapsamda kontrol et ve firebase-messaging-sw.js olduğundan emin ol
   let registration = await navigator.serviceWorker.getRegistration("/");
-  if (!registration) {
+  if (
+    !registration ||
+    !registration.active ||
+    !(registration.active.scriptURL || "").includes("firebase-messaging-sw.js")
+  ) {
     registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
   }
 
-  // 2. Eğer servis çalışanı kurulum aşamasındaysa aktifleşene kadar bekle
+  // 2. Servis çalışanı aktifleşene kadar bekle
   if (registration.installing || registration.waiting) {
     await new Promise((resolve) => {
       const sw = registration.installing || registration.waiting;
@@ -238,16 +242,22 @@ const ensureServiceWorkerAndGetToken = async (msgInstance, forceRefresh = false)
     throw new Error("VAPID Key yapılandırması eksik.");
   }
 
+  // Eğer forceRefresh istenmişse (örn. sunucu NotRegistered bildirdiyse) eski aboneliği ve IDB önbelleğini sil
   if (forceRefresh) {
     try {
+      console.log("FCM Zorunlu Yenileme (forceRefresh): Eski abonelik ve önbellek temizleniyor...");
       const existingSub = await registration.pushManager.getSubscription().catch(() => null);
       if (existingSub) {
         await existingSub.unsubscribe().catch(() => {});
       }
-      await deleteToken(msgInstance).catch(() => {});
-      await new Promise((r) => setTimeout(r, 200));
+      try {
+        indexedDB.deleteDatabase("fcm_token_details_db");
+        indexedDB.deleteDatabase("firebase-messaging-database");
+      } catch (idbErr) {}
+      await registration.update().catch(() => {});
+      await new Promise((r) => setTimeout(r, 300));
     } catch (e) {
-      console.warn("FCM forceRefresh temizleme uyarısı:", e);
+      console.warn("FCM forceRefresh hazırlık hatası:", e);
     }
   }
 
@@ -271,33 +281,33 @@ const ensureServiceWorkerAndGetToken = async (msgInstance, forceRefresh = false)
       pushErr?.name === "AbortError";
 
     if (isPushServiceErr) {
-      // 1. Akıllı Kurtarma: Tarayıcıdaki çakışan veya yanıt vermeyen push aboneliğini sıfırla
+      // Akıllı Kurtarma: Hata durumunda tarayıcıdaki çakışan veya yanıt vermeyen push aboneliğini sıfırla
       try {
         console.log("FCM Push service recovery devrede: Eski abonelik temizlenip taze token isteniyor...");
         const existingSub = await registration.pushManager.getSubscription().catch(() => null);
         if (existingSub) {
           await existingSub.unsubscribe().catch(() => {});
         }
-        await deleteToken(msgInstance).catch(() => {});
+        try {
+          indexedDB.deleteDatabase("fcm_token_details_db");
+          indexedDB.deleteDatabase("firebase-messaging-database");
+        } catch (idbErr) {}
         await registration.update().catch(() => {});
-        // Tarayıcı push daemon'unun toparlanması için kısa bekleme
-        await new Promise((r) => setTimeout(r, 350));
+        await new Promise((r) => setTimeout(r, 400));
 
         const retryToken = await getToken(msgInstance, {
           vapidKey,
           serviceWorkerRegistration: registration,
         });
         if (retryToken) {
-          console.log("✅ Push servisi başarıyla kurtarıldı ve geçerli FCM tokenı alındı!");
+          console.log("✅ Push servisi başarıyla kurtarıldı ve geçerli FCM tokenı alındı:", retryToken.slice(0, 15));
           return { token: retryToken, isPushToken: true };
         }
       } catch (retryErr) {
         console.warn("FCM getToken yeniden deneme hatası:", retryErr?.message || retryErr);
       }
 
-      // 2. Mobil tarayıcı push servisine donanımsal olarak bağlanamıyorsa (PWA standalone dışı Safari,
-      // Google Play bağlantısı olmayan Android veya pil tasarrufu kısıtlaması):
-      // Cihaz kaydını kesinlikle iptal etmeyip uygulama içi canlı alarm ve sirenler için cihazı bağla!
+      // Mobil tarayıcı donanımsal olarak push servisine bağlanamıyorsa fallback in-app token üret
       const fallbackToken = `inapp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       return {
         token: fallbackToken,
@@ -311,6 +321,29 @@ const ensureServiceWorkerAndGetToken = async (msgInstance, forceRefresh = false)
   }
 
   return { token: null, isPushToken: false };
+};
+
+// Sunucu tarafında token doğrulaması yapan ve tokenı kullanıcıya bağlayan yardımcı fonksiyon
+const registerDeviceTokenOnServer = async (token, userObj) => {
+  if (!token || !userObj?.id) return { success: false };
+  try {
+    const res = await fetch("/api/token/register-device", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token,
+        userId: userObj.id,
+        username: userObj.username,
+        dept: userObj.dept,
+        role: userObj.role,
+      }),
+    });
+    const data = await res.json();
+    return data;
+  } catch (e) {
+    console.warn("registerDeviceTokenOnServer ağ hatası:", e);
+    return { success: false, error: e?.message };
+  }
 };
 
 const getDeptKey = (deptStr) => {
@@ -1066,42 +1099,83 @@ const LoginScreen = () => {
         setAdminSystemMode(loginTheme);
       }
       
-      // Giriş yapan hesabın bildirim kimliğini her zaman senkronize et (aynı birimden yeni hesap veya cihaz değişimi)
+      // Giriş yapan hesabın bildirim kimliğini senkronize et (aynı telefondan yeni hesap veya cihaz değişimi)
       localStorage.removeItem("isg_notifications_disabled");
       localStorage.setItem("isg_notification_device_owner", account.id);
       localStorage.setItem("isg_notification_role", account.role);
       localStorage.setItem("isg_notification_dept", account.dept || "");
 
-      if (registerDevice || (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted")) {
+      let loggedInAccountWithTokens = { ...account };
+      const cachedToken = localStorage.getItem("isg_device_fcm_token");
+      if (cachedToken && !cachedToken.startsWith("inapp_") && cachedToken.length > 30) {
+        loggedInAccountWithTokens.fcmToken = cachedToken;
+        loggedInAccountWithTokens.fcmTokens = [
+          ...new Set([...(account.fcmTokens || []), cachedToken]),
+        ];
+      }
+
+      if (
+        (registerDevice || (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted")) &&
+        import.meta.env.VITE_FIREBASE_VAPID_KEY
+      ) {
         if ("Notification" in window && "serviceWorker" in navigator) {
-          Notification.requestPermission().then(async (permission) => {
-            console.log("Notification permission:", permission);
-            if (
-              permission === "granted" &&
-              import.meta.env.VITE_FIREBASE_VAPID_KEY
-            ) {
-              try {
+          (async () => {
+            try {
+              const permission = await Notification.requestPermission().catch(() => null);
+              if (permission === "granted") {
                 const msgInstance = await getAppMessaging();
                 if (!msgInstance) return;
-                const { token, isPushToken } = await ensureServiceWorkerAndGetToken(msgInstance, registerDevice);
-                if (token) {
-                  localStorage.setItem("isg_device_fcm_token", token);
-                  const updates = {
-                    lastActive: new Date(),
-                  };
-                  if (isPushToken) {
-                    updates.fcmToken = token;
-                    updates.fcmTokens = arrayUnion(token);
-                  } else {
-                    updates.inAppDeviceToken = token;
+                let { token, isPushToken } = await ensureServiceWorkerAndGetToken(msgInstance);
+                if (token && isPushToken) {
+                  // Sunucu tarafında doğrula ve bu kullanıcıya bağla (diğer hesaplardan temizle)
+                  let regRes = await registerDeviceTokenOnServer(token, account);
+                  if (regRes?.deadToken) {
+                    console.log("Token Google FCM sunucusunda geçersiz kılındı. Yenileniyor...");
+                    const refreshed = await ensureServiceWorkerAndGetToken(msgInstance, true);
+                    if (refreshed.token && refreshed.isPushToken) {
+                      token = refreshed.token;
+                      await registerDeviceTokenOnServer(token, account);
+                    }
                   }
-                  await setDoc(doc(db, "users", account.id), updates, { merge: true });
+
+                  if (token) {
+                    localStorage.setItem("isg_device_fcm_token", token);
+                    localStorage.setItem("isg_notification_device_owner", account.id);
+                    localStorage.setItem("isg_notification_role", account.role);
+                    localStorage.setItem("isg_notification_dept", account.dept || "");
+                    localStorage.removeItem("isg_notifications_disabled");
+
+                    // Doğrudan Firestore'a da anlık yansıt
+                    await setDoc(
+                      doc(db, "users", account.id),
+                      {
+                        fcmToken: token,
+                        fcmTokens: arrayUnion(token),
+                        lastActive: new Date(),
+                      },
+                      { merge: true }
+                    ).catch(() => {});
+
+                    console.log(`✅ Cihaz tokenı ${account.username} (${account.dept}) hesabına kaydedildi.`);
+
+                    // React state'ini derhal güncelle (kırmızı uyarı bandı çıkmasın)
+                    setCurrentUser((prev) => {
+                      if (!prev || prev.id !== account.id) return prev;
+                      const tokens = Array.isArray(prev.fcmTokens) ? [...prev.fcmTokens] : [];
+                      if (!tokens.includes(token)) tokens.push(token);
+                      return {
+                        ...prev,
+                        fcmToken: token,
+                        fcmTokens: tokens,
+                      };
+                    });
+                  }
                 }
-              } catch (err) {
-                console.warn("Otomatik FCM Token alımı ertelendi:", err?.message || err);
               }
+            } catch (err) {
+              console.warn("Giriş esnasında FCM Token kaydı ertelendi:", err?.message || err);
             }
-          }).catch(() => {});
+          })();
         }
       }
       // Show welcome animation sequence before transitioning
@@ -1120,7 +1194,7 @@ const LoginScreen = () => {
       }, 950);
 
       setTimeout(() => {
-        setCurrentUser(account);
+        setCurrentUser(loggedInAccountWithTokens);
         setLoginErr("");
         setIsSubmitting(false);
         setWelcomeState(null);
@@ -2040,9 +2114,23 @@ const MainLayout = ({ theme = "blue", children }) => {
         }),
       });
       const data = await res.json();
-      alert(
-        `Test bildirimi gönderildi!\nBaşarılı: ${data.sentCount}\nHatalı: ${data.failureCount}`,
-      );
+      if (!res.ok || data.error) {
+        alert(`Test bildirimi gönderilemedi: ${data.error || "Sunucu hatası"}`);
+        return;
+      }
+      const sent = Number(data.sentCount) || 0;
+      const failed = Number(data.failureCount) || 0;
+      const target = Number(data.targetCount) ?? (sent + failed);
+
+      if (target === 0 && sent === 0) {
+        alert(
+          `⚠️ "${testDept === "all" ? "Tüm Departmanlar" : testDept}" departmanında kayıtlı ve açık cihaz bulunamadı.\n\nBir cihaza bildirim gidebilmesi için o departmandan bir kullanıcının telefondan giriş yapıp bildirim izni vermesi gereklidir.`,
+        );
+      } else {
+        alert(
+          `Test bildirimi tamamlandı!\n\nHedef Cihaz: ${target}\nBaşarılı (İletilen): ${sent}\nHatalı (Ulaşılamayan): ${failed}`,
+        );
+      }
     } catch (error) {
       console.error(error);
       alert("Test gönderilirken hata oluştu.");
@@ -2862,13 +2950,13 @@ const MainLayout = ({ theme = "blue", children }) => {
                               {lang === "en" ? "Target" : "Hedef"}: {t(getDeptKey(log.dept)) || log.dept}
                             </span>
                             <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded">
-                              {lang === "en" ? "Devices Found" : "Bulunan Cihaz"}: {log.targetCount}
+                              {lang === "en" ? "Devices Found" : "Bulunan Cihaz"}: {log.targetCount ?? 0}
                             </span>
                             <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded">
-                              {lang === "en" ? "Success" : "Başarılı"}: {log.successCount}
+                              {lang === "en" ? "Success" : "Başarılı"}: {log.successCount ?? 0}
                             </span>
                             <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-0.5 rounded">
-                              {lang === "en" ? "Failed" : "Hatalı"}: {log.failureCount}
+                              {lang === "en" ? "Failed" : "Hatalı"}: {log.failureCount ?? 0}
                             </span>
                           </div>
                           {log.failureCount > 0 &&
@@ -13685,9 +13773,23 @@ export default function App() {
           throw new Error("Tarayıcınızın bildirim altyapısı bu oturumda başlatılamadı. Gizli sekme veya engelli ayarları kontrol edin.");
         }
 
-        const { token, isPushToken } = await ensureServiceWorkerAndGetToken(msgInstance, true);
+        let { token, isPushToken } = await ensureServiceWorkerAndGetToken(msgInstance);
 
         if (token) {
+          let regRes = null;
+          if (isPushToken) {
+            regRes = await registerDeviceTokenOnServer(token, currentUser);
+            if (regRes?.deadToken) {
+              console.log("Token Google FCM sunucularında kayıtsız (NotRegistered). Zorunlu yenileniyor...");
+              const refreshed = await ensureServiceWorkerAndGetToken(msgInstance, true);
+              if (refreshed.token && refreshed.isPushToken) {
+                token = refreshed.token;
+                isPushToken = true;
+                regRes = await registerDeviceTokenOnServer(token, currentUser);
+              }
+            }
+          }
+
           localStorage.setItem("isg_device_fcm_token", token);
           localStorage.setItem("isg_notification_device_owner", currentUser.id);
           localStorage.setItem("isg_notification_role", currentUser.role);
@@ -13705,6 +13807,19 @@ export default function App() {
           }
 
           await setDoc(doc(db, "users", currentUser.id), userDocUpdates, { merge: true }).catch(() => {});
+
+          // React state'ini derhal güncelle (kırmızı uyarı bandı anında kaybolsun)
+          setCurrentUser((prev) => {
+            if (!prev) return prev;
+            const prevTokens = Array.isArray(prev.fcmTokens) ? [...prev.fcmTokens] : [];
+            if (isPushToken && !prevTokens.includes(token)) prevTokens.push(token);
+            return {
+              ...prev,
+              fcmToken: isPushToken ? token : prev.fcmToken,
+              fcmTokens: prevTokens,
+              inAppDeviceToken: !isPushToken ? token : prev.inAppDeviceToken,
+            };
+          });
 
           if (isPushToken) {
             setToastMessage({
@@ -13793,7 +13908,7 @@ export default function App() {
       const msgInstance = await getAppMessaging();
       if (!msgInstance) return;
 
-      const { token, isPushToken } = await ensureServiceWorkerAndGetToken(msgInstance, force);
+      let { token, isPushToken } = await ensureServiceWorkerAndGetToken(msgInstance);
 
       if (token) {
         sessionStorage.setItem(syncKey, String(Date.now()));
@@ -13803,15 +13918,23 @@ export default function App() {
         localStorage.setItem("isg_notification_dept", userObj.dept || "");
 
         if (isPushToken) {
+          let regRes = await registerDeviceTokenOnServer(token, userObj);
+          if (regRes?.deadToken) {
+            console.log("Token Google FCM sunucularında kayıtsız (NotRegistered), arka planda yenileniyor...");
+            const refreshed = await ensureServiceWorkerAndGetToken(msgInstance, true);
+            if (refreshed.token && refreshed.isPushToken) {
+              token = refreshed.token;
+              await registerDeviceTokenOnServer(token, userObj);
+            }
+          }
           const existingTokens = Array.isArray(userObj.fcmTokens) ? userObj.fcmTokens : [];
           if (!existingTokens.includes(token) || userObj.fcmToken !== token) {
-            console.log("Token sync/registration detected, updating Firestore with multi-device array...");
             await setDoc(doc(db, "users", userObj.id), {
               fcmToken: token,
               fcmTokens: arrayUnion(token),
               lastActive: new Date(),
             }, { merge: true });
-            console.log("Token updated successfully for user:", userObj.username);
+            console.log("Token senkronize edildi:", userObj.username);
           }
         }
       }
@@ -14470,36 +14593,29 @@ export default function App() {
       }
     }
 
-    // Backend endpoint'ini de çağırarak Firebase Admin ile tüm kullanıcı kayıtlarından bu cihazın tokenını temizle
+    // Backend endpoint'ini de çağırarak Firebase Admin ile oturumu kapatılan kullanıcının tokenını temizle
     if (deviceFcmToken || activeUserId) {
       try {
         await fetch("/api/token/disable-device", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token: deviceFcmToken, userId: activeUserId }),
+          body: JSON.stringify({
+            token: deviceFcmToken,
+            userId: activeUserId,
+            userOnly: !disableNotifications,
+          }),
         }).catch(() => {});
       } catch (e) {}
     }
 
     if (disableNotifications) {
-      // 1. Bu cihaz için bildirimleri kesin olarak kapat ve yerel kayıtları temizle
+      // 1. Bu cihaz için bildirimleri kapat ve yerel tercihi kaydet
       localStorage.setItem("isg_notifications_disabled", "true");
       localStorage.removeItem("isg_notification_device_owner");
       localStorage.removeItem("isg_notification_role");
       localStorage.removeItem("isg_notification_dept");
-      localStorage.removeItem("isg_device_fcm_token");
 
-      // 2. Tarayıcı push bildirim aboneliğini sonlandır
-      try {
-        const msgInstance = await getAppMessaging();
-        if (msgInstance) {
-          await deleteToken(msgInstance).catch(() => {});
-        }
-      } catch (e) {
-        console.warn("Tarayıcı FCM token iptal hatası:", e);
-      }
-
-      // 3. Varsa açık bildirimleri temizle
+      // 2. Varsa açık bildirimleri temizle
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.ready.then((reg) => {
           reg.getNotifications().then((notifs) => {
@@ -14514,7 +14630,6 @@ export default function App() {
           : "Bildirimler kapatıldı ve çıkış yapıldı."
       );
     } else {
-      localStorage.removeItem("isg_device_fcm_token");
       toast.success(
         lang === "en" ? "Logged out successfully." : "Çıkış yapıldı."
       );
