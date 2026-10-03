@@ -151,6 +151,7 @@ import {
 } from "./components/SkeletonLoader";
 import PdfReportModal from "./components/PdfReportModal";
 import { NotificationStatusBanner } from "./components/NotificationStatusBanner";
+import { KvkkCookieModal, KvkkCookieBanner } from "./components/KvkkCookiePolicy";
 
 import { validateEnvVariables } from "./utils/envValidator";
 
@@ -987,6 +988,7 @@ const LoginScreen = () => {
     db,
     notificationStatus,
     requestNotificationPermission,
+    openKvkkModal,
   } = ctx;
 
   const [username, setUsername] = useState("");
@@ -1713,8 +1715,39 @@ const LoginScreen = () => {
             </div>
           </form>
 
+          {/* Legal KVKK & Cookies Consent Notice */}
+          <div className="pt-3.5 border-t border-gray-150 dark:border-gray-800 text-center">
+            <p className="text-[11px] leading-relaxed text-gray-500 dark:text-gray-400">
+              {lang === "en" ? "By signing in, you acknowledge and agree to the " : "Bu sisteme giriş yaparak "}
+              <button
+                type="button"
+                onClick={() => openKvkkModal && openKvkkModal("kvkk")}
+                className="font-bold underline text-blue-600 dark:text-blue-400 hover:text-blue-700 cursor-pointer"
+              >
+                {lang === "en" ? "KVKK Privacy Notice" : "KVKK Aydınlatma Metni"}
+              </button>
+              {lang === "en" ? ", " : ", "}
+              <button
+                type="button"
+                onClick={() => openKvkkModal && openKvkkModal("cookies")}
+                className="font-bold underline text-blue-600 dark:text-blue-400 hover:text-blue-700 cursor-pointer"
+              >
+                {lang === "en" ? "Essential Cookies" : "Zorunlu Çerezler"}
+              </button>
+              {lang === "en" ? " and " : " ve "}
+              <button
+                type="button"
+                onClick={() => openKvkkModal && openKvkkModal("photos")}
+                className="font-bold underline text-blue-600 dark:text-blue-400 hover:text-blue-700 cursor-pointer"
+              >
+                {lang === "en" ? "Field Photo Terms (OHS Law)" : "Saha Fotoğraflandırma Koşulları"}
+              </button>
+              {lang === "en" ? "." : "'nı peşinen kabul etmiş sayılırsınız."}
+            </p>
+          </div>
+
           {/* Signature */}
-          <div className="pt-4 text-center">
+          <div className="pt-2 text-center">
             <span className="text-xs italic font-light text-gray-400/50 dark:text-gray-500/40 select-none tracking-widest">
               by Gelkobilisim
             </span>
@@ -1941,6 +1974,7 @@ const MainLayout = ({ theme = "blue", children }) => {
     setShowPdfReportModal,
     soundAlerts,
     toggleSoundAlerts,
+    openKvkkModal,
   } = ctx;
 
   let roleText = t(currentUser.role) || currentUser.role;
@@ -2091,6 +2125,40 @@ const MainLayout = ({ theme = "blue", children }) => {
 
   const [debugTab, setDebugTab] = useState("users");
   const [notifLogs, setNotifLogs] = useState([]);
+  const [logFilterStatus, setLogFilterStatus] = useState("all");
+  const [logSearchQuery, setLogSearchQuery] = useState("");
+  const [expandedLogId, setExpandedLogId] = useState(null);
+  const [isClearingLogs, setIsClearingLogs] = useState(false);
+
+  const handleClearAuditLogs = async () => {
+    if (
+      !window.confirm(
+        lang === "en"
+          ? "Are you sure you want to clear all notification audit logs?"
+          : "Tüm bildirim audit/denetim loglarını temizlemek istediğinize emin misiniz?",
+      )
+    )
+      return;
+    setIsClearingLogs(true);
+    try {
+      const res = await fetch("/api/notifications/audit-logs/clear", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.success) {
+        setNotifLogs([]);
+        alert(
+          lang === "en"
+            ? "Audit logs cleared successfully."
+            : "Audit logları başarıyla temizlendi.",
+        );
+      }
+    } catch (e) {
+      console.error("Clear logs error:", e);
+    } finally {
+      setIsClearingLogs(false);
+    }
+  };
 
   // Tools State
   const [testDept, setTestDept] = useState("");
@@ -2174,15 +2242,50 @@ const MainLayout = ({ theme = "blue", children }) => {
 
   useEffect(() => {
     if (showDebug && debugTab === "logs") {
+      let isMounted = true;
       const q = query(
-        collection(db, "notification_logs"),
+        collection(db, "notification_audit_logs"),
         orderBy("timestamp", "desc"),
         limit(50),
       );
-      const unsub = onSnapshot(q, (snap) => {
-        setNotifLogs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-      });
-      return () => unsub();
+      const unsub = onSnapshot(
+        q,
+        (snap) => {
+          if (!isMounted) return;
+          if (!snap.empty) {
+            setNotifLogs(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+          } else {
+            // Fallback to notification_logs if audit logs is empty
+            const fallbackQ = query(
+              collection(db, "notification_logs"),
+              orderBy("timestamp", "desc"),
+              limit(50),
+            );
+            onSnapshot(fallbackQ, (fallbackSnap) => {
+              if (isMounted) {
+                setNotifLogs(fallbackSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+              }
+            });
+          }
+        },
+        (err) => {
+          console.warn("Audit logs listener fallback to notification_logs:", err);
+          const fallbackQ = query(
+            collection(db, "notification_logs"),
+            orderBy("timestamp", "desc"),
+            limit(50),
+          );
+          onSnapshot(fallbackQ, (fallbackSnap) => {
+            if (isMounted) {
+              setNotifLogs(fallbackSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+            }
+          });
+        },
+      );
+      return () => {
+        isMounted = false;
+        unsub();
+      };
     }
   }, [showDebug, debugTab, db]);
 
@@ -2512,6 +2615,14 @@ const MainLayout = ({ theme = "blue", children }) => {
             <PWAInstallButton />
           </div>
           <button
+            onClick={() => openKvkkModal && openKvkkModal("kvkk")}
+            className="w-full flex items-center px-3 py-2 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 font-medium rounded-xl transition-colors mt-2 text-xs cursor-pointer"
+            title={lang === "en" ? "Privacy & Legal Policy" : "Gizlilik & KVKK Politikası"}
+          >
+            <ShieldCheck className="w-4 h-4 mr-3 shrink-0 text-blue-500" />
+            <span>{lang === "en" ? "Privacy & Legal Policy" : "Gizlilik & KVKK Politikası"}</span>
+          </button>
+          <button
             onClick={logout}
             className="w-full flex items-center px-3 py-2.5 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 font-bold rounded-xl transition-colors mt-2 text-sm"
           >
@@ -2697,10 +2808,26 @@ const MainLayout = ({ theme = "blue", children }) => {
             </div>
             {children}
           </div>
-          <footer className="w-full py-4 text-center shrink-0">
-            <span className="text-xs italic font-light text-gray-400/40 dark:text-gray-500/40 select-none tracking-widest transition-opacity hover:opacity-80">
+          <footer className="w-full py-4 text-center shrink-0 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 text-xs">
+            <span className="italic font-light text-gray-400/50 dark:text-gray-500/50 select-none tracking-widest">
               by Gelkobilisim
             </span>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">•</span>
+            <button
+              type="button"
+              onClick={() => openKvkkModal && openKvkkModal("kvkk")}
+              className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 underline transition-colors cursor-pointer text-xs"
+            >
+              {lang === "en" ? "KVKK, Field Photos & Privacy Policy" : "KVKK, Saha Fotoğrafları & Gizlilik Politikası"}
+            </button>
+            <span className="hidden sm:inline text-gray-300 dark:text-gray-700">•</span>
+            <button
+              type="button"
+              onClick={() => openKvkkModal && openKvkkModal("cookies")}
+              className="text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 underline transition-colors cursor-pointer text-xs"
+            >
+              {lang === "en" ? "Cookie Settings" : "Çerez Tercihleri"}
+            </button>
           </footer>
         </main>
 
@@ -2919,67 +3046,291 @@ const MainLayout = ({ theme = "blue", children }) => {
                     </div>
                   </>
                 ) : (
-                  <div className="space-y-2 sm:space-y-3">
-                    {notifLogs.length === 0 ? (
-                      <div className="text-center text-gray-500 p-8 border border-dashed rounded-xl border-gray-300 dark:border-gray-700 text-xs sm:text-sm">
-                        {lang === "en" ? "No notification logs found." : "Kayıtlı log bulunamadı."}
-                      </div>
-                    ) : (
-                      notifLogs.map((log) => (
-                        <div
-                          key={log.id}
-                          className="border border-gray-200 dark:border-gray-700 rounded-lg p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/50"
+                  <div className="space-y-3">
+                    {/* Audit Logs Filter & Search Toolbar */}
+                    <div className="bg-gray-100 dark:bg-gray-800/80 p-2.5 sm:p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-1.5 overflow-x-auto hide-scrollbar">
+                        <button
+                          type="button"
+                          onClick={() => setLogFilterStatus("all")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            logFilterStatus === "all"
+                              ? "bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-xs"
+                              : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
+                          }`}
                         >
-                          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-gray-200 dark:border-gray-700 pb-2 mb-2 gap-1">
-                            <div className="font-bold flex items-center text-xs sm:text-sm text-gray-800 dark:text-gray-100 min-w-0">
-                              {log.failureCount > 0 ? (
-                                <AlertTriangle className="w-4 h-4 text-orange-500 mr-1.5 shrink-0" />
-                              ) : (
-                                <CheckCircle className="w-4 h-4 text-green-500 mr-1.5 shrink-0" />
+                          {lang === "en" ? "All" : "Tümü"} ({notifLogs.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogFilterStatus("failed")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            logFilterStatus === "failed"
+                              ? "bg-red-500 text-white shadow-xs"
+                              : "text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40"
+                          }`}
+                        >
+                          <AlertTriangle className="w-3 h-3" />
+                          <span>
+                            {lang === "en" ? "Failed Only" : "Hatalılar"} (
+                            {notifLogs.filter((l) => (l.failureCount || 0) > 0 || l.status === "FAILED").length}
+                            )
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLogFilterStatus("success")}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            logFilterStatus === "success"
+                              ? "bg-emerald-600 text-white shadow-xs"
+                              : "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                          }`}
+                        >
+                          <CheckCircle className="w-3 h-3" />
+                          <span>
+                            {lang === "en" ? "Successful" : "Başarılılar"} (
+                            {notifLogs.filter((l) => (l.failureCount || 0) === 0 && (l.successCount || 0) > 0).length}
+                            )
+                          </span>
+                        </button>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <div className="relative flex-1 sm:w-44">
+                          <Search className="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                          <input
+                            type="text"
+                            value={logSearchQuery}
+                            onChange={(e) => setLogSearchQuery(e.target.value)}
+                            placeholder={lang === "en" ? "Filter logs..." : "Loglarda ara..."}
+                            className="w-full text-xs pl-7 pr-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 focus:outline-none"
+                          />
+                        </div>
+
+                        {notifLogs.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleClearAuditLogs}
+                            disabled={isClearingLogs}
+                            className="px-2.5 py-1 text-xs font-bold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40 rounded-lg transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
+                            title={lang === "en" ? "Clear all audit logs" : "Tüm logları temizle"}
+                          >
+                            <Trash2 className="w-3 h-3" />
+                            <span>{isClearingLogs ? "..." : (lang === "en" ? "Clear" : "Temizle")}</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Filtered Logs List */}
+                    {(() => {
+                      const filtered = notifLogs.filter((log) => {
+                        // Status filter
+                        if (logFilterStatus === "failed") {
+                          if ((log.failureCount || 0) === 0 && log.status !== "FAILED") return false;
+                        } else if (logFilterStatus === "success") {
+                          if ((log.failureCount || 0) > 0 || log.status === "FAILED") return false;
+                        }
+                        // Search query filter
+                        if (logSearchQuery.trim()) {
+                          const q = logSearchQuery.toLowerCase();
+                          const title = (log.title || "").toLowerCase();
+                          const dept = (log.dept || "").toLowerCase();
+                          const body = (log.body || "").toLowerCase();
+                          const errorMatch = (log.failedDetails || []).some(
+                            (f) => (f.error || "").toLowerCase().includes(q) || (f.username || "").toLowerCase().includes(q)
+                          );
+                          const tokenMatch = (log.tokenAudits || []).some(
+                            (t) =>
+                              (t.username || "").toLowerCase().includes(q) ||
+                              (t.name || "").toLowerCase().includes(q) ||
+                              (t.error || "").toLowerCase().includes(q) ||
+                              (t.token || "").toLowerCase().includes(q)
+                          );
+                          if (!title.includes(q) && !dept.includes(q) && !body.includes(q) && !errorMatch && !tokenMatch) {
+                            return false;
+                          }
+                        }
+                        return true;
+                      });
+
+                      if (filtered.length === 0) {
+                        return (
+                          <div className="text-center text-gray-500 p-8 border border-dashed rounded-xl border-gray-300 dark:border-gray-700 text-xs sm:text-sm">
+                            {lang === "en"
+                              ? "No notification audit logs match the filter."
+                              : "Filtreye uygun bildirim denetim logu bulunamadı."}
+                          </div>
+                        );
+                      }
+
+                      return filtered.map((log) => {
+                        const isExpanded = expandedLogId === log.id;
+                        const hasTokenAudits = Array.isArray(log.tokenAudits) && log.tokenAudits.length > 0;
+                        const hasFailedDetails = Array.isArray(log.failedDetails) && log.failedDetails.length > 0;
+
+                        const isSuccess = (log.failureCount || 0) === 0 && (log.successCount || 0) > 0;
+                        const isPartial = (log.failureCount || 0) > 0 && (log.successCount || 0) > 0;
+                        const isFail = (log.failureCount || 0) > 0 && (log.successCount || 0) === 0;
+
+                        return (
+                          <div
+                            key={log.id}
+                            className="border border-gray-200 dark:border-gray-700 rounded-xl p-3 sm:p-4 bg-white dark:bg-gray-900/60 shadow-xs space-y-2.5 transition-all"
+                          >
+                            {/* Card Header */}
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center border-b border-gray-100 dark:border-gray-800 pb-2.5 gap-1.5">
+                              <div className="flex items-center gap-2 min-w-0">
+                                {isSuccess ? (
+                                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+                                ) : isPartial ? (
+                                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500 shrink-0"></span>
+                                ) : isFail ? (
+                                  <span className="w-2.5 h-2.5 rounded-full bg-red-500 shrink-0"></span>
+                                ) : (
+                                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0"></span>
+                                )}
+                                <span className="font-extrabold text-xs sm:text-sm text-gray-900 dark:text-gray-100 truncate">
+                                  {log.title || "İSG Bildirimi"}
+                                </span>
+                                {log.type && (
+                                  <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                                    {log.type}
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="text-[11px] text-gray-400 font-mono shrink-0">
+                                {log.timestamp?.toDate
+                                  ? log.timestamp.toDate().toLocaleString(lang === "en" ? "en-US" : "tr-TR")
+                                  : log.createdAt
+                                  ? new Date(log.createdAt).toLocaleString(lang === "en" ? "en-US" : "tr-TR")
+                                  : ""}
+                              </div>
+                            </div>
+
+                            {/* Summary Metrics Bar */}
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs">
+                              <span className="bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded font-medium text-gray-700 dark:text-gray-300">
+                                {lang === "en" ? "Target Dept" : "Hedef Birim"}: {t(getDeptKey(log.dept)) || log.dept || "all"}
+                              </span>
+                              <span className="bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded font-bold">
+                                {lang === "en" ? "Targets" : "Cihaz"}: {log.targetCount ?? 0}
+                              </span>
+                              <span className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 px-2 py-0.5 rounded font-bold">
+                                {lang === "en" ? "Delivered" : "Başarılı"}: {log.successCount ?? 0}
+                              </span>
+                              {(log.failureCount || 0) > 0 && (
+                                <span className="bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-0.5 rounded font-bold">
+                                  {lang === "en" ? "Failed" : "Hatalı"}: {log.failureCount ?? 0}
+                                </span>
                               )}
-                              <span className="truncate">{log.title}</span>
+                              {(log.cleanedCount || 0) > 0 && (
+                                <span className="bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 px-2 py-0.5 rounded font-bold">
+                                  🧹 {log.cleanedCount} {lang === "en" ? "Dead Tokens Purged" : "Ölü Token Temizlendi"}
+                                </span>
+                              )}
                             </div>
-                            <div className="text-[11px] sm:text-xs text-gray-500 shrink-0">
-                              {log.timestamp?.toDate
-                                ? log.timestamp.toDate().toLocaleString(lang === "en" ? "en-US" : "tr-TR")
-                                : ""}
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-1 sm:gap-2 text-[10px] sm:text-xs font-medium mb-2 sm:mb-3">
-                            <span className="bg-gray-200 dark:bg-gray-700 px-2 py-0.5 rounded">
-                              {lang === "en" ? "Target" : "Hedef"}: {t(getDeptKey(log.dept)) || log.dept}
-                            </span>
-                            <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 px-2 py-0.5 rounded">
-                              {lang === "en" ? "Devices Found" : "Bulunan Cihaz"}: {log.targetCount ?? 0}
-                            </span>
-                            <span className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 px-2 py-0.5 rounded">
-                              {lang === "en" ? "Success" : "Başarılı"}: {log.successCount ?? 0}
-                            </span>
-                            <span className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 px-2 py-0.5 rounded">
-                              {lang === "en" ? "Failed" : "Hatalı"}: {log.failureCount ?? 0}
-                            </span>
-                          </div>
-                          {log.failureCount > 0 &&
-                            log.failedDetails &&
-                            log.failedDetails.length > 0 && (
-                              <div className="bg-red-50 dark:bg-red-900/20 p-2.5 sm:p-3 rounded-lg border border-red-100 dark:border-red-800 text-[11px] text-red-800 dark:text-red-300 font-mono break-all">
-                                {log.failedDetails.map((f, i) => (
-                                  <div
-                                    key={i}
-                                    className="mb-1 border-b border-red-100 dark:border-red-900/50 pb-1 last:border-0 last:pb-0 last:mb-0"
-                                  >
-                                    <span className="font-bold">{lang === "en" ? "Error:" : "Hata:"}</span>{" "}
-                                    {f.error} <br />
-                                    <span className="text-[10px] opacity-75">
-                                      Token: {f.token?.substring(0, 20)}...
-                                    </span>
+
+                            {/* Expandable Token-by-Token Audit Inspector */}
+                            {(hasTokenAudits || hasFailedDetails) && (
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedLogId(isExpanded ? null : log.id)}
+                                  className="text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer pt-1"
+                                >
+                                  <span>
+                                    {isExpanded
+                                      ? (lang === "en" ? "Hide Token Audit Details" : "Token Denetim Detaylarını Gizle")
+                                      : (lang === "en" ? "Inspect Token-by-Token Details" : "Token Bazlı Denetim Detaylarını İncele")}
+                                  </span>
+                                  {isExpanded ? (
+                                    <ChevronUp className="w-3.5 h-3.5" />
+                                  ) : (
+                                    <ChevronDown className="w-3.5 h-3.5" />
+                                  )}
+                                </button>
+
+                                {isExpanded && (
+                                  <div className="mt-2 pt-2 border-t border-gray-150 dark:border-gray-800 space-y-1.5 animate-fade-in">
+                                    {hasTokenAudits
+                                      ? log.tokenAudits.map((item, tIdx) => (
+                                          <div
+                                            key={tIdx}
+                                            className={`p-2.5 rounded-lg border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+                                              item.status === "DELIVERED"
+                                                ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/60 dark:border-emerald-900/40 text-emerald-950 dark:text-emerald-200"
+                                                : "bg-red-50/70 dark:bg-red-950/30 border-red-200 dark:border-red-900/50 text-red-950 dark:text-red-200"
+                                            }`}
+                                          >
+                                            <div className="space-y-0.5 min-w-0 flex-1">
+                                              <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="font-bold text-gray-900 dark:text-gray-100">
+                                                  {item.name || item.username || "Kullanıcı"}
+                                                </span>
+                                                <span className="text-[11px] opacity-75 font-mono">
+                                                  (@{item.username || item.userId})
+                                                </span>
+                                                {item.dept && (
+                                                  <span className="text-[10px] px-1.5 py-0.2 rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 font-semibold">
+                                                    {item.dept}
+                                                  </span>
+                                                )}
+                                                {item.role && (
+                                                  <span className="text-[10px] opacity-75">({item.role})</span>
+                                                )}
+                                              </div>
+
+                                              <div className="font-mono text-[10px] opacity-70 truncate">
+                                                Token: {item.tokenMasked || (item.token ? item.token.slice(0, 16) + "..." : "N/A")}
+                                              </div>
+
+                                              {item.status === "FAILED" && (
+                                                <div className="text-[11px] font-mono text-red-700 dark:text-red-300 font-medium pt-0.5">
+                                                  <span className="font-bold">Hata: </span>
+                                                  <span>{item.errorCode || ""}</span> - <span>{item.error}</span>
+                                                  {item.actionTaken && (
+                                                    <span className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                                                      {item.actionTaken}
+                                                    </span>
+                                                  )}
+                                                </div>
+                                              )}
+                                            </div>
+
+                                            <div className="shrink-0 self-start sm:self-center">
+                                              {item.status === "DELIVERED" ? (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                                                  <Check className="w-3 h-3" /> İletildi
+                                                </span>
+                                              ) : (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
+                                                  <AlertTriangle className="w-3 h-3" /> Başarısız
+                                                </span>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ))
+                                      : log.failedDetails.map((f, i) => (
+                                          <div
+                                            key={i}
+                                            className="p-2.5 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900/50 text-[11px] text-red-900 dark:text-red-200 font-mono"
+                                          >
+                                            <div className="font-bold">{lang === "en" ? "Error:" : "Hata:"} {f.error}</div>
+                                            <div className="text-[10px] opacity-75 truncate">
+                                              Token: {f.token ? f.token.slice(0, 24) + "..." : "N/A"}
+                                            </div>
+                                          </div>
+                                        ))}
                                   </div>
-                                ))}
+                                )}
                               </div>
                             )}
-                        </div>
-                      ))
-                    )}
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 )}
               </div>
@@ -4895,6 +5246,10 @@ const ModDashboard = () => {
                   </span>
                 </label>
               )}
+              <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                <span>6331 sayılı İSG Kanunu ve KVKK uyarınca bu fotoğraf yalnızca iş güvenliği denetimi amacıyla işlenir.</span>
+              </p>
             </div>
 
             {/* Submit Button */}
@@ -6514,6 +6869,10 @@ const SefDashboard = () => {
                       </span>
                     </label>
                   )}
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                    <span>6331 sayılı İSG Kanunu ve KVKK uyarınca bu fotoğraf yalnızca iş güvenliği denetimi amacıyla işlenir.</span>
+                  </p>
                 </div>
               )}
 
@@ -13649,6 +14008,12 @@ export default function App() {
   const [adminSystemMode, setAdminSystemMode] = useState("home");
   const [adminViewMode, setAdminViewMode] = useState("list");
   const [showPdfReportModal, setShowPdfReportModal] = useState(false);
+  const [showKvkkModal, setShowKvkkModal] = useState(false);
+  const [kvkkInitialTab, setKvkkInitialTab] = useState("kvkk");
+  const openKvkkModal = useCallback((tab = "kvkk") => {
+    setKvkkInitialTab(tab);
+    setShowKvkkModal(true);
+  }, []);
 
   const [notificationStatus, setNotificationStatus] = useState(
     "Notification" in window ? Notification.permission : "unsupported",
@@ -15113,6 +15478,9 @@ export default function App() {
       verifyAndSyncToken,
       showPdfReportModal,
       setShowPdfReportModal,
+      showKvkkModal,
+      setShowKvkkModal,
+      openKvkkModal,
       soundAlerts,
       toggleSoundAlerts,
       DEPARTMENTS,
@@ -15150,6 +15518,8 @@ export default function App() {
       recheckNotificationPermission,
       verifyAndSyncToken,
       showPdfReportModal,
+      showKvkkModal,
+      openKvkkModal,
       soundAlerts,
       toggleSoundAlerts,
     ],
@@ -15389,6 +15759,20 @@ export default function App() {
             </Routes>
           </>
         )}
+
+        {/* Global KVKK, Zorunlu Çerezler ve Saha Fotoğrafları Modalı */}
+        <KvkkCookieModal
+          isOpen={showKvkkModal}
+          onClose={() => setShowKvkkModal(false)}
+          lang={lang}
+          initialTab={kvkkInitialTab}
+        />
+
+        {/* Ekranın Altında Yüzen KVKK & Çerez Onay Bildirimi */}
+        <KvkkCookieBanner
+          onOpenModal={() => openKvkkModal("kvkk")}
+          lang={lang}
+        />
       </div>
     </AppContext.Provider>
   );

@@ -1,25 +1,56 @@
 {
+  "id": "/",
   "name": "ADS Takip - İSG ve Sevkiyat Yönetim Portalı",
   "short_name": "ADS Takip",
-  "description": "ADS Metal A.Ş. İSG Saha Denetim ve Sevkiyat Takip Portalı",
+  "description": "ADS Metal A.Ş. İş Sağlığı ve Güvenliği (İSG) saha denetimi, departman puanlama ve fabrika sevkiyat/yükleme takip sistemi.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#0f172a",
   "orientation": "portrait",
+  "categories": ["business", "productivity", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/adsmetal_logo.jpg",
       "sizes": "192x192",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/adsmetal_logo.jpg",
       "sizes": "512x512",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/adsmetal_logo.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/adsmetal_logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "İSG Saha Denetimi",
+      "short_name": "İSG Denetim",
+      "description": "İş Sağlığı ve Güvenliği saha ihlal ve denetim modülünü aç",
+      "url": "/?mode=isg",
+      "icons": [{ "src": "/adsmetal_logo.jpg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Sevkiyat & Lojistik",
+      "short_name": "Sevkiyat",
+      "description": "Fabrika yükleme ve tır sevkiyat takip modülünü aç",
+      "url": "/?mode=yukleme",
+      "icons": [{ "src": "/adsmetal_logo.jpg", "sizes": "192x192" }]
     }
   ],
   "gcm_sender_id": "103953800507"

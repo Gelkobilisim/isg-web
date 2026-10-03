@@ -51,8 +51,13 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
-    // System notification logs: Read only from client, server Admin SDK handles writes
+    // System notification logs & audit logs: Read only from client, server Admin SDK handles writes
     match /notification_logs/{logId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /notification_audit_logs/{logId} {
       allow read: if true;
       allow write: if false;
     }

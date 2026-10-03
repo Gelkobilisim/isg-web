@@ -713,7 +713,8 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
     return res.status(403).json({ error: "Bu işlem için bildirim gönderme yetkiniz bulunmamaktadır." });
   }
 
-  const { type, payload } = req.body;
+  const { type } = req.body;
+  const payload = req.body.payload || req.body || {};
 
   try {
     const usersSnapshot = await getFirestore().collection("users").get();
@@ -959,25 +960,51 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         tokens: uniqueTokens,
       };
 
+      function findTokenUserDetails(token: string, usersList: any[]) {
+        const matched = usersList.find((u) => {
+          const userTokens = getUserFcmTokens(u);
+          return userTokens.includes(token);
+        });
+        if (matched) {
+          return {
+            userId: matched.id,
+            username: matched.username || matched.id,
+            name: matched.name || matched.username || matched.id,
+            dept: matched.department || matched.dept || "Genel",
+            role: matched.role || "user",
+          };
+        }
+        return {
+          userId: "unknown",
+          username: "Bilinmeyen Kullanıcı",
+          name: "Cihaz Kaydı",
+          dept: "Genel",
+          role: "user",
+        };
+      }
+
       const response = await getMessaging().sendEachForMulticast(message);
       console.log(
         `FCM sent: ${response.successCount} successful, ${response.failureCount} failed.`,
       );
 
-      const failedTokens = [];
-      const successfulTokens = [];
-      const tokensToRemove = [];
+      const failedTokens: any[] = [];
+      const successfulTokens: any[] = [];
+      const tokensToRemove: string[] = [];
+      const tokenAudits: any[] = [];
 
       response.responses.forEach((resp, idx) => {
         const currentToken = uniqueTokens[idx];
+        const userMeta = findTokenUserDetails(currentToken, users);
+        const tokenMasked =
+          currentToken.length > 20
+            ? `${currentToken.substring(0, 10)}...${currentToken.substring(currentToken.length - 8)}`
+            : currentToken;
+
         if (!resp.success) {
           const errCode = resp.error ? resp.error.code : "";
           const errMsg = resp.error ? resp.error.message || "" : "";
-          failedTokens.push({
-            token: currentToken,
-            error: errMsg || "Unknown error",
-          });
-          
+
           const isDead =
             errCode === "messaging/invalid-registration-token" ||
             errCode === "messaging/registration-token-not-registered" ||
@@ -991,8 +1018,39 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
           if (isDead) {
             tokensToRemove.push(currentToken);
           }
+
+          const auditRecord = {
+            token: currentToken,
+            tokenMasked,
+            userId: userMeta.userId,
+            username: userMeta.username,
+            name: userMeta.name,
+            dept: userMeta.dept,
+            role: userMeta.role,
+            status: "FAILED",
+            errorCode: errCode || "fcm_error",
+            error: errMsg || "Bilinmeyen FCM hatası",
+            isDeadToken: isDead,
+            actionTaken: isDead ? "AUTO_CLEANED_DEAD_TOKEN" : "RETAINED",
+            timestamp: new Date().toISOString(),
+          };
+
+          failedTokens.push(auditRecord);
+          tokenAudits.push(auditRecord);
         } else {
           successfulTokens.push(currentToken);
+          tokenAudits.push({
+            token: currentToken,
+            tokenMasked,
+            userId: userMeta.userId,
+            username: userMeta.username,
+            name: userMeta.name,
+            dept: userMeta.dept,
+            role: userMeta.role,
+            status: "DELIVERED",
+            messageId: resp.messageId || "",
+            timestamp: new Date().toISOString(),
+          });
         }
       });
 
@@ -1040,23 +1098,39 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         }
       }
 
-      // FCM iletimi tamamlandı
-
+      // FCM iletimi ve Audit Log kaydı
       try {
-        await getFirestore()
-          .collection("notification_logs")
-          .add({
-            timestamp: new Date(),
-            type,
-            title: notificationTitle,
-            dept: payload.dept || "System",
-            targetCount: tokensToNotify.length,
-            successCount: response.successCount,
-            failureCount: response.failureCount,
-            failedDetails: failedTokens,
-          });
+        const auditDoc = {
+          timestamp: new Date(),
+          createdAt: new Date().toISOString(),
+          type,
+          title: notificationTitle,
+          body: notificationBody,
+          dept: payload.dept || "System",
+          sender: payload.sender || payload.sentBy || "System",
+          targetCount: uniqueTokens.length,
+          successCount: response.successCount,
+          failureCount: response.failureCount,
+          status:
+            response.failureCount === 0
+              ? "SUCCESS"
+              : response.successCount === 0
+              ? "FAILED"
+              : "PARTIAL",
+          tokenAudits,
+          failedDetails: failedTokens,
+          cleanedCount: tokensToRemove.length,
+          actionTakenNote:
+            tokensToRemove.length > 0
+              ? `${tokensToRemove.length} geçersiz/ölü token otomatik temizlendi.`
+              : "Tüm tokenlar aktif.",
+        };
+
+        const firestore = getFirestore();
+        await firestore.collection("notification_audit_logs").add(auditDoc);
+        await firestore.collection("notification_logs").add(auditDoc);
       } catch (logErr) {
-        console.error("Failed to write to notification_logs:", logErr);
+        console.error("Failed to write to notification_logs / audit_logs:", logErr);
       }
 
       return res.json({
@@ -1064,7 +1138,14 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
         sentCount: response.successCount,
         failureCount: response.failureCount,
         targetCount: uniqueTokens.length,
+        status:
+          response.failureCount === 0
+            ? "SUCCESS"
+            : response.successCount === 0
+            ? "FAILED"
+            : "PARTIAL",
         errors: failedTokens,
+        tokenAudits,
       });
     } else {
       return res.json({
@@ -1078,6 +1159,56 @@ app.post(["/api/notify", "/notify"], async (req, res) => {
   } catch (error) {
     console.error("FCM Send Error:", error);
     return res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+// Bildirim Audit Log kayıtlarını listeleme (hata/başarı detayları ile)
+app.get(["/api/notifications/audit-logs", "/notifications/audit-logs"], async (req, res) => {
+  if (!isFirebaseAdminInitialized) {
+    return res.status(500).json({ error: "Firebase Admin is not configured." });
+  }
+
+  try {
+    const limitCount = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    const statusFilter = req.query.status as string; // 'all', 'failed', 'success'
+
+    const snapshot = await getFirestore()
+      .collection("notification_audit_logs")
+      .orderBy("timestamp", "desc")
+      .limit(limitCount)
+      .get();
+
+    let logs = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+
+    if (statusFilter === "failed") {
+      logs = logs.filter((l: any) => l.failureCount > 0 || l.status === "FAILED");
+    } else if (statusFilter === "success") {
+      logs = logs.filter((l: any) => l.failureCount === 0 && l.successCount > 0);
+    }
+
+    return res.json({ success: true, count: logs.length, logs });
+  } catch (err: any) {
+    console.error("Failed to get audit logs:", err);
+    return res.status(500).json({ error: err?.message || "Audit loglar getirilemedi." });
+  }
+});
+
+// Bildirim Audit Loglarını temizleme
+app.post(["/api/notifications/audit-logs/clear", "/notifications/audit-logs/clear"], async (req, res) => {
+  if (!isFirebaseAdminInitialized) {
+    return res.status(500).json({ error: "Firebase Admin is not configured." });
+  }
+
+  try {
+    const firestore = getFirestore();
+    const snapshot = await firestore.collection("notification_audit_logs").limit(100).get();
+    const batch = firestore.batch();
+    snapshot.docs.forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+
+    return res.json({ success: true, message: `${snapshot.size} audit log kaydı temizlendi.` });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message || "Loglar temizlenemedi." });
   }
 });
 
