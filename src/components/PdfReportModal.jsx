@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import jsPDF from "jspdf";
 import { toPng } from "html-to-image";
+import { toast } from "react-hot-toast";
 
 const ADS_LOGO_BASE64 =
   "data:image/jpeg;base64,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";
@@ -302,9 +303,14 @@ export default function PdfReportModal({
             : "Fabrika_Genel_Raporu";
 
       pdf.save(`ADS_Metal_${typeStr}_${dateStr}.pdf`);
+      toast.success(isEn ? "PDF report downloaded successfully." : "Resmi İSG ve Denetim Raporu PDF olarak indirildi.");
     } catch (err) {
       console.error("PDF oluşturma hatası:", err);
-      alert("PDF belgesi oluşturulurken bir hata meydana geldi: " + (err?.message || err));
+      toast.error(
+        isEn
+          ? "Failed to generate PDF: " + (err?.message || err)
+          : "PDF belgesi oluşturulurken bir hata meydana geldi: " + (err?.message || err),
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -314,13 +320,7 @@ export default function PdfReportModal({
     window.print();
   };
 
-  const isAdmin =
-    currentUser?.role === "admin" ||
-    currentUser?.role === "yonetici" ||
-    currentUser?.username === "agiradar" ||
-    currentUser?.username === "agiradarsahin";
-
-  if (!isOpen || !isAdmin) return null;
+  if (!isOpen) return null;
 
   // Render Page 1 Content Template
   const renderPage1Content = () => (
@@ -1283,12 +1283,12 @@ export default function PdfReportModal({
           aria-hidden="true"
           style={{
             position: "fixed",
-            left: "-9999px",
+            left: "0px",
             top: "0px",
             width: "794px",
             minWidth: "794px",
             maxWidth: "794px",
-            zIndex: -999,
+            zIndex: -1000,
             pointerEvents: "none",
             opacity: 1,
             display: "block",

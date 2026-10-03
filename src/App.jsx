@@ -152,6 +152,7 @@ import {
 import PdfReportModal from "./components/PdfReportModal";
 import { NotificationStatusBanner } from "./components/NotificationStatusBanner";
 import { KvkkCookieModal, KvkkCookieBanner } from "./components/KvkkCookiePolicy";
+import { PhotoSourceModal, compressImageFile } from "./components/PhotoSourceModal";
 
 import { validateEnvVariables } from "./utils/envValidator";
 
@@ -4206,6 +4207,7 @@ const YukleniciDashboard = () => {
   const { t, createTask, lang = "tr" } = ctx || {};
 
   const [imgPreview, setImgPreview] = React.useState(null);
+  const [showPhotoSourceModal, setShowPhotoSourceModal] = React.useState(false);
   const [formState, setFormState] = React.useState({
     dept: "Boyahane",
     priority: "yuksek",
@@ -4331,47 +4333,52 @@ const YukleniciDashboard = () => {
             ></textarea>
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2">
-              {t("photo_evidence") || "Fotoğraf (İsteğe Bağlı)"}
+            <label className="block text-sm font-bold text-gray-700 dark:text-gray-200 mb-2 flex items-center justify-between">
+              <span>{t("photo_evidence") || "Fotoğraf (İsteğe Bağlı)"}</span>
+              {imgPreview && (
+                <button
+                  type="button"
+                  onClick={() => setImgPreview(null)}
+                  className="text-xs text-red-500 hover:text-red-700 font-bold flex items-center gap-1 cursor-pointer"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Fotoğrafı Kaldır</span>
+                </button>
+              )}
             </label>
-            <input
-              type="file"
-              id="yukleniciCameraInput"
-              accept="image/*"
-              capture="environment"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files[0];
-                if (file) {
-                  const reader = new FileReader();
-                  reader.onloadend = () => setImgPreview(reader.result);
-                  reader.readAsDataURL(file);
-                }
-                e.target.value = null;
-              }}
-            />
-            <label
-              htmlFor="yukleniciCameraInput"
-              className="w-full h-32 md:h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden"
+            <div
+              onClick={() => setShowPhotoSourceModal(true)}
+              className="w-full h-36 md:h-48 bg-gray-50 dark:bg-gray-900 border-2 border-dashed border-gray-300 dark:border-gray-600 hover:border-blue-400 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-colors group overflow-hidden"
             >
               {imgPreview ? (
-                <img
-                  loading="lazy"
-                  decoding="async"
-                  src={imgPreview}
-                  className="w-full h-full object-cover"
-                />
+                <div className="relative w-full h-full group">
+                  <img
+                    loading="lazy"
+                    decoding="async"
+                    src={imgPreview}
+                    alt="Kanıt Fotoğrafı"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="px-4 py-2 bg-white text-gray-900 rounded-xl text-xs font-bold shadow-md">
+                      Fotoğrafı Değiştir (Kamera / Galeri)
+                    </span>
+                  </div>
+                </div>
               ) : (
                 <>
-                  <div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-3 group-hover:scale-110">
+                  <div className="bg-white dark:bg-gray-800 p-3 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform">
                     <Camera className="w-6 h-6 text-gray-400 group-hover:text-blue-500" />
                   </div>
-                  <span className="text-sm font-bold text-gray-500 dark:text-gray-400">
-                    {t("cam_open") || "Kamerayı Aç / Fotoğraf Seç"}
+                  <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                    Kamera veya Galeriden Fotoğraf Seç
+                  </span>
+                  <span className="text-xs text-gray-400 mt-0.5">
+                    Kameradan canlı çekmek veya albümden seçmek için tıklayın
                   </span>
                 </>
               )}
-            </label>
+            </div>
           </div>
           <button
             type="submit"
@@ -4381,6 +4388,22 @@ const YukleniciDashboard = () => {
             {t("submit_btn") || "İhlali Bildir"}
           </button>
         </form>
+
+        <PhotoSourceModal
+          isOpen={showPhotoSourceModal}
+          onClose={() => setShowPhotoSourceModal(false)}
+          onPhotoSelected={(compressedBase64) => {
+            setImgPreview(compressedBase64);
+            triggerHaptic("selection");
+          }}
+          title={lang === "en" ? "Select Photo Source" : "Fotoğraf Kaynağını Seçin"}
+          subtitle={
+            lang === "en"
+              ? "Take photo with camera or choose from gallery"
+              : "Sahada anlık canlı fotoğraf çekin veya cihazınızın galerisinden seçim yapın."
+          }
+          lang={lang}
+        />
       </div>
     </div>
   );
@@ -4429,6 +4452,9 @@ const ModDashboard = () => {
 
   // Create Form State
   const [imgPreview, setImgPreview] = React.useState(null);
+  const [showPhotoSourceModal, setShowPhotoSourceModal] = React.useState(false);
+  const isgCameraInputRef = React.useRef(null);
+  const isgGalleryInputRef = React.useRef(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [formState, setFormState] = React.useState({
     dept: deptsList[0] || "Boyahane",
@@ -4556,13 +4582,18 @@ const ModDashboard = () => {
     }, 350);
   };
 
-  const handleImageUpload = (file) => {
+  const handleImageUpload = async (file) => {
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImgPreview(reader.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImageFile(file, 1200, 0.75);
+      setImgPreview(compressed);
+      triggerHaptic("selection");
+    } catch (err) {
+      console.error("Image upload compression failed:", err);
+      const reader = new FileReader();
+      reader.onloadend = () => setImgPreview(reader.result);
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -4685,20 +4716,6 @@ const ModDashboard = () => {
                   : "Saha tehlike tespiti, terminli ihlal atamaları, şef çözüm/itiraz değerlendirmeleri ve canlı süreç takibi."}
               </p>
             </div>
-          </div>
-
-          {/* Quick Header CTA */}
-          <div className="flex items-center gap-2.5 self-stretch sm:self-auto shrink-0">
-            <button
-              onClick={() => {
-                triggerHaptic("selection");
-                setActiveTab("create");
-              }}
-              className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-sm font-bold shadow-md shadow-emerald-600/20 active:scale-95 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{lang === "en" ? "New Inspection" : "Yeni İhlal Bildir"}</span>
-            </button>
           </div>
         </div>
       </div>
@@ -4836,6 +4853,9 @@ const ModDashboard = () => {
           onClick={() => {
             triggerHaptic("selection");
             setActiveTab("create");
+            setTimeout(() => {
+              document.getElementById("isg-create-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+            }, 50);
           }}
           className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
             activeTab === "create"
@@ -4888,7 +4908,7 @@ const ModDashboard = () => {
 
       {/* 4. TAB 1: YENİ İHLAL BİLDİR (SAHA TESPİT FORMU) */}
       {activeTab === "create" && (
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-200 dark:border-gray-700/80 animate-slide-up space-y-6">
+        <div id="isg-create-form" className="bg-white dark:bg-gray-800 rounded-3xl p-6 md:p-8 shadow-sm border border-gray-200 dark:border-gray-700/80 animate-slide-up space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-gray-100 dark:border-gray-700/80 gap-3">
             <div>
               <h2 className="text-lg md:text-xl font-black text-gray-900 dark:text-gray-100 flex items-center gap-2">
@@ -5182,9 +5202,23 @@ const ModDashboard = () => {
                 )}
               </label>
 
+              {/* Hidden Inputs for Camera (capture="environment") and Gallery */}
               <input
                 type="file"
-                id="modCamera"
+                ref={isgCameraInputRef}
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleImageUpload(e.target.files[0]);
+                    e.target.value = "";
+                  }
+                }}
+              />
+              <input
+                type="file"
+                ref={isgGalleryInputRef}
                 accept="image/*"
                 className="hidden"
                 onChange={(e) => {
@@ -5209,12 +5243,14 @@ const ModDashboard = () => {
                     }}
                   />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-                    <label
-                      htmlFor="modCamera"
-                      className="px-4 py-2 bg-white text-gray-900 rounded-xl text-xs font-bold shadow-md cursor-pointer hover:bg-gray-100 transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => setShowPhotoSourceModal(true)}
+                      className="px-4 py-2 bg-white text-gray-900 rounded-xl text-xs font-bold shadow-md cursor-pointer hover:bg-gray-100 transition-colors flex items-center gap-1.5"
                     >
-                      {lang === "en" ? "Change Photo" : "Fotoğrafı Değiştir"}
-                    </label>
+                      <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{lang === "en" ? "Change Photo" : "Fotoğrafı Değiştir"}</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
@@ -5231,20 +5267,48 @@ const ModDashboard = () => {
                   </div>
                 </div>
               ) : (
-                <label
-                  htmlFor="modCamera"
-                  className="w-full h-40 bg-gray-50 dark:bg-gray-900/60 border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl flex flex-col justify-center items-center text-gray-500 dark:text-gray-400 cursor-pointer transition-all group"
+                <div
+                  onClick={() => setShowPhotoSourceModal(true)}
+                  className="w-full p-6 bg-gradient-to-b from-gray-50 to-emerald-50/20 dark:from-gray-900/60 dark:to-emerald-950/20 border-2 border-dashed border-gray-300 dark:border-gray-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-3xl flex flex-col justify-center items-center text-center cursor-pointer transition-all group shadow-xs hover:shadow-md"
                 >
-                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-200 dark:border-gray-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                    <Camera className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+                  <div className="w-14 h-14 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-emerald-200 dark:border-emerald-900/60 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                    <Camera className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <span className="text-sm font-bold text-gray-700 dark:text-gray-200">
-                    {lang === "en" ? "Take Photo / Upload Evidence" : "Kamera ile Çek / Fotoğraf Yükle"}
+                  <span className="text-sm font-extrabold text-gray-800 dark:text-gray-100">
+                    {lang === "en" ? "Add Field Evidence Photo" : "Saha Kanıt Fotoğrafı Ekle"}
                   </span>
-                  <span className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                    {lang === "en" ? "PNG, JPG or JPEG up to 10MB" : "PNG, JPG veya JPEG formatında"}
-                  </span>
-                </label>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-sm">
+                    {lang === "en"
+                      ? "Tap to choose: take live photo with camera or choose from gallery"
+                      : "Fotoğraf eklemek için dokunun: Kameradan canlı çekin veya galeriden seçin"}
+                  </p>
+
+                  {/* Two explicit Quick-Action Buttons inside the card */}
+                  <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5 w-full max-w-xs">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        isgCameraInputRef.current?.click();
+                      }}
+                      className="flex-1 min-w-[125px] py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer hover:scale-[1.02]"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                      <span>{lang === "en" ? "Camera" : "Kamera ile Çek"}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        isgGalleryInputRef.current?.click();
+                      }}
+                      className="flex-1 min-w-[125px] py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer hover:scale-[1.02]"
+                    >
+                      <ImageIcon className="w-3.5 h-3.5" />
+                      <span>{lang === "en" ? "Gallery" : "Galeriden Seç"}</span>
+                    </button>
+                  </div>
+                </div>
               )}
               <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
@@ -5935,6 +5999,23 @@ const ModDashboard = () => {
         </div>
       )}
 
+      {/* Photo Source Selector Modal (Kamera veya Galeri) */}
+      <PhotoSourceModal
+        isOpen={showPhotoSourceModal}
+        onClose={() => setShowPhotoSourceModal(false)}
+        onPhotoSelected={(compressedBase64) => {
+          setImgPreview(compressedBase64);
+          triggerHaptic("selection");
+        }}
+        title={lang === "en" ? "Select Photo Source" : "Fotoğraf Kaynağını Seçin"}
+        subtitle={
+          lang === "en"
+            ? "Take live photo with camera or choose from gallery"
+            : "Sahada anlık canlı fotoğraf çekin veya cihazınızın galerisinden seçim yapın."
+        }
+        lang={lang}
+      />
+
       {/* 8. Mobile Bottom Navigation */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-t border-gray-200 dark:border-gray-800 px-4 py-2 flex justify-around shadow-lg">
         <button
@@ -6022,6 +6103,7 @@ const SefDashboard = () => {
   });
   const [note, setNote] = React.useState("");
   const [afterImgPreview, setAfterImgPreview] = React.useState(null);
+  const [showPhotoSourceModal, setShowPhotoSourceModal] = React.useState(false);
 
   // Pagination for tasks list
   const [sefiTasksLimit, setSefiTasksLimit] = React.useState(12);
@@ -6838,36 +6920,36 @@ const SefDashboard = () => {
                         alt="Çözüm Fotoğrafı"
                         className="w-full h-48 object-cover"
                       />
-                      <label
-                        htmlFor="sefCamera"
+                      <div
+                        onClick={() => setShowPhotoSourceModal(true)}
                         className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white font-bold text-xs cursor-pointer gap-2"
                       >
                         <RefreshCw className="w-6 h-6" />
-                        <span>{lang === "en" ? "Retake Photo" : "Fotoğrafı Değiştir"}</span>
-                      </label>
+                        <span>{lang === "en" ? "Change Photo (Camera/Gallery)" : "Fotoğrafı Değiştir (Kamera/Galeri)"}</span>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setAfterImgPreview(null)}
-                        className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-white hover:bg-rose-600 transition-colors"
+                        className="absolute top-2 right-2 p-1.5 rounded-full bg-slate-900/80 text-white hover:bg-rose-600 transition-colors cursor-pointer"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     </div>
                   ) : (
-                    <label
-                      htmlFor="sefCamera"
+                    <div
+                      onClick={() => setShowPhotoSourceModal(true)}
                       className="w-full h-44 bg-slate-50 dark:bg-slate-800/60 border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-emerald-500 dark:hover:border-emerald-500 rounded-2xl flex flex-col justify-center items-center text-slate-500 dark:text-slate-400 cursor-pointer transition-colors group p-4 text-center"
                     >
                       <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
                         <Camera className="w-6 h-6" />
                       </div>
                       <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
-                        {t("open_camera") || (lang === "en" ? "Open Camera & Take Photo" : "Kamerayı Aç / Fotoğraf Çek")}
+                        {lang === "en" ? "Select Photo (Camera or Gallery)" : "Kamera veya Galeriden Fotoğraf Seç"}
                       </span>
                       <span className="text-xs text-slate-400 mt-1">
-                        {lang === "en" ? "Click to capture fix proof" : "Düzeltilen alanın net fotoğrafını yükleyin"}
+                        {lang === "en" ? "Tap to choose live camera or device gallery" : "Kameradan canlı çekmek veya albümden seçmek için tıklayın"}
                       </span>
-                    </label>
+                    </div>
                   )}
                   <p className="text-[10px] text-gray-500 dark:text-gray-400 mt-1.5 flex items-center gap-1">
                     <ShieldCheck className="w-3.5 h-3.5 text-blue-500 shrink-0" />
@@ -6940,6 +7022,23 @@ const SefDashboard = () => {
           </div>
         </div>
       )}
+
+      {/* Photo Source Selector Modal for Sef Dashboard */}
+      <PhotoSourceModal
+        isOpen={showPhotoSourceModal}
+        onClose={() => setShowPhotoSourceModal(false)}
+        onPhotoSelected={(compressedBase64) => {
+          setAfterImgPreview(compressedBase64);
+          triggerHaptic("selection");
+        }}
+        title={lang === "en" ? "Select Solution Photo" : "Çözüm Fotoğrafı Ekle"}
+        subtitle={
+          lang === "en"
+            ? "Take live photo with camera or choose from gallery"
+            : "Sahada anlık canlı fotoğraf çekin veya cihazınızın galerisinden seçim yapın."
+        }
+        lang={lang}
+      />
     </div>
   );
 };
